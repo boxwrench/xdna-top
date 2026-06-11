@@ -3,24 +3,43 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>xdna-top Telemetry & Architecture</title>
+  <title>xdna-top Telemetry & Learning Hub</title>
   <!-- Modern Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Custom Premium Stylesheet -->
   <style>
     :root {
-      --bg-dark: #0a0c10;
-      --bg-card: rgba(18, 22, 31, 0.7);
-      --border-color: rgba(255, 255, 255, 0.08);
-      --accent-cyan: #00f0ff;
-      --accent-magenta: #ff007f;
-      --accent-green: #39ff14;
-      --text-main: #f3f4f6;
-      --text-muted: #9ca3af;
+      --bg-main: #f8fafc;
+      --bg-card: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-light: #64748b;
+      --primary: #0f2a4a; /* Classic Dark Blue */
+      --primary-rgb: 15, 42, 74;
+      --primary-hover: #08192f;
+      --secondary: #2563eb; /* Royal Blue */
+      --secondary-rgb: 37, 99, 235;
+      --secondary-light: #3b82f6; /* Medium Blue */
+      --accent-sky: #0ea5e9; /* Sky Blue */
+      --accent-light: #f0f7ff; /* Soft Light Blue */
+      --accent-light-border: #bae6fd;
+      --border-color: #e2e8f0;
+      --border-focus: #93c5fd;
+      --success: #10b981;
+      --success-light: #ecfdf5;
+      --warning: #f59e0b;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 10px 15px -3px rgba(15, 42, 74, 0.04), 0 4px 6px -4px rgba(15, 42, 74, 0.04);
+      --shadow-indigo: 0 10px 25px -5px rgba(37, 99, 235, 0.08), 0 8px 10px -6px rgba(37, 99, 235, 0.08);
     }
 
     * {
@@ -29,47 +48,284 @@
       padding: 0;
     }
 
+    html {
+      scroll-behavior: smooth;
+    }
+
     body {
-      background-color: var(--bg-dark);
-      background-image: 
-        radial-gradient(circle at 10% 20%, rgba(0, 240, 255, 0.05) 0%, transparent 40%),
-        radial-gradient(circle at 90% 80%, rgba(255, 0, 127, 0.05) 0%, transparent 40%);
-      background-attachment: fixed;
+      background-color: var(--bg-main);
       color: var(--text-main);
-      font-family: 'Outfit', sans-serif;
+      font-family: 'Inter', sans-serif;
       line-height: 1.6;
-      padding: 2rem 1rem;
+      padding: 0;
+      min-height: 100vh;
     }
 
+    /* Typography */
+    h1, h2, h3, h4, h5 {
+      font-family: 'Outfit', sans-serif;
+      color: var(--primary);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    /* Container */
     .container {
-      max-width: 1200px;
+      max-width: 1280px;
       margin: 0 auto;
+      padding: 0 1.5rem;
     }
 
-    /* Header styling */
-    header {
-      text-align: center;
-      margin-bottom: 3rem;
-      animation: fadeIn 1s ease-out;
+    /* Header & Navbar */
+    .navbar {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow-sm);
     }
 
-    h1 {
-      font-size: 3rem;
+    .nav-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 70px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+    }
+
+    .brand-logo {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      width: 38px;
+      height: 38px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
       font-weight: 800;
-      letter-spacing: -0.05em;
-      margin-bottom: 0.5rem;
-      background: linear-gradient(135deg, var(--accent-cyan), #ffffff, var(--accent-magenta));
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.25rem;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    }
+
+    .brand-name {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--primary);
+      letter-spacing: -0.03em;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .brand-badge {
+      font-size: 0.75rem;
+      background: var(--accent-light);
+      color: var(--secondary);
+      padding: 0.1rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 600;
+      border: 1px solid var(--accent-light-border);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+      list-style: none;
+    }
+
+    .nav-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.95rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: var(--radius-sm);
+      transition: var(--transition);
+    }
+
+    .nav-link:hover {
+      color: var(--secondary);
+      background-color: var(--accent-light);
+    }
+
+    .nav-btn {
+      background: var(--primary);
+      color: white;
+      padding: 0.6rem 1.2rem;
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .nav-btn:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Hero Section */
+    .hero {
+      background: linear-gradient(180deg, #edf4fc 0%, var(--bg-main) 100%);
+      padding: 4.5rem 0 3.5rem 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 3rem;
+      align-items: center;
+    }
+
+    @media (min-width: 960px) {
+      .hero-grid {
+        grid-template-columns: 1.2fr 0.8fr;
+      }
+    }
+
+    .hero-content {
+      max-width: 680px;
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(37, 99, 235, 0.08);
+      color: var(--secondary);
+      font-weight: 600;
+      font-size: 0.85rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 9999px;
+      margin-bottom: 1.25rem;
+      border: 1px solid rgba(37, 99, 235, 0.15);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .hero-tag::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background: var(--secondary);
+      border-radius: 50%;
+    }
+
+    .hero h1 {
+      font-size: 3rem;
+      line-height: 1.15;
+      margin-bottom: 1.25rem;
+      letter-spacing: -0.04em;
+    }
+
+    .hero h1 span {
+      background: linear-gradient(135deg, var(--primary), var(--secondary-light));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
-    header p {
-      font-size: 1.2rem;
+    .hero p {
+      font-size: 1.15rem;
       color: var(--text-muted);
-      font-weight: 300;
+      margin-bottom: 2rem;
+      line-height: 1.6;
     }
 
-    /* Grid layout */
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .btn-secondary {
+      background: white;
+      color: var(--primary);
+      border: 1px solid var(--border-color);
+      padding: 0.6rem 1.2rem;
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+    }
+
+    .btn-secondary:hover {
+      background: var(--accent-light);
+      border-color: var(--accent-light-border);
+      color: var(--secondary);
+    }
+
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+
+    .hero-stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+    }
+
+    .hero-stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--border-focus);
+    }
+
+    .stat-val {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--primary);
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .stat-lbl {
+      font-size: 0.85rem;
+      color: var(--text-light);
+      margin-top: 0.25rem;
+    }
+
+    /* Main Grid Section */
+    .section-title-wrap {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .section-title-wrap h2 {
+      font-size: 2.25rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-title-wrap p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .main-section {
+      padding: 4.5rem 0;
+    }
+
     .grid {
       display: grid;
       grid-template-columns: 1fr;
@@ -77,108 +333,135 @@
       margin-bottom: 3rem;
     }
 
-    @media (min-width: 900px) {
+    @media (min-width: 960px) {
       .grid {
         grid-template-columns: 3fr 2fr;
       }
     }
 
-    /* Glassmorphic Panel */
+    /* Panel Card Styles */
     .panel {
       background: var(--bg-card);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--border-color);
-      border-radius: 16px;
+      border-radius: var(--radius-lg);
       padding: 2rem;
-      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      box-shadow: var(--shadow-lg);
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
     }
 
     .panel:hover {
-      border-color: rgba(255, 255, 255, 0.15);
-      box-shadow: 0 8px 32px 0 rgba(0, 240, 255, 0.05);
+      box-shadow: var(--shadow-indigo);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1rem;
     }
 
     .panel-title {
-      font-size: 1.4rem;
-      font-weight: 600;
-      margin-bottom: 1.5rem;
+      font-size: 1.35rem;
+      font-weight: 700;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.6rem;
     }
 
     .panel-title::before {
       content: '';
       display: inline-block;
       width: 4px;
-      height: 1.2rem;
-      background: var(--accent-cyan);
+      height: 1.25rem;
+      background: var(--secondary);
       border-radius: 2px;
     }
 
-    .panel-title.magenta::before {
-      background: var(--accent-magenta);
+    .panel-title.accent-sky::before {
+      background: var(--accent-sky);
     }
 
     /* Chart Container */
     .chart-container {
       position: relative;
-      height: 400px;
+      height: 380px;
       width: 100%;
     }
 
-    /* Architecture SVG Diagram */
+    /* SVG Architecture Diagram */
     .arch-svg {
       width: 100%;
       height: auto;
-      max-height: 400px;
+      max-height: 340px;
+      background-color: var(--bg-main);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+      padding: 1rem;
     }
 
     .node {
-      transition: filter 0.3s ease;
+      transition: var(--transition);
+      cursor: pointer;
     }
 
-    .node:hover {
-      filter: drop-shadow(0px 0px 8px rgba(0, 240, 255, 0.6));
+    .node:hover rect {
+      fill: var(--accent-light);
+      stroke: var(--secondary-light);
+      filter: drop-shadow(0 4px 8px rgba(37, 99, 235, 0.15));
     }
 
-    /* Info Panel details */
+    .node-core:hover rect {
+      fill: var(--primary-hover);
+    }
+
+    /* Meta Lists */
     .meta-list {
       list-style: none;
       display: flex;
       flex-direction: column;
-      gap: 1rem;
+      gap: 0.75rem;
     }
 
     .meta-item {
       display: flex;
       justify-content: space-between;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      padding-bottom: 0.5rem;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.6rem;
+    }
+
+    .meta-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
     }
 
     .meta-label {
       color: var(--text-muted);
-      font-weight: 400;
+      font-weight: 500;
+      font-size: 0.9rem;
     }
 
     .meta-value {
       font-family: 'JetBrains Mono', monospace;
       font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--primary);
     }
 
-    .meta-value.cyan { color: var(--accent-cyan); }
-    .meta-value.magenta { color: var(--accent-magenta); }
-    .meta-value.green { color: var(--accent-green); }
+    .meta-value.blue { color: var(--secondary); }
+    .meta-value.sky { color: var(--accent-sky); }
+    .meta-value.dark { color: var(--primary); }
 
-    /* Legend details */
+    /* Custom Legends */
     .legend-container {
       display: flex;
       justify-content: center;
       gap: 1.5rem;
-      margin-top: 1rem;
+      margin-top: 1.5rem;
       flex-wrap: wrap;
     }
 
@@ -186,285 +469,1562 @@
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       color: var(--text-muted);
+      font-weight: 500;
     }
 
     .legend-color {
-      width: 12px;
-      height: 12px;
-      border-radius: 3px;
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
     }
 
-    /* Quick status indicators */
+    /* Status Badges */
     .badge {
       padding: 0.25rem 0.75rem;
       border-radius: 9999px;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .badge-blue {
+      background: var(--accent-light);
+      color: var(--secondary);
+      border: 1px solid var(--accent-light-border);
+    }
+
+    .badge-sky {
+      background: #f0fdf4;
+      color: var(--success);
+      border: 1px solid #bbf7d0;
+    }
+
+    /* Interactive Lessons Hub */
+    .lessons-section {
+      background: var(--bg-card);
+      border-top: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-color);
+      padding: 5rem 0;
+    }
+
+    .lessons-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2.5rem;
+    }
+
+    @media (min-width: 900px) {
+      .lessons-layout {
+        grid-template-columns: 280px 1fr;
+      }
+    }
+
+    .lessons-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .lesson-tab-btn {
+      background: none;
+      border: 1px solid transparent;
+      padding: 1.1rem 1.25rem;
+      text-align: left;
+      font-family: 'Outfit', sans-serif;
       font-weight: 600;
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .lesson-tab-btn:hover {
+      background: var(--accent-light);
+      color: var(--secondary);
+    }
+
+    .lesson-tab-btn.active {
+      background: var(--primary);
+      color: white;
+      box-shadow: var(--shadow-md);
+    }
+
+    .lesson-num {
+      font-size: 0.8rem;
+      background: rgba(0, 0, 0, 0.1);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .lesson-tab-btn.active .lesson-num {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .lesson-content-pane {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 2.5rem;
+      box-shadow: var(--shadow-lg);
+      min-height: 480px;
+    }
+
+    .lesson-body {
+      display: none;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    .lesson-body.active {
+      display: block;
+    }
+
+    .lesson-title-meta {
+      color: var(--secondary);
+      font-weight: 700;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+
+    .lesson-body h3 {
+      font-size: 1.8rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .lesson-text {
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+      font-size: 1.05rem;
+      line-height: 1.7;
+    }
+
+    .lesson-text p {
+      margin-bottom: 1rem;
+    }
+
+    .lesson-text strong {
+      color: var(--primary);
+    }
+
+    /* Lesson Interactive Playgrounds */
+    .playground-box {
+      background-color: var(--bg-main);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .playground-title {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--primary);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .playground-title::before {
+      content: '⚡';
+      font-size: 1.1rem;
+    }
+
+    /* Interactive Simulator for Lesson 2 */
+    .sim-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 600px) {
+      .sim-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .sim-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .sim-btn {
+      background: white;
+      border: 1px solid var(--border-color);
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      font-size: 0.9rem;
+      color: var(--primary);
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .sim-btn:hover {
+      background: var(--accent-light);
+      border-color: var(--accent-light-border);
+      color: var(--secondary);
+    }
+
+    .sim-btn.action-primary {
+      background: var(--secondary);
+      color: white;
+      border-color: var(--secondary);
+    }
+
+    .sim-btn.action-primary:hover {
+      background: #1d4ed8;
+    }
+
+    .sim-display {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 1.25rem;
+      border-radius: var(--radius-sm);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      position: relative;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .sim-display-title {
+      font-size: 0.75rem;
+      color: var(--text-light);
+      margin-bottom: 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 0.5rem;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
 
-    .badge-cyan {
-      background: rgba(0, 240, 255, 0.1);
-      color: var(--accent-cyan);
-      border: 1px solid rgba(0, 240, 255, 0.2);
+    .sim-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.5rem;
     }
 
-    .badge-magenta {
-      background: rgba(255, 0, 127, 0.1);
-      color: var(--accent-magenta);
-      border: 1px solid rgba(255, 0, 127, 0.2);
+    .sim-table th {
+      color: #94a3b8;
+      text-align: left;
+      font-weight: 500;
+      font-size: 0.75rem;
+      padding-bottom: 0.5rem;
     }
 
-    /* Animations */
+    .sim-table td {
+      padding: 0.35rem 0;
+      font-weight: 700;
+    }
+
+    .sim-badge {
+      display: inline-block;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .sim-badge.idle { background: #334155; color: #cbd5e1; }
+    .sim-badge.active { background: #065f46; color: #34d399; }
+    .sim-badge.inflight { background: #854d0e; color: #fbbf24; }
+
+    .sim-explanation {
+      margin-top: 1rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 0.8rem;
+      color: #94a3b8;
+      line-height: 1.4;
+    }
+
+    .sim-explanation strong {
+      color: #fff;
+    }
+
+    /* Code Snippet styling */
+    .code-block {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 1.25rem;
+      border-radius: var(--radius-sm);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      overflow-x: auto;
+      margin-top: 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .code-comment { color: #64748b; }
+    .code-keyword { color: #f472b6; }
+    .code-def { color: #38bdf8; }
+    .code-str { color: #34d399; }
+
+    /* Lesson 1 comparison boxes */
+    .l1-comparison {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 600px) {
+      .l1-comparison {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .l1-box {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 1.25rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .l1-box h4 {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+      font-size: 1.1rem;
+    }
+
+    .l1-visual {
+      height: 60px;
+      background: var(--bg-main);
+      border-radius: 4px;
+      margin-top: 1rem;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* CSS Animations for Lesson 1 comparison visualizers */
+    .temporal-bar {
+      width: 0%;
+      height: 8px;
+      background: var(--secondary);
+      border-radius: 4px;
+      animation: fillTemporal 4s infinite linear;
+    }
+    @keyframes fillTemporal {
+      0% { width: 0%; opacity: 1; }
+      40% { width: 80%; opacity: 1; }
+      50% { width: 80%; opacity: 0.3; }
+      90% { width: 80%; opacity: 0.3; }
+      100% { width: 0%; opacity: 0; }
+    }
+
+    .spatial-nodes {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .spatial-node {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #cbd5e1;
+      border: 2px solid #94a3b8;
+    }
+    .spatial-node.active-pulse {
+      animation: nodePulse 1.5s infinite alternate;
+    }
+    .spatial-node.active-pulse:nth-child(1) { animation-delay: 0s; }
+    .spatial-node.active-pulse:nth-child(2) { animation-delay: 0.2s; }
+    .spatial-node.active-pulse:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes nodePulse {
+      0% { background: #cbd5e1; border-color: #94a3b8; box-shadow: none; }
+      100% { background: var(--accent-sky); border-color: var(--secondary-light); box-shadow: 0 0 8px rgba(14, 165, 233, 0.6); }
+    }
+
+    /* Lesson 3 Interactive Terminal output */
+    .term-box {
+      background: #0b0f19;
+      color: #a5b4fc;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      margin-top: 1.5rem;
+      box-shadow: var(--shadow-md);
+    }
+    .term-header {
+      background: #1e293b;
+      padding: 0.5rem 1rem;
+      font-size: 0.75rem;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .term-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ef4444;
+    }
+    .term-dot:nth-child(2) { background: #f59e0b; }
+    .term-dot:nth-child(3) { background: #10b981; }
+    .term-title { margin-left: 0.5rem; font-family: 'JetBrains Mono', monospace; }
+    
+    .term-body {
+      padding: 1.25rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      min-height: 150px;
+      white-space: pre-wrap;
+      color: #f1f5f9;
+    }
+    .term-prompt {
+      color: #38bdf8;
+    }
+
+    /* Glossary Section */
+    .glossary-section {
+      padding: 5rem 0;
+      background: var(--bg-main);
+    }
+
+    .glossary-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+
+    @media (min-width: 768px) {
+      .glossary-controls {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+      }
+    }
+
+    .search-input-wrap {
+      position: relative;
+      flex-grow: 1;
+      max-width: 480px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 0.8rem 1rem 0.8rem 2.5rem;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      font-family: inherit;
+      font-size: 0.95rem;
+      color: var(--text-main);
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--secondary-light);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-light);
+      pointer-events: none;
+    }
+
+    .filter-tags {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      background: white;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .filter-btn:hover {
+      background: var(--accent-light);
+      color: var(--secondary);
+      border-color: var(--accent-light-border);
+    }
+
+    .filter-btn.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 768px) {
+      .glossary-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (min-width: 1100px) {
+      .glossary-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    .glossary-card {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+    }
+
+    .glossary-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--border-focus);
+    }
+
+    .glossary-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.75rem;
+    }
+
+    .glossary-term {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 0;
+    }
+
+    .glossary-tag {
+      font-size: 0.7rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .tag-hardware { background: #fef3c7; color: #d97706; }
+    .tag-software { background: #e0f2fe; color: #0369a1; }
+    .tag-telemetry { background: #ecfdf5; color: #047857; }
+
+    .glossary-def {
+      color: var(--text-muted);
+      font-size: 0.925rem;
+      line-height: 1.5;
+      margin-bottom: 1rem;
+      flex-grow: 1;
+    }
+
+    .glossary-card-footer {
+      border-top: 1px solid var(--border-color);
+      padding-top: 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: var(--text-light);
+      font-weight: 500;
+    }
+
+    .glossary-details {
+      display: none;
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px dashed var(--border-color);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      animation: slideDown 0.2s ease-out;
+    }
+
+    .glossary-card.expanded .glossary-details {
+      display: block;
+    }
+
+    .glossary-card.expanded {
+      grid-row: span 2;
+      border-color: var(--secondary-light);
+      box-shadow: var(--shadow-indigo);
+    }
+
+    .expand-icon {
+      transition: var(--transition);
+    }
+
+    .glossary-card.expanded .expand-icon {
+      transform: rotate(180deg);
+    }
+
+    /* Highlight class for search */
+    mark {
+      background-color: #fef08a;
+      color: inherit;
+      padding: 0.1rem 0.2rem;
+      border-radius: 2px;
+    }
+
+    /* Keyframes */
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
+      from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Footer */
     .footer {
-      text-align: center;
-      padding: 3rem 0 1rem;
-      color: var(--text-muted);
+      background: var(--primary);
+      color: #94a3b8;
+      padding: 4rem 0 2rem 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 0.95rem;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2.5rem;
+      margin-bottom: 3rem;
+    }
+
+    @media (min-width: 768px) {
+      .footer-grid {
+        grid-template-columns: 2fr 1fr 1fr;
+      }
+    }
+
+    .footer-brand {
+      max-width: 320px;
+    }
+
+    .footer-brand .brand-name {
+      color: white;
+      margin-bottom: 1rem;
+      display: inline-block;
+    }
+
+    .footer-text {
+      color: #94a3b8;
+      line-height: 1.6;
       font-size: 0.9rem;
+    }
+
+    .footer-title {
+      color: white;
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .footer-links {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .footer-links a {
+      color: #94a3b8;
+      text-decoration: none;
+      transition: var(--transition);
+      font-size: 0.9rem;
+    }
+
+    .footer-links a:hover {
+      color: white;
+    }
+
+    .footer-bottom {
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    @media (min-width: 768px) {
+      .footer-bottom {
+        flex-direction: row;
+      }
+    }
+
+    .footer-copyright {
+      font-size: 0.85rem;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>xdna-top telemetry dashboard</h1>
-      <p>Unified Real-Time Telemetry & System Architecture for AMD Strix Halo</p>
-    </header>
 
-    <div class="grid">
-      <!-- Chart Panel -->
-      <div class="panel">
-        <div class="panel-title">3-State Telemetry Visualization</div>
-        <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.95rem;">
-          Historical trace showing transition states: 
-          <strong>(1) Idle</strong> (t=0s to t=10s), 
-          <strong>(2) iGPU Prefill Load</strong> (t=10s to t=15s), 
-          <strong>(3) NPU Execution Active</strong> (t=40s onwards).
-        </p>
-        <div class="chart-container">
-          <canvas id="telemetryChart"></canvas>
-        </div>
-        <div class="legend-container">
-          <div class="legend-item">
-            <div class="legend-color" style="background: var(--accent-cyan);"></div>
-            <span>iGPU Busy %</span>
-          </div>
-          <div class="legend-item">
-            <div class="legend-color" style="background: rgba(255, 0, 127, 0.8);"></div>
-            <span>iGPU Power (Watts)</span>
-          </div>
-          <div class="legend-item">
-            <div class="legend-color" style="background: var(--accent-green);"></div>
-            <span>NPU Context Active (0/1)</span>
-          </div>
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="container nav-container">
+      <a href="#" class="brand">
+        <div class="brand-logo">x</div>
+        <span class="brand-name">xdna-top</span>
+        <span class="brand-badge">v0.1 Alpha</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#dashboard" class="nav-link">Dashboard</a></li>
+        <li><a href="#lessons" class="nav-link">Learning Hub</a></li>
+        <li><a href="#glossary" class="nav-link">Glossary</a></li>
+        <li><a href="https://github.com/boxwrench/xdna-top" class="nav-btn" target="_blank">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container hero-grid">
+      <div class="hero-content">
+        <span class="hero-tag">Ryzen AI NPU telemetry</span>
+        <h1>The system monitor for <span>AMD Ryzen AI NPUs</span></h1>
+        <p>A clean, unified terminal dashboard providing real-time NPU + iGPU telemetry for AMD Strix Halo APUs. Directly scraping sysfs endpoints and tracking hardware context deltas when stock tools come up empty.</p>
+        <div class="hero-actions">
+          <a href="#dashboard" class="nav-btn">View Live Telemetry</a>
+          <a href="#lessons" class="btn-secondary">Explore Learning Hub</a>
         </div>
       </div>
-
-      <!-- Info & Architecture Panel -->
-      <div class="panel">
-        <div class="panel-title magenta">System Architecture</div>
-        <div style="margin-bottom: 2rem;">
-          <svg class="arch-svg" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <!-- Background grids/connectors -->
-            <path d="M70 120 H330 M70 180 H330 M200 60 V240" stroke="rgba(255, 255, 255, 0.05)" stroke-width="2" />
-            
-            <!-- Links / Arrows -->
-            <path d="M120 120 V80 H200" stroke="var(--accent-cyan)" stroke-width="1.5" stroke-dasharray="4 4" />
-            <path d="M280 120 V80 H200" stroke="var(--accent-magenta)" stroke-width="1.5" stroke-dasharray="4 4" />
-            <path d="M200 120 V160" stroke="#f3f4f6" stroke-width="2" />
-            
-            <!-- Nodes -->
-            <!-- Kernel / HW sources -->
-            <g class="node">
-              <rect x="50" x="50" y="100" width="100" height="40" rx="6" fill="#1e293b" stroke="var(--accent-cyan)" stroke-width="1.5" />
-              <text x="100" y="125" fill="#f3f4f6" font-size="11" font-family="Outfit" font-weight="600" text-anchor="middle">sysfs (iGPU)</text>
-            </g>
-
-            <g class="node">
-              <rect x="250" y="100" width="100" height="40" rx="6" fill="#1e293b" stroke="var(--accent-magenta)" stroke-width="1.5" />
-              <text x="300" y="125" fill="#f3f4f6" font-size="11" font-family="Outfit" font-weight="600" text-anchor="middle">xrt-smi (NPU)</text>
-            </g>
-
-            <!-- TUI Daemon/App -->
-            <g class="node">
-              <rect x="130" y="160" width="140" height="50" rx="8" fill="#0f172a" stroke="#f3f4f6" stroke-width="2" />
-              <text x="200" y="185" fill="#f3f4f6" font-size="12" font-family="Outfit" font-weight="800" text-anchor="middle">xdna-top Core</text>
-              <text x="200" y="198" fill="var(--text-muted)" font-size="9" font-family="Outfit" text-anchor="middle">Fused Scraping (5 Hz)</text>
-            </g>
-
-            <!-- Output modes -->
-            <g class="node">
-              <rect x="60" y="240" width="110" height="36" rx="6" fill="#111827" stroke="var(--accent-cyan)" stroke-width="1" />
-              <text x="115" y="262" fill="var(--accent-cyan)" font-size="10" font-family="JetBrains Mono" text-anchor="middle">--json Output</text>
-            </g>
-
-            <g class="node">
-              <rect x="230" y="240" width="110" height="36" rx="6" fill="#111827" stroke="var(--accent-magenta)" stroke-width="1" />
-              <text x="285" y="262" fill="var(--accent-magenta)" font-size="10" font-family="Outfit" font-weight="600" text-anchor="middle">TUI Terminal</text>
-            </g>
-          </svg>
+      <div class="hero-stats">
+        <div class="hero-stat-card">
+          <div class="stat-val">5 Hz</div>
+          <div class="stat-lbl">Telemetry Refresh Rate</div>
         </div>
-
-        <div class="panel-title">Telemetry Parameters</div>
-        <ul class="meta-list">
-          <li class="meta-item">
-            <span class="meta-label">Total Time Samples</span>
-            <span class="meta-value" id="traceLength">0</span>
-          </li>
-          <li class="meta-item">
-            <span class="meta-label">iGPU Idle Threshold</span>
-            <span class="meta-value cyan">10%</span>
-          </li>
-          <li class="meta-item">
-            <span class="meta-label">iGPU Prefill Trigger</span>
-            <span class="meta-value magenta">35.0 Watts</span>
-          </li>
-          <li class="meta-item">
-            <span class="meta-label">NPU Active State Signal</span>
-            <span class="meta-value green">Delta Counter > 0</span>
-          </li>
-          <li class="meta-item">
-            <span class="meta-label">Telemetry Refresh Rate</span>
-            <span class="meta-value">5 Hz (200ms)</span>
-          </li>
-        </ul>
+        <div class="hero-stat-card">
+          <div class="stat-val">NPU + iGPU</div>
+          <div class="stat-lbl">Unified Multi-Engine View</div>
+        </div>
+        <div class="hero-stat-card">
+          <div class="stat-val">XDNA 2</div>
+          <div class="stat-lbl">RyzenAI-npu5 Core</div>
+        </div>
+        <div class="hero-stat-card">
+          <div class="stat-val">Zero Root</div>
+          <div class="stat-lbl">User Space sysfs access</div>
+        </div>
       </div>
     </div>
+  </section>
 
-    <!-- Telemetry Data Script Loading -->
-    <script src="telemetry_data.js"></script>
-    <script>
-      document.getElementById('traceLength').innerText = telemetryData.length;
+  <!-- Dashboard Section -->
+  <section class="main-section" id="dashboard">
+    <div class="container">
+      <div class="section-title-wrap">
+        <h2>Live Telemetry Visualization</h2>
+        <p>Analyze transitions between idle, iGPU loading, and spatial NPU execution states in a representative Strix Halo telemetry trace.</p>
+      </div>
 
-      // Extract datasets
-      const labels = telemetryData.map(d => d.relative_ts + 's');
-      const gpuBusy = telemetryData.map(d => d.gpu_busy_pct);
-      const gpuPower = telemetryData.map(d => d.gpu_power_w);
-      const npuActive = telemetryData.map(d => d.npu_active ? 100 : 0); // scale NPU active to 100 for visual comparison
+      <div class="grid">
+        <!-- Chart Panel -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">3-State Telemetry Stream</div>
+            <span class="badge badge-blue">Interactive Chart</span>
+          </div>
+          <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem;">
+            This illustrative trace highlights three distinct phases:
+            <strong>(1) Idle State</strong> (t=0s to t=10s),
+            <strong>(2) iGPU Prefill Load</strong> (t=10s to t=15s), and
+            <strong>(3) NPU Execution Active</strong> (t&approx;40s to t&approx;44s).
+            It is a representative sample for visualization &mdash; the real captured
+            artifacts (screenshot, asciinema cast, and 1&nbsp;Hz telemetry log) live in the
+            <a href="https://github.com/boxwrench/xdna-top/tree/main/docs/bundle" target="_blank" style="color: var(--secondary); font-weight: 600;">capture bundle</a>.
+          </p>
+          <div class="chart-container">
+            <canvas id="telemetryChart"></canvas>
+          </div>
+          <div class="legend-container">
+            <div class="legend-item">
+              <div class="legend-color" style="background: var(--secondary);"></div>
+              <span>iGPU Busy %</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: var(--accent-sky);"></div>
+              <span>iGPU Power (Watts)</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: rgba(37, 99, 235, 0.15); border: 1.5px dashed var(--secondary-light);"></div>
+              <span>NPU Activity State (On/Off)</span>
+            </div>
+          </div>
+        </div>
 
-      // Render Chart
-      const ctx = document.getElementById('telemetryChart').getContext('2d');
-      new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [
-            {
-              label: 'iGPU Busy %',
-              data: gpuBusy,
-              borderColor: '#00f0ff',
-              backgroundColor: 'rgba(0, 240, 255, 0.05)',
-              borderWidth: 2,
-              pointRadius: 0,
-              yAxisID: 'y'
-            },
-            {
-              label: 'iGPU Power (W)',
-              data: gpuPower,
-              borderColor: '#ff007f',
-              backgroundColor: 'transparent',
-              borderWidth: 2,
-              pointRadius: 0,
-              yAxisID: 'y1'
-            },
-            {
-              label: 'NPU Active',
-              data: npuActive,
-              borderColor: '#39ff14',
-              backgroundColor: 'rgba(57, 255, 20, 0.03)',
-              borderWidth: 1.5,
-              borderDash: [5, 5],
-              pointRadius: 0,
-              fill: true,
-              yAxisID: 'y'
-            }
-          ]
+        <!-- Info & Architecture Panel -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title accent-sky">System Architecture</div>
+            <span class="badge badge-sky">Data Pipeline</span>
+          </div>
+          <div style="margin-bottom: 2rem;">
+            <svg class="arch-svg" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Background grids/connectors -->
+              <path d="M70 120 H330 M70 180 H330 M200 60 V240" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="2 2" />
+              
+              <!-- Links / Arrows -->
+              <path d="M120 120 V80 H200" stroke="var(--secondary)" stroke-width="1.5" stroke-dasharray="3 3" />
+              <path d="M280 120 V80 H200" stroke="var(--accent-sky)" stroke-width="1.5" stroke-dasharray="3 3" />
+              <path d="M200 120 V160" stroke="var(--primary)" stroke-width="2" />
+              
+              <!-- Nodes -->
+              <!-- Kernel / HW sources -->
+              <g class="node">
+                <rect x="50" y="100" width="100" height="40" rx="6" fill="#ffffff" stroke="var(--secondary)" stroke-width="1.5" />
+                <text x="100" y="125" fill="var(--primary)" font-size="11" font-family="Outfit" font-weight="600" text-anchor="middle">sysfs (iGPU)</text>
+              </g>
+
+              <g class="node">
+                <rect x="250" y="100" width="100" height="40" rx="6" fill="#ffffff" stroke="var(--accent-sky)" stroke-width="1.5" />
+                <text x="300" y="125" fill="var(--primary)" font-size="11" font-family="Outfit" font-weight="600" text-anchor="middle">xrt-smi (NPU)</text>
+              </g>
+
+              <!-- TUI Daemon/App -->
+              <g class="node node-core">
+                <rect x="130" y="160" width="140" height="50" rx="8" fill="var(--primary)" stroke="var(--secondary-light)" stroke-width="1.5" />
+                <text x="200" y="185" fill="#ffffff" font-size="12" font-family="Outfit" font-weight="800" text-anchor="middle">xdna-top Core</text>
+                <text x="200" y="198" fill="#e0f2fe" font-size="9" font-family="Inter" text-anchor="middle">Fused Scraping (5 Hz)</text>
+              </g>
+
+              <!-- Output modes -->
+              <g class="node">
+                <rect x="60" y="240" width="110" height="36" rx="6" fill="#ffffff" stroke="var(--secondary-light)" stroke-width="1" />
+                <text x="115" y="262" fill="var(--secondary)" font-size="10" font-family="JetBrains Mono" font-weight="600" text-anchor="middle">--json Output</text>
+              </g>
+
+              <g class="node">
+                <rect x="230" y="240" width="110" height="36" rx="6" fill="#ffffff" stroke="var(--primary)" stroke-width="1" />
+                <text x="285" y="262" fill="var(--primary)" font-size="10" font-family="Outfit" font-weight="600" text-anchor="middle">TUI Terminal</text>
+              </g>
+            </svg>
+          </div>
+
+          <div class="panel-header" style="margin-bottom: 1rem; padding-bottom: 0.5rem;">
+            <div class="panel-title" style="font-size: 1.1rem;">Telemetry Parameters</div>
+          </div>
+          <ul class="meta-list">
+            <li class="meta-item">
+              <span class="meta-label">Total Time Samples</span>
+              <span class="meta-value dark" id="traceLength">0</span>
+            </li>
+            <li class="meta-item">
+              <span class="meta-label">iGPU Idle Threshold</span>
+              <span class="meta-value blue">10%</span>
+            </li>
+            <li class="meta-item">
+              <span class="meta-label">iGPU Prefill Trigger</span>
+              <span class="meta-value sky">35.0 Watts</span>
+            </li>
+            <li class="meta-item">
+              <span class="meta-label">NPU Active State Signal</span>
+              <span class="meta-value blue">Delta Counter > 0</span>
+            </li>
+            <li class="meta-item">
+              <span class="meta-label">Telemetry Refresh Rate</span>
+              <span class="meta-value dark">5 Hz (200ms)</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Lessons Section -->
+  <section class="lessons-section" id="lessons">
+    <div class="container">
+      <div class="section-title-wrap">
+        <h2>Interactive Learning Hub</h2>
+        <p>Master how xdna-top bridges hardware pipelines, parses NPU telemetry, and avoids common driver stack pitfalls.</p>
+      </div>
+
+      <div class="lessons-layout">
+        <!-- Sidebar Navigation -->
+        <div class="lessons-sidebar">
+          <button class="lesson-tab-btn active" onclick="switchLesson(1)">
+            <span class="lesson-num">01</span>
+            Temporal vs. Spatial
+          </button>
+          <button class="lesson-tab-btn" onclick="switchLesson(2)">
+            <span class="lesson-num">02</span>
+            The Counter-Delta Trick
+          </button>
+          <button class="lesson-tab-btn" onclick="switchLesson(3)">
+            <span class="lesson-num">03</span>
+            Scraping sysfs & XRT
+          </button>
+        </div>
+
+        <!-- Content Pane -->
+        <div class="lesson-content-pane">
+          
+          <!-- Lesson 1 -->
+          <div class="lesson-body active" id="lesson-1">
+            <span class="lesson-title-meta">Lesson 01 · Silicon Architecture</span>
+            <h3>Temporal vs. Spatial Compute Engines</h3>
+            <div class="lesson-text">
+              <p>To monitor a Strix Halo APU, you must understand that the iGPU and NPU operate under entirely different execution models:</p>
+              <p><strong>The iGPU</strong> operates on a <strong>Temporal Execution Model</strong>. It has standard cores executing instruction streams over time. Threads are scheduled onto shader cores, and "busy %" measures how many cycles these cores spent doing non-idle work in a sampling window. This represents conventional temporal loading.</p>
+              <p><strong>The NPU (XDNA)</strong> utilizes a <strong>Spatial Dataflow Model</strong>. Instead of scheduling instructions to fixed cores, an array of AI Engine (AIE) tiles is physical-mapped and routed into a custom spatial layout. A workload claims a static <em>Hardware Context</em> (a partition of tiles), and data streams directly through the fabric. Consequently, there is <strong>no honest "NPU utilization %"</strong>; a partition is either allocated to route data or it is not.</p>
+            </div>
+            
+            <div class="playground-box">
+              <div class="playground-title">Visualizing the Execution Styles</div>
+              <div class="l1-comparison">
+                <div class="l1-box">
+                  <h4>Temporal iGPU</h4>
+                  <p style="font-size: 0.85rem; color: var(--text-muted);">Cores grind through sequential queues. Utilization scales linearly with active periods.</p>
+                  <div class="l1-visual">
+                    <div class="temporal-bar"></div>
+                  </div>
+                </div>
+                <div class="l1-box">
+                  <h4>Spatial NPU</h4>
+                  <p style="font-size: 0.85rem; color: var(--text-muted);">Data streams concurrently through a static hardware configuration mesh.</p>
+                  <div class="l1-visual">
+                    <div class="spatial-nodes">
+                      <div class="spatial-node active-pulse"></div>
+                      <div class="spatial-node active-pulse"></div>
+                      <div class="spatial-node active-pulse"></div>
+                      <div class="spatial-node"></div>
+                      <div class="spatial-node"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lesson 2 -->
+          <div class="lesson-body" id="lesson-2">
+            <span class="lesson-title-meta">Lesson 02 · Monitoring Algorithm</span>
+            <h3>The Counter-Delta Trick</h3>
+            <div class="lesson-text">
+              <p>Since the XDNA architecture does not offer a direct "utilization %," how do we know if it is active? We look at hardware-context counters.</p>
+              <p>Through AMD XRT, the driver tracks cumulative <strong>Submissions</strong> (work units pushed to NPU) and <strong>Completions</strong> (work units finished by NPU) per context. Naively looking at the driver's status column tells us "Active" as long as a model remains loaded in memory. To find actual usage, <code>xdna-top</code> tracks counter changes across samples:</p>
+            </div>
+            
+            <div class="playground-box">
+              <div class="playground-title">Interactive State Simulator</div>
+              <div class="sim-grid">
+                <div class="sim-controls">
+                  <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Click buttons to mock hardware telemetry changes and see the derived state output in real time:</p>
+                  <button class="sim-btn" onclick="runSimStep('idle')">
+                    <span>Simulate Idle State</span>
+                    <span style="font-size: 0.75rem; color: var(--text-light);">No change</span>
+                  </button>
+                  <button class="sim-btn action-primary" onclick="runSimStep('submit')">
+                    <span>Submit & Execute Job</span>
+                    <span style="font-size: 0.75rem;">Submissions +1, Completions +1</span>
+                  </button>
+                  <button class="sim-btn" onclick="runSimStep('inflight')">
+                    <span>Simulate In-Flight Queue</span>
+                    <span style="font-size: 0.75rem; color: var(--text-light);">Submissions +1</span>
+                  </button>
+                  <button class="sim-btn" onclick="runSimStep('reset')">
+                    <span>Reset Telemetry Sim</span>
+                    <span style="font-size: 0.75rem; color: var(--text-light);">Reset to 0</span>
+                  </button>
+                </div>
+                
+                <div class="sim-display">
+                  <div class="sim-display-title">xdna-top Telemetry Engine (Derived AIE State)</div>
+                  <table class="sim-table">
+                    <thead>
+                      <tr>
+                        <th>CTX ID</th>
+                        <th>SUBMISSIONS</th>
+                        <th>COMPLETIONS</th>
+                        <th>DERIVED STATE</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>1</td>
+                        <td id="sim-sub">12,450</td>
+                        <td id="sim-comp">12,450</td>
+                        <td><span class="sim-badge idle" id="sim-state">Idle</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div class="sim-explanation" id="sim-exp">
+                    Context is loaded but idle. Counters did not increment since the last sample.
+                  </div>
+                </div>
+              </div>
+
+              <div class="code-block">
+<span class="code-keyword">def</span> <span class="code-def">derive_npu_state</span>(prev_sub, curr_sub, curr_comp):
+    <span class="code-comment"># If submissions are increasing, work is running</span>
+    is_active = curr_sub &gt; prev_sub
+    <span class="code-comment"># If submissions outpace completions, jobs are queued in hardware</span>
+    in_flight = curr_sub &gt; curr_comp
+    
+    <span class="code-keyword">if</span> is_active:
+        <span class="code-keyword">return</span> <span class="code-str">"ACTIVE"</span> <span class="code-keyword">if</span> <span class="code-keyword">not</span> in_flight <span class="code-keyword">else</span> <span class="code-str">"ACTIVE (IN-FLIGHT)"</span>
+    <span class="code-keyword">return</span> <span class="code-str">"IDLE"</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lesson 3 -->
+          <div class="lesson-body" id="lesson-3">
+            <span class="lesson-title-meta">Lesson 03 · Telemetry Scraping</span>
+            <h3>Harvesting Linux sysfs & XRT Outputs</h3>
+            <div class="lesson-text">
+              <p>On AMD Strix Halo running Linux, standard CLI monitoring utilities like <code>amd-smi</code> often fail or return <code>N/A</code>. To circumvent this, <code>xdna-top</code> reads the telemetry directly from raw file paths and command binaries in user space:</p>
+              <p><strong>iGPU Telemetry:</strong> Read from the kernel's DRM sysfs class path: <code>/sys/class/drm/card1/device/gpu_busy_percent</code> for load percent, and <code>/sys/class/drm/card1/device/hwmon/hwmon*/power1_input</code> for instantaneous power in microwatts.</p>
+              <p><strong>NPU Telemetry:</strong> Read by calling and parsing <code>xrt-smi examine --report aie-partitions</code>, extracting the owning PID, partition IDs, and active context counts.</p>
+            </div>
+            
+            <div class="playground-box">
+              <div class="playground-title">Interactive Shell Scanner</div>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">Click a command below to mock execution and examine the raw output parsed by xdna-top:</p>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button class="sim-btn" onclick="runShellCmd('cat_busy')">cat .../gpu_busy_percent</button>
+                <button class="sim-btn" onclick="runShellCmd('cat_power')">cat .../power1_input</button>
+                <button class="sim-btn" onclick="runShellCmd('xrt_partitions')">xrt-smi examine --report aie-partitions</button>
+              </div>
+              
+              <div class="term-box">
+                <div class="term-header">
+                  <div class="term-dot"></div>
+                  <div class="term-dot"></div>
+                  <div class="term-dot"></div>
+                  <span class="term-title">terminal - raw_scrape</span>
+                </div>
+                <div class="term-body" id="term-out"><span class="term-prompt">user@strix-halo:~$</span> Click one of the commands above to run...</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Glossary Section -->
+  <section class="glossary-section" id="glossary">
+    <div class="container">
+      <div class="section-title-wrap">
+        <h2>Telemetry Glossary</h2>
+        <p>A comprehensive glossary of NPU architecture, hardware telemetry terms, and AMD XDNA specific concepts.</p>
+      </div>
+
+      <div class="glossary-controls">
+        <div class="search-input-wrap">
+          <svg class="search-icon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="glossarySearch" class="search-input" placeholder="Search glossary terms (e.g. NPU, context, spatial)..." oninput="filterGlossary()">
+        </div>
+        <div class="filter-tags">
+          <button class="filter-btn active" onclick="filterCategory('all')">All</button>
+          <button class="filter-btn" onclick="filterCategory('hardware')">Hardware</button>
+          <button class="filter-btn" onclick="filterCategory('software')">Software</button>
+          <button class="filter-btn" onclick="filterCategory('telemetry')">Telemetry</button>
+        </div>
+      </div>
+
+      <div class="glossary-grid" id="glossaryGrid">
+        <!-- APU -->
+        <div class="glossary-card" data-category="hardware" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">APU</h3>
+            <span class="glossary-tag tag-hardware">Hardware</span>
+          </div>
+          <p class="glossary-def">Accelerated Processing Unit. An AMD processor package containing CPU cores, integrated graphics (iGPU), and dedicated AI accelerators (NPU) on a single die.</p>
+          <div class="glossary-card-footer">
+            <span>Strix Halo, Phoenix, Hawk Point</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> System monitors traditionally look at CPU and GPU separately. An APU fuses these alongside an NPU, necessitating tools like <code>xdna-top</code> that look at both compute layers side by side to ensure resources aren't bottlenecking.
+          </div>
+        </div>
+
+        <!-- NPU -->
+        <div class="glossary-card" data-category="hardware" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">NPU</h3>
+            <span class="glossary-tag tag-hardware">Hardware</span>
+          </div>
+          <p class="glossary-def">Neural Processing Unit. A specialized hardware accelerator built specifically for machine learning inference tasks, optimized for low power and high matrix throughput.</p>
+          <div class="glossary-card-footer">
+            <span>AMD XDNA, XDNA 2</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> Running local LLM inference on an NPU rather than the GPU saves system memory bandwidth and power, allowing the iGPU to be dedicated to other tasks like graphics rendering.
+          </div>
+        </div>
+
+        <!-- iGPU -->
+        <div class="glossary-card" data-category="hardware" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">iGPU</h3>
+            <span class="glossary-tag tag-hardware">Hardware</span>
+          </div>
+          <p class="glossary-def">Integrated Graphics Processing Unit. The onboard GPU engine within the APU. In Strix Halo, this is the Radeon 8060S (RDNA 3.5 gfx1151) boasting massive compute capability.</p>
+          <div class="glossary-card-footer">
+            <span>Radeon 8060S / gfx1151</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> Because the Strix Halo iGPU is so large, developers frequently use it alongside the NPU to run concurrent local model inference, making dual-telemetry critical.
+          </div>
+        </div>
+
+        <!-- Spatial Dataflow -->
+        <div class="glossary-card" data-category="hardware" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">Spatial Dataflow</h3>
+            <span class="glossary-tag tag-hardware">Hardware</span>
+          </div>
+          <p class="glossary-def">An architectural model where compute cells (AIE tiles) are physically arranged, routing stream data directly through circuits rather than executing temporal instructions.</p>
+          <div class="glossary-card-footer">
+            <span>XDNA Architecture</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> Because data flows through pre-routed cells rather than competing for scheduler cycles, standard "utilization percentage" metrics are useless. You either stream data through a context or you do not.
+          </div>
+        </div>
+
+        <!-- Hardware Context -->
+        <div class="glossary-card" data-category="software" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">Hardware Context</h3>
+            <span class="glossary-tag tag-software">Software</span>
+          </div>
+          <p class="glossary-def">An active partition of AI Engine tiles allocated on the XDNA NPU fabric for an application. A context is registered to a unique process PID.</p>
+          <div class="glossary-card-footer">
+            <span>aie-partitions table</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> The driver status flags a context as "Active" whenever a process holds the partition. <code>xdna-top</code> parses this table to find which PIDs own NPU space.
+          </div>
+        </div>
+
+        <!-- Counter-Delta Trick -->
+        <div class="glossary-card" data-category="telemetry" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">Counter-Delta Trick</h3>
+            <span class="glossary-tag tag-telemetry">Telemetry</span>
+          </div>
+          <p class="glossary-def">The logic routine used by xdna-top to determine true NPU execution. It diffs cumulative context submission counters across discrete samples.</p>
+          <div class="glossary-card-footer">
+            <span>Activity Derivation</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> Prevents false positives. A loaded model context will report "Active" state to the OS even when completely idle; tracking sample-to-sample deltas surfaces true processor activity.
+          </div>
+        </div>
+
+        <!-- In-flight Job -->
+        <div class="glossary-card" data-category="telemetry" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">In-flight Job</h3>
+            <span class="glossary-tag tag-telemetry">Telemetry</span>
+          </div>
+          <p class="glossary-def">A state where the number of submissions sent to the NPU is strictly greater than the completions reported back, indicating active hardware processing.</p>
+          <div class="glossary-card-footer">
+            <span>Submissions > Completions</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> Seeing jobs "in-flight" verifies that work is currently queued on AIE tiles at the exact instant the telemetry sample was taken.
+          </div>
+        </div>
+
+        <!-- sysfs -->
+        <div class="glossary-card" data-category="software" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">sysfs</h3>
+            <span class="glossary-tag tag-software">Software</span>
+          </div>
+          <p class="glossary-def">A virtual filesystem provided by the Linux kernel that exposes device driver statistics, parameters, and telemetry nodes to user space.</p>
+          <div class="glossary-card-footer">
+            <span>/sys/class/drm/card*</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> <code>xdna-top</code> bypasses broken or empty <code>amd-smi</code> commands on APUs by reading directly from raw sysfs files like <code>gpu_busy_percent</code>.
+          </div>
+        </div>
+
+        <!-- XRT -->
+        <div class="glossary-card" data-category="software" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">XRT</h3>
+            <span class="glossary-tag tag-software">Software</span>
+          </div>
+          <p class="glossary-def">Xilinx Runtime. The unified library and driver layer utilized by AMD to configure, load, and manage AI Engines and Ryzen AI NPU cores.</p>
+          <div class="glossary-card-footer">
+            <span>xrt-smi Command</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> XRT handles low-level spatial scheduling on the NPU fabric. The <code>xrt-smi</code> utility exposes the partition reports that supply the hardware counter telemetry.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <span class="brand-name">xdna-top</span>
+          <p class="footer-text">Bridging the telemetry gaps on AMD APU silicon. Built and maintained under the Boxwrench project for deep hardware monitoring precision.</p>
+        </div>
+        <div>
+          <h4 class="footer-title">Navigation</h4>
+          <ul class="footer-links">
+            <li><a href="#dashboard">Live Dashboard</a></li>
+            <li><a href="#lessons">Learning Hub</a></li>
+            <li><a href="#glossary">Telemetry Glossary</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="footer-title">Documentation</h4>
+          <ul class="footer-links">
+            <li><a href="https://github.com/boxwrench/xdna-top/blob/main/docs/HOW-IT-WORKS.md" target="_blank">How It Works Guide</a></li>
+            <li><a href="https://github.com/boxwrench/xdna-top/blob/main/docs/ORIGINS.md" target="_blank">Project Origins</a></li>
+            <li><a href="https://github.com/boxwrench/xdna-top" target="_blank">GitHub Repository</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div class="footer-copyright">
+          &copy; 2026 Boxwrench Project. Released under the Apache-2.0 license.
+        </div>
+        <div class="footer-text">
+          Illustrative telemetry modeled on AMD Ryzen AI Max+ 395 (Strix Halo).
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Telemetry Data Script Loading -->
+  <script src="telemetry_data.js"></script>
+  <script>
+    document.getElementById('traceLength').innerText = telemetryData.length;
+
+    // Extract datasets
+    const labels = telemetryData.map(d => d.relative_ts + 's');
+    const gpuBusy = telemetryData.map(d => d.gpu_busy_pct);
+    const gpuPower = telemetryData.map(d => d.gpu_power_w);
+    const npuActive = telemetryData.map(d => d.npu_active ? 100 : 0); // scale NPU active to 100 for visual comparison
+
+    // Render Chart using the new Blue Palette styling
+    const ctx = document.getElementById('telemetryChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'iGPU Busy %',
+            data: gpuBusy,
+            borderColor: '#2563eb', // Royal Blue
+            backgroundColor: 'rgba(37, 99, 235, 0.05)',
+            borderWidth: 2,
+            pointRadius: 0,
+            yAxisID: 'y'
+          },
+          {
+            label: 'iGPU Power (W)',
+            data: gpuPower,
+            borderColor: '#0ea5e9', // Sky Blue
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            pointRadius: 0,
+            yAxisID: 'y1'
+          },
+          {
+            label: 'NPU Active',
+            data: npuActive,
+            borderColor: '#3b82f6', // Medium blue
+            backgroundColor: 'rgba(59, 130, 246, 0.08)',
+            borderWidth: 1.5,
+            borderDash: [5, 5],
+            pointRadius: 0,
+            fill: true,
+            yAxisID: 'y'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false,
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: {
-            mode: 'index',
-            intersect: false,
+        plugins: {
+          legend: {
+            display: false // Using custom HTML legends
           },
-          plugins: {
-            legend: {
-              display: false // Using custom HTML legends
-            },
-            tooltip: {
-              backgroundColor: '#111827',
-              titleColor: '#f3f4f6',
-              bodyColor: '#f3f4f6',
-              borderColor: 'rgba(255, 255, 255, 0.1)',
-              borderWidth: 1,
-              callbacks: {
-                label: function(context) {
-                  let label = context.dataset.label || '';
-                  if (label === 'NPU Active') {
-                    return `NPU State: ${context.raw === 100 ? 'ACTIVE' : 'IDLE'}`;
-                  }
-                  return `${label}: ${context.raw}`;
+          tooltip: {
+            backgroundColor: '#0f2a4a',
+            titleColor: '#ffffff',
+            bodyColor: '#ffffff',
+            borderColor: '#e2e8f0',
+            borderWidth: 1,
+            callbacks: {
+              label: function(context) {
+                let label = context.dataset.label || '';
+                if (label === 'NPU Active') {
+                  return `NPU State: ${context.raw === 100 ? 'ACTIVE' : 'IDLE'}`;
                 }
-              }
-            }
-          },
-          scales: {
-            x: {
-              grid: {
-                color: 'rgba(255, 255, 255, 0.03)'
-              },
-              ticks: {
-                color: '#9ca3af',
-                maxTicksLimit: 12
-              }
-            },
-            y: {
-              min: 0,
-              max: 100,
-              title: {
-                display: true,
-                text: 'GPU Load (%) / NPU (0-100)',
-                color: '#9ca3af'
-              },
-              grid: {
-                color: 'rgba(255, 255, 255, 0.03)'
-              },
-              ticks: {
-                color: '#9ca3af'
-              }
-            },
-            y1: {
-              min: 0,
-              max: 100,
-              position: 'right',
-              title: {
-                display: true,
-                text: 'iGPU Power (Watts)',
-                color: '#9ca3af'
-              },
-              grid: {
-                drawOnChartArea: false // only want grid lines for left axis
-              },
-              ticks: {
-                color: '#9ca3af'
+                return `${label}: ${context.raw}`;
               }
             }
           }
+        },
+        scales: {
+          x: {
+            grid: {
+              color: '#f1f5f9'
+            },
+            ticks: {
+              color: '#64748b',
+              maxTicksLimit: 12
+            }
+          },
+          y: {
+            min: 0,
+            max: 100,
+            title: {
+              display: true,
+              text: 'GPU Load (%) / NPU (0-100)',
+              color: '#475569',
+              font: {
+                weight: '600'
+              }
+            },
+            grid: {
+              color: '#f1f5f9'
+            },
+            ticks: {
+              color: '#64748b'
+            }
+          },
+          y1: {
+            min: 0,
+            max: 100,
+            position: 'right',
+            title: {
+              display: true,
+              text: 'iGPU Power (Watts)',
+              color: '#475569',
+              font: {
+                weight: '600'
+              }
+            },
+            grid: {
+              drawOnChartArea: false
+            },
+            ticks: {
+              color: '#64748b'
+            }
+          }
+        }
+      }
+    });
+
+    // Lesson Switcher Logic
+    function switchLesson(lessonNum) {
+      // Deactivate all buttons and panes
+      document.querySelectorAll('.lesson-tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.lesson-body').forEach(body => body.classList.remove('active'));
+
+      // Activate selected button and pane
+      const selectedBtn = document.querySelectorAll('.lesson-tab-btn')[lessonNum - 1];
+      selectedBtn.classList.add('active');
+      document.getElementById(`lesson-${lessonNum}`).classList.add('active');
+    }
+
+    // Interactive Simulator Logic (Lesson 2)
+    let currentSub = 12450;
+    let currentComp = 12450;
+    let prevSub = 12450;
+
+    function runSimStep(action) {
+      const subEl = document.getElementById('sim-sub');
+      const compEl = document.getElementById('sim-comp');
+      const stateEl = document.getElementById('sim-state');
+      const expEl = document.getElementById('sim-exp');
+
+      prevSub = currentSub;
+
+      if (action === 'reset') {
+        currentSub = 0;
+        currentComp = 0;
+        prevSub = 0;
+      } else if (action === 'idle') {
+        // No counter changes
+      } else if (action === 'submit') {
+        // Normal workload: submissions and completions both advance
+        currentSub += Math.floor(Math.random() * 40) + 15;
+        currentComp = currentSub;
+      } else if (action === 'inflight') {
+        // High concurrency / queuing load: submissions outpace completions
+        currentSub += Math.floor(Math.random() * 30) + 10;
+        currentComp = currentSub - (Math.floor(Math.random() * 3) + 1);
+      }
+
+      // Format numbers with spaces
+      subEl.innerText = currentSub.toLocaleString();
+      compEl.innerText = currentComp.toLocaleString();
+
+      // State determination logic
+      const is_active = currentSub > prevSub;
+      const in_flight = currentSub > currentComp;
+
+      if (action === 'reset') {
+        stateEl.className = 'sim-badge idle';
+        stateEl.innerText = 'Idle';
+        expEl.innerHTML = 'Simulator reset. Counters are at 0. Derived state is <strong>IDLE</strong>.';
+      } else if (is_active) {
+        if (in_flight) {
+          stateEl.className = 'sim-badge inflight';
+          stateEl.innerText = 'Active (In-Flight)';
+          expEl.innerHTML = `Submissions delta is <strong>+${currentSub - prevSub}</strong> (Active execution). Submissions (${currentSub}) exceed Completions (${currentComp}), meaning <strong>${currentSub - currentComp} jobs are currently in flight</strong> in the hardware pipeline.`;
+        } else {
+          stateEl.className = 'sim-badge active';
+          stateEl.innerText = 'Active';
+          expEl.innerHTML = `Submissions delta is <strong>+${currentSub - prevSub}</strong> (Active execution). Since all submitted tasks have completed, the fabric is operating with zero queue latency.`;
+        }
+      } else {
+        stateEl.className = 'sim-badge idle';
+        stateEl.innerText = 'Idle';
+        expEl.innerHTML = `Submissions delta is <strong>0</strong>. Although the context exists, no new work has been dispatched since the last sample, deriving an <strong>IDLE</strong> state.`;
+      }
+    }
+
+    // Interactive Shell Scanner Logic (Lesson 3)
+    function runShellCmd(cmd) {
+      const termEl = document.getElementById('term-out');
+      
+      if (cmd === 'cat_busy') {
+        termEl.innerHTML = `<span class="term-prompt">user@strix-halo:~$</span> cat /sys/class/drm/card1/device/gpu_busy_percent\n<span style="color: #34d399;">76</span>\n\n<span class="term-prompt">user@strix-halo:~$</span> <span style="color: #64748b;"># iGPU is currently operating at 76% temporal utilization.</span>`;
+      } else if (cmd === 'cat_power') {
+        termEl.innerHTML = `<span class="term-prompt">user@strix-halo:~$</span> cat /sys/class/drm/card1/device/hwmon/hwmon4/power1_input\n<span style="color: #34d399;">24560000</span>\n\n<span class="term-prompt">user@strix-halo:~$</span> <span style="color: #64748b;"># Reading in microwatts. xdna-top translates 24,560,000 uW to 24.56 Watts.</span>`;
+      } else if (cmd === 'xrt_partitions') {
+        termEl.innerHTML = `<span class="term-prompt">user@strix-halo:~$</span> xrt-smi examine --report aie-partitions\n\n--------------------------------------------\nAI Engine Partitions\n--------------------------------------------\nPID      CTX   SUBMISSIONS   COMPLETIONS   STATUS\n158772    1        12480         12479      Active\n\n<span class="term-prompt">user@strix-halo:~$</span> <span style="color: #64748b;"># One active context owned by PID 158772 (local NPU inference).</span>`;
+      }
+    }
+
+    // Glossary Search & Filter Logic
+    let currentCategory = 'all';
+
+    function toggleCard(card) {
+      card.classList.toggle('expanded');
+    }
+
+    function filterCategory(category) {
+      currentCategory = category;
+      
+      // Update button classes
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        if (btn.innerText.toLowerCase() === category) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
         }
       });
-    </script>
+      
+      filterGlossary();
+    }
 
-    <div class="footer">
-      <p>xdna-top v0.1.0-dev · MIT/Apache-2.0 License · Boxwrench Project</p>
-    </div>
-  </div>
+    function filterGlossary() {
+      const searchVal = document.getElementById('glossarySearch').value.toLowerCase();
+      const cards = document.querySelectorAll('.glossary-card');
+      
+      cards.forEach(card => {
+        const category = card.getAttribute('data-category');
+        const term = card.querySelector('.glossary-term');
+        const def = card.querySelector('.glossary-def');
+        const details = card.querySelector('.glossary-details');
+        
+        const textToSearch = (term.textContent + ' ' + def.textContent + ' ' + details.textContent).toLowerCase();
+        
+        const matchesSearch = textToSearch.includes(searchVal);
+        const matchesCategory = currentCategory === 'all' || category === currentCategory;
+        
+        if (matchesSearch && matchesCategory) {
+          card.style.display = 'flex';
+          
+          // Apply highlight
+          highlightText(term, searchVal);
+          highlightText(def, searchVal);
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    function highlightText(element, query) {
+      const originalText = element.textContent;
+      if (!query) {
+        element.innerHTML = originalText;
+        return;
+      }
+      
+      const regex = new RegExp(`(${query})`, 'gi');
+      element.innerHTML = originalText.replace(regex, '<mark>$1</mark>');
+    }
+  </script>
 </body>
 </html>
