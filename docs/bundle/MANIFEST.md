@@ -22,6 +22,7 @@ logged hardware telemetry. Capture performed on AMD Strix Halo (RyzenAI-npu5 + R
 | `xdna-top_json_at_screenshot.json` | `xdna-top --json` at the PNG screenshot instant. |
 | `capture_instant.txt` | ISO timestamp of the PNG screenshot. |
 | `screenshot_window_raw.png` | Uncropped gnome-screenshot of the real window (title bar "xdna-top"); `docs/screenshot.png` is this image cropped to TUI-only. |
+| `probe_2026-06-11_npu_telemetry_negative.md` | Negative-result probe (kernel 6.17): `amdxdna` exposes no NPU busy-time/telemetry sysfs node, and `xrt-smi --report platform` reads `Estimated Power : N/A` even mid-generation. Verbatim sysfs and six mid-generation transcripts; corroborates the per-context delta as the only honest unprivileged signal. |
 
 ## Counter corroboration (anti-fabrication cross-check)
 - **PNG (`docs/screenshot.png`)** — NPU contexts show submissions/completions

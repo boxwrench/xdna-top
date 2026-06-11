@@ -33,9 +33,13 @@ If you run local AI on an AMD Strix Halo machine, you are flying blind twice ove
 | Is the **NPU** doing anything at all? | — | — | ✅ live contexts + activity |
 | Both, side by side, while two models run | — | — | ✅ that's the whole point |
 
-The NPU half simply did not exist anywhere: no tool surfaced XDNA activity.
-`xdna-top` reads it from AMD's own XRT (`xrt-smi`) and pairs it with iGPU
-telemetry scraped directly from `sysfs` — one terminal, one glance, both engines.
+When this tool was built, the NPU half didn't exist anywhere: nothing surfaced
+XDNA activity. (GNOME Resources 1.10, Feb 2026, has since added a desktop GUI
+view of AMD NPUs.) `xdna-top` remains the only *terminal* monitor for it, the
+only *unified* NPU + iGPU view on this silicon, and the only *per-context* one —
+owning PID and live submission counters, not a single aggregate number. It reads
+the NPU from AMD's own XRT (`xrt-smi`) and pairs it with iGPU telemetry scraped
+directly from `sysfs` — one terminal, one glance, both engines.
 
 Born from a practical need: while experimenting with **concurrent NPU + iGPU
 local LLM inference** on Strix Halo, "is the NPU actually executing?" turned out
@@ -55,10 +59,13 @@ Honesty matters in a measurement tool, so here is exactly what each pane is:
   incrementing is doing work; an in-flight gap between submissions and
   completions means work is queued *right now*).
 - What it does **not** show: an NPU "utilization %." The XDNA fabric is a
-  spatial dataflow architecture and does not expose a meaningful single busy
-  percentage. Tools that print one for it are making it up. We show you the
-  real signal instead — and explain it in
-  [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md).
+  spatial dataflow architecture: a single "compute busy" percentage isn't
+  meaningful there — and on current kernels there is nothing to read anyway.
+  We probed: on 6.17, `amdxdna` exposes no telemetry sysfs node at all, and
+  `xrt-smi`'s Estimated Power reads N/A even mid-generation (receipts in
+  [docs/bundle/](docs/bundle/)). The truthful unprivileged signal is
+  per-context submission-counter deltas, so that is what we show — and explain
+  in [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md).
 
 ## Quick start
 

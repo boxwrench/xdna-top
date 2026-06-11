@@ -23,11 +23,15 @@ array of AI-engine tiles is configured into a layout that data streams
 through that context. This architectural difference has a consequence that
 shapes this whole tool:
 
-> **There is no honest "NPU utilization %."** The fabric doesn't expose one,
-> and the spatial model means a single percentage wouldn't mean what you'd
-> want it to mean anyway. Any tool printing one for XDNA is interpolating
-> fiction. What the hardware *does* expose is better than fiction: real
-> bookkeeping, which we read directly.
+> **There is no honest "NPU utilization %" here.** A *temporal* busy fraction
+> ("was anything running this window?") can be a legitimate metric where a
+> driver exports a busy-time counter — Intel's `ivpu` does, and GUI monitors
+> build their NPU percentages from it. But on Strix Halo today there is
+> nothing to build from: `amdxdna` exposes no busy-time or telemetry node in
+> sysfs (probed on kernel 6.17; receipts in `docs/bundle/`), and the spatial
+> model means even a temporal percentage says little about how hard the tile
+> array is actually working. What the hardware *does* expose is better than a
+> guess: real per-context bookkeeping, which we read directly.
 
 ## Reading the iGPU: sysfs, not amd-smi
 
@@ -122,3 +126,7 @@ duty is to not lie about whether it's monitoring.
   we trust yet; we won't print one until it does.
 - **If AMD fixes `amd-smi` on gfx1151**, the iGPU half of this tool becomes
   redundant — happily. The NPU half and the unified view remain the point.
+
+(The kernel also emits `amdxdna` ftrace tracepoints per job, which could
+corroborate the delta method — but tracefs needs elevated privileges, and
+xdna-top keeps its zero-root promise.)
