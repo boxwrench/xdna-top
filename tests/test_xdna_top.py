@@ -6,12 +6,15 @@ from unittest.mock import patch, MagicMock
 from rich.panel import Panel
 from rich.console import Console
 from xdna_top.main import (
+    LEMONADE_THEME,
+    create_header_panel,
     make_bar,
     make_sparkline,
     create_igpu_panel,
     create_npu_panel,
     main,
 )
+from xdna_top.lemonade import main as lemonade_main
 from xdna_top.gauge import GpuState
 
 
@@ -99,6 +102,45 @@ def test_create_npu_panel_active():
     assert "Active" in output
 
 
+def test_lemonade_theme_panels():
+    igpu_panel = create_igpu_panel(
+        busy_pct=25,
+        power_w=18.25,
+        state=GpuState.ACTIVE,
+        busy_history=[0, 25],
+        power_history=[10, 18.25],
+        theme=LEMONADE_THEME,
+    )
+    npu_panel = create_npu_panel(
+        npu_active=True,
+        contexts=[],
+        xrt_error=False,
+        theme=LEMONADE_THEME,
+    )
+
+    console = Console()
+    with console.capture() as capture:
+        console.print(igpu_panel)
+        console.print(npu_panel)
+    output = capture.get()
+
+    assert "Lemon Grove iGPU" in output
+    assert "Lemon Stand NPU" in output
+    assert "Fresh Hardware Contexts" in output
+
+
+def test_lemonade_header_has_pixel_lemon():
+    panel = create_header_panel(LEMONADE_THEME)
+
+    console = Console()
+    with console.capture() as capture:
+        console.print(panel)
+    output = capture.get()
+
+    assert "lemonade-top" in output
+    assert "██████████" in output
+
+
 @patch("xdna_top.main.HardwareGauge")
 @patch("sys.argv")
 def test_json_flag(mock_argv, mock_gauge_class):
@@ -123,3 +165,27 @@ def test_json_flag(mock_argv, mock_gauge_class):
         printed_json = json.loads(printed_str)
         assert printed_json["gpu_busy_pct"] == 10
         assert printed_json["state"] == "ACTIVE"
+
+
+@patch("xdna_top.main.HardwareGauge")
+@patch("sys.argv")
+def test_lemonade_json_flag(mock_argv, mock_gauge_class):
+    mock_argv.__getitem__.side_effect = lambda idx: ["lemonade-top", "--json"][idx]
+    mock_argv.__len__.return_value = 2
+
+    mock_gauge = MagicMock()
+    mock_gauge.read.return_value.to_dict.return_value = {
+        "gpu_busy_pct": 5,
+        "gpu_power_w": 10.0,
+        "npu_active": False,
+        "state": "IDLE",
+        "ts": 12345.67,
+    }
+    mock_gauge_class.return_value = mock_gauge
+
+    with patch("builtins.print") as mock_print:
+        ret = lemonade_main()
+        assert ret == 0
+        printed_json = json.loads(mock_print.call_args[0][0])
+        assert printed_json["gpu_busy_pct"] == 5
+        assert printed_json["state"] == "IDLE"

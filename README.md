@@ -73,7 +73,13 @@ Honesty matters in a measurement tool, so here is exactly what each pane is:
 pip install xdna-top        # or: pipx install xdna-top
 xdna-top                    # live TUI, q to quit
 xdna-top --json             # one fused telemetry reading to stdout, then exit
+lemonade-top                # same monitor, lemonade-stand theme 🍋
 ```
+
+`lemonade-top` is the very same telemetry engine — identical NPU + iGPU signals
+and `--json` output — just wearing a lemonade-stand theme. It's purely cosmetic
+(no extra dependencies, nothing to do with the Lemonade SDK); pick whichever
+palette you prefer.
 
 **Requirements:** Linux with the `amdxdna` driver bound (`/dev/accel/accel0`),
 Python ≥ 3.11, and `xrt-smi` on your PATH for the NPU pane. No ROCm required.

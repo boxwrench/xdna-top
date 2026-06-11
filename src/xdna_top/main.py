@@ -7,6 +7,7 @@ import tty
 import termios
 import argparse
 from pathlib import Path
+from dataclasses import dataclass
 
 from rich.layout import Layout
 from rich.panel import Panel
@@ -17,6 +18,78 @@ from rich.text import Text
 from rich.align import Align
 
 from xdna_top.gauge import HardwareGauge, GpuState, run_xrt_smi, parse_xrt_smi
+
+
+@dataclass(frozen=True)
+class TuiTheme:
+    app_name: str
+    header: str
+    footer: str
+    stopped_message: str
+    header_border: str
+    footer_border: str
+    igpu_title: str
+    igpu_border: str
+    npu_title: str
+    npu_border: str
+    table_title: str
+    table_title_style: str
+    state_idle_style: str
+    state_active_style: str
+    state_prefill_style: str
+    npu_idle_style: str
+    npu_active_style: str
+    header_size: int = 3
+    header_art: tuple[str, ...] = ()
+
+
+DEFAULT_THEME = TuiTheme(
+    app_name="xdna-top",
+    header="[bold white]xdna-top[/bold white] - Unified NPU+iGPU Monitor [Strix Halo]",
+    footer="Press [bold red]q[/bold red] or [bold red]Ctrl-C[/bold red] to quit. Telemetry refresh rate: 5 Hz.",
+    stopped_message="[green]xdna-top stopped cleanly.[/green]",
+    header_border="white",
+    footer_border="white",
+    igpu_title="[bold cyan]iGPU Telemetry[/bold cyan]",
+    igpu_border="cyan",
+    npu_title="[bold magenta]Ryzen AI NPU[/bold magenta]",
+    npu_border="magenta",
+    table_title="Active Hardware Contexts",
+    table_title_style="bold magenta",
+    state_idle_style="green",
+    state_active_style="yellow",
+    state_prefill_style="bold red",
+    npu_idle_style="bold yellow",
+    npu_active_style="bold green",
+)
+
+
+LEMONADE_THEME = TuiTheme(
+    app_name="lemonade-top",
+    header="[bold yellow]lemonade-top[/bold yellow] - Fresh NPU+iGPU Stand [Strix Halo]",
+    footer="Press [bold green]q[/bold green] or [bold green]Ctrl-C[/bold green] to close the stand. Fresh squeeze: 5 Hz.",
+    stopped_message="[yellow]lemonade-top stand closed cleanly.[/yellow]",
+    header_border="yellow",
+    footer_border="green",
+    igpu_title="[bold yellow]Lemon Grove iGPU[/bold yellow]",
+    igpu_border="yellow",
+    npu_title="[bold green]Lemon Stand NPU[/bold green]",
+    npu_border="green",
+    table_title="Fresh Hardware Contexts",
+    table_title_style="bold yellow",
+    state_idle_style="green",
+    state_active_style="yellow",
+    state_prefill_style="bold green",
+    npu_idle_style="bold yellow",
+    npu_active_style="bold green",
+    header_size=7,
+    header_art=(
+        "      [green]██[/green]",
+        "   [yellow]██████[/yellow][green]██[/green]",
+        " [yellow]██████████[/yellow]",
+        "  [yellow]████████[/yellow]",
+    ),
+)
 
 
 class KeyListener:
@@ -88,19 +161,20 @@ def create_igpu_panel(
     busy_history: list[float],
     power_history: list[float],
     igpu_degraded: bool = False,
+    theme: TuiTheme = DEFAULT_THEME,
 ) -> Panel:
     """Constructs the iGPU status Panel."""
     text = Text()
     if igpu_degraded:
         text.append("[WARNING] sysfs endpoints missing or unreadable; iGPU telemetry degraded.\n\n", style="bold red")
-        return Panel(text, title="[bold cyan]iGPU Telemetry[/bold cyan]", border_style="red")
+        return Panel(text, title=theme.igpu_title, border_style="red")
 
     # Color coding for state
-    state_color = "green"
+    state_color = theme.state_idle_style
     if state == GpuState.ACTIVE:
-        state_color = "yellow"
+        state_color = theme.state_active_style
     elif state == GpuState.PREFILL_BURST:
-        state_color = "bold red"
+        state_color = theme.state_prefill_style
 
     # Format output text
     text.append("iGPU State: ", style="bold")
@@ -120,25 +194,30 @@ def create_igpu_panel(
     # Strix Halo iGPU maximum power is typically ~80-100W, so scale sparkline to 80.0
     text.append(f"{make_sparkline(power_history, max_val=80.0)}\n")
 
-    return Panel(text, title="[bold cyan]iGPU Telemetry[/bold cyan]", border_style="cyan")
+    return Panel(text, title=theme.igpu_title, border_style=theme.igpu_border)
 
 
-def create_npu_panel(npu_active: bool, contexts: list[dict], xrt_error: bool) -> Panel:
+def create_npu_panel(
+    npu_active: bool,
+    contexts: list[dict],
+    xrt_error: bool,
+    theme: TuiTheme = DEFAULT_THEME,
+) -> Panel:
     """Constructs the NPU status Panel."""
     text = Text()
     
     if xrt_error:
         text.append("[WARNING] xrt-smi not found or failed; NPU telemetry degraded.\n\n", style="bold red")
-        return Panel(text, title="[bold magenta]Ryzen AI NPU[/bold magenta]", border_style="red")
+        return Panel(text, title=theme.npu_title, border_style="red")
 
     status_str = "ACTIVE" if npu_active else "IDLE"
-    status_color = "bold green" if npu_active else "bold yellow"
+    status_color = theme.npu_active_style if npu_active else theme.npu_idle_style
     
     text.append("NPU State: ", style="bold")
     text.append(f"{status_str}\n\n", style=status_color)
 
     # Contexts Table
-    table = Table(title="Active Hardware Contexts", expand=True, title_style="bold magenta")
+    table = Table(title=theme.table_title, expand=True, title_style=theme.table_title_style)
     table.add_column("PID", style="cyan")
     table.add_column("Ctx ID", style="magenta")
     table.add_column("Submissions", style="green")
@@ -157,14 +236,26 @@ def create_npu_panel(npu_active: bool, contexts: list[dict], xrt_error: bool) ->
     if not contexts:
         table.add_row("N/A", "N/A", "0", "0", "No active contexts")
 
-    return Panel(Group(text, Align.left(table)), title="[bold magenta]Ryzen AI NPU[/bold magenta]", border_style="magenta")
+    return Panel(Group(text, Align.left(table)), title=theme.npu_title, border_style=theme.npu_border)
 
 
-def build_layout() -> Layout:
+def create_header_panel(theme: TuiTheme = DEFAULT_THEME) -> Panel:
+    """Constructs the themed header Panel."""
+    if not theme.header_art:
+        body = Align.center(theme.header, vertical="middle")
+    else:
+        body = Group(
+            *(Align.center(line) for line in theme.header_art),
+            Align.center(theme.header),
+        )
+    return Panel(body, border_style=theme.header_border)
+
+
+def build_layout(theme: TuiTheme = DEFAULT_THEME) -> Layout:
     """Defines terminal Grid layout."""
     layout = Layout()
     layout.split_column(
-        Layout(name="header", size=3),
+        Layout(name="header", size=theme.header_size),
         Layout(name="body", ratio=1),
         Layout(name="footer", size=3)
     )
@@ -175,15 +266,19 @@ def build_layout() -> Layout:
     return layout
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="xdna-top: NPU+iGPU Telemetry Monitor")
+def build_parser(description: str = "xdna-top: NPU+iGPU Telemetry Monitor") -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--json", action="store_true", help="Print a single fused reading and exit.")
     parser.add_argument("--idle-busy-pct", type=int, default=10, help="GPU idle/busy threshold percent")
     parser.add_argument("--prefill-power-w", type=float, default=35.0, help="GPU prefill power threshold (W)")
     parser.add_argument("--hysteresis-samples", type=int, default=3, help="Hysteresis majority vote window size")
     parser.add_argument("--bench-dir", type=str, default="/tmp/xdna_top", help="Directory for latest gauge readings")
     parser.add_argument("--npu-device", type=str, default=None, help="NPU device BDF override")
-    args = parser.parse_args()
+    return parser
+
+
+def run_monitor(args: argparse.Namespace, theme: TuiTheme = DEFAULT_THEME) -> int:
+    """Runs the live monitor or JSON output for a configured TUI theme."""
 
     gauge = HardwareGauge(
         gpu_idle_busy_pct=args.idle_busy_pct,
@@ -201,18 +296,15 @@ def main() -> int:
 
     # TUI loop
     console = Console()
-    layout = build_layout()
+    layout = build_layout(theme)
     
     # Header
-    layout["header"].update(Panel(
-        Align.center("[bold white]xdna-top[/bold white] — Unified NPU+iGPU Monitor [Strix Halo]", vertical="middle"),
-        border_style="white"
-    ))
+    layout["header"].update(create_header_panel(theme))
     
     # Footer
     layout["footer"].update(Panel(
-        Align.center("Press [bold red]q[/bold red] or [bold red]Ctrl-C[/bold red] to quit. Telemetry refresh rate: 5 Hz.", vertical="middle"),
-        border_style="white"
+        Align.center(theme.footer, vertical="middle"),
+        border_style=theme.footer_border,
     ))
 
     # History buffers for sparklines
@@ -269,13 +361,15 @@ def main() -> int:
                         busy_history,
                         power_history,
                         igpu_degraded=reading.igpu_degraded,
+                        theme=theme,
                     )
                 )
                 layout["body"]["npu"].update(
                     create_npu_panel(
                         reading.npu_active,
                         contexts,
-                        xrt_error
+                        xrt_error,
+                        theme=theme,
                     )
                 )
 
@@ -290,8 +384,14 @@ def main() -> int:
     finally:
         key_listener.restore()
 
-    console.print("[green]xdna-top stopped cleanly.[/green]")
+    console.print(theme.stopped_message)
     return 0
+
+
+def main() -> int:
+    parser = build_parser()
+    args = parser.parse_args()
+    return run_monitor(args)
 
 
 if __name__ == "__main__":

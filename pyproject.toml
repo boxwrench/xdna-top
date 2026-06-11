@@ -19,7 +19,7 @@ dependencies = [
 
 [project.scripts]
 xdna-top = "xdna_top.main:main"
+lemonade-top = "xdna_top.lemonade:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
