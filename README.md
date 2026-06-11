@@ -18,6 +18,8 @@ where `amd-smi` comes up empty.
 
 ![xdna-top Telemetry TUI](docs/screenshot.png)
 
+[Interactive telemetry dashboard](https://boxwrench.github.io/xdna-top/)
+
 </div>
 
 
@@ -103,7 +105,8 @@ hardware-context bookkeeping; `xdna-top` polls both, derives activity from
 submission-counter deltas, fuses them into one reading, and renders it with
 [rich](https://github.com/Textualize/rich). The full guided tour — including an
 annotated real capture of an LLM generation lighting up the NPU pane — is in
-**[docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md)**.
+**[docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md)**, and the hosted interactive
+view lives at **[boxwrench.github.io/xdna-top](https://boxwrench.github.io/xdna-top/)**.
 
 ## Roadmap
 
