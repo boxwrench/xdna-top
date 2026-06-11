@@ -13,6 +13,7 @@ The schema should be explicit, versioned, and stable enough for `env-report`,
   "captured_at": "2026-06-11T12:34:56.789Z",
   "host": {},
   "commands": {},
+  "backends": {},
   "devices": {},
   "telemetry": {},
   "degraded": {},
@@ -84,6 +85,35 @@ Keep raw command output out of the default snapshot unless it is small and
 stable. Prefer normalized summaries plus return codes. If raw output is needed
 for debugging, add it under an explicit `raw` field later.
 
+### `backends`
+
+Telemetry backend provenance.
+
+```json
+{
+  "npu": {
+    "primary": "amdxdna_ioctl",
+    "fallbacks_used": ["xrt_smi"],
+    "signals": {
+      "device": "amdxdna_ioctl",
+      "sensors": "amdxdna_ioctl",
+      "contexts": "xrt_smi"
+    }
+  },
+  "igpu": {
+    "primary": "sysfs",
+    "signals": {
+      "busy_pct": "sysfs",
+      "power_w": "sysfs"
+    }
+  }
+}
+```
+
+The preferred NPU backend is direct AMDXDNA DRM IOCTL probing through
+`/dev/accel/*`. `xrt-smi` remains useful for compatibility and for per-context
+PID/submission/completion data until equivalent direct attribution is available.
+
 ### `devices`
 
 Detected device state.
@@ -102,6 +132,23 @@ Detected device state.
     "detected": true,
     "bdf": "0000:c6:00.1",
     "name": "RyzenAI-npu5",
+    "driver": {
+      "drm_version": {
+        "major": 0,
+        "minor": 7
+      },
+      "supports_sensors": true
+    },
+    "sensors": {
+      "power_w": {
+        "value": 4.2,
+        "source": "amdxdna_ioctl"
+      },
+      "column_utilization_pct": {
+        "value": 17.5,
+        "source": "amdxdna_ioctl"
+      }
+    },
     "contexts": [
       {
         "pid": 1234,
@@ -109,7 +156,8 @@ Detected device state.
         "ctx_id": 1,
         "submissions": 100,
         "completions": 100,
-        "status": "Active"
+        "status": "Active",
+        "source": "xrt_smi"
       }
     ],
     "report_shape": {
@@ -128,7 +176,8 @@ Detected device state.
 ```
 
 The NPU section should preserve per-context PID and counter data because PID
-attribution is the strongest available guard against overclaiming.
+attribution is the strongest available guard against overclaiming. Sensor values
+and context counters should carry source/provenance when practical.
 
 ### `telemetry`
 
@@ -166,6 +215,9 @@ Machine-readable degraded status and reasons.
 
 Reason strings should be stable enough for tests and reports, for example:
 
+- `amdxdna_ioctl_unavailable`
+- `amdxdna_drm_version_unsupported`
+- `amdxdna_sensors_unavailable`
 - `xrt_smi_not_found`
 - `xrt_smi_examine_failed`
 - `aie_partitions_report_failed`
@@ -178,6 +230,10 @@ List of non-fatal probe errors.
 
 ```json
 [
+  {
+    "probe": "amdxdna_ioctl.query_sensors",
+    "message": "ioctl failed: invalid argument"
+  },
   {
     "probe": "xrt_smi.aie_partitions",
     "message": "command timed out after 1.5s"
@@ -194,8 +250,13 @@ Initial compare should treat these as high-signal changes:
 
 - `schema_version` changed
 - `host.kernel.release` changed
+- `backends.npu.primary` changed
+- `backends.npu.signals.sensors` changed
+- `devices.npu.driver.drm_version` changed
+- `devices.npu.driver.supports_sensors` changed
 - `commands.xrt_smi.available` changed
 - `commands.xrt_smi.aie_partitions_returncode` changed from `0` to non-zero
+  when contexts depend on `xrt_smi`
 - `/dev/accel/accel0` disappeared
 - `devices.npu.bdf` changed
 - `devices.npu.report_shape.has_hw_contexts` changed
@@ -211,7 +272,8 @@ Example:
 
 ```text
 PASS require-npu: observed devices.npu.detected=true
-PASS require-xrt: observed commands.xrt_smi.available=true
+PASS require-npu-sensors: observed devices.npu.driver.supports_sensors=true
+PASS require-context-source: observed backends.npu.signals.contexts=xrt_smi
 FAIL require-igpu-power: observed devices.igpu.power_path_exists=false, required true
 ```
 

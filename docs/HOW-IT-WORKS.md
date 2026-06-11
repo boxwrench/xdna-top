@@ -1,7 +1,7 @@
 # How it works
 
 This is the guided tour. It assumes you know what a terminal is and that your
-machine has an AMD Strix Halo APU in it — nothing else. By the end you'll know
+machine has an AMD Strix Halo APU in it - nothing else. By the end you'll know
 exactly where every number on the screen comes from, and just as importantly,
 what those numbers can and cannot tell you.
 
@@ -15,7 +15,7 @@ kernel driver dutifully tracks them. A GPU executes work *temporally*: shader
 cores grind through a queue, and "busy %" honestly summarizes how saturated
 they were over a sampling window.
 
-**The NPU** (AMD XDNA, enumerated as `RyzenAI-npu5`) is a different animal: a
+**The NPU** (AMD XDNA, enumerated as `RyzenAI-npu5`) is a different engine: a
 *spatial dataflow* fabric. Instead of cores marching through instructions, an
 array of AI-engine tiles is configured into a layout that data streams
 *through*. Work isn't scheduled onto it moment-to-moment; a workload claims a
@@ -23,15 +23,11 @@ array of AI-engine tiles is configured into a layout that data streams
 through that context. This architectural difference has a consequence that
 shapes this whole tool:
 
-> **There is no honest "NPU utilization %" here.** A *temporal* busy fraction
-> ("was anything running this window?") can be a legitimate metric where a
-> driver exports a busy-time counter — Intel's `ivpu` does, and GUI monitors
-> build their NPU percentages from it. But on Strix Halo today there is
-> nothing to build from: `amdxdna` exposes no busy-time or telemetry node in
-> sysfs (probed on kernel 6.17; receipts in `docs/bundle/`), and the spatial
-> model means even a temporal percentage says little about how hard the tile
-> array is actually working. What the hardware *does* expose is better than a
-> guess: real per-context bookkeeping, which we read directly.
+> **Be precise about NPU percentages.** A driver may expose a direct sensor
+> such as column utilization, and `xdna-top` should report that when the kernel
+> supports it. But a generic "NPU utilization %" is not the same thing as proof
+> that a specific request used the NPU. For that, per-context ownership and
+> submission/completion deltas are the stronger evidence.
 
 ## Reading the iGPU: sysfs, not amd-smi
 
@@ -47,7 +43,28 @@ driver's own counters are sitting right there in sysfs:
 `xdna-top` polls these at 5 Hz and keeps a 60-second rolling window for the
 sparklines. There is no estimation layer: if the kernel says 87, we print 87.
 
-## Reading the NPU: xrt-smi and the counter-delta trick
+## Reading the NPU: IOCTLs first, XRT where it helps
+
+The preferred NPU path is to talk to the kernel driver directly through the
+DRM/AMDXDNA IOCTL interface exposed by `/dev/accel/*`.
+
+If you are new to this layer, think of an IOCTL as a structured question a
+userspace program asks a device driver. Reading a normal file says "give me
+bytes." An IOCTL says "run this driver-specific operation with this C-shaped
+data structure." For `xdna-top`, that direct path can answer questions such as:
+
+- Which accel device is present?
+- What AMDXDNA DRM driver version is this?
+- Does this kernel expose NPU sensors?
+- Is there a direct power or column-utilization sensor?
+
+That is better than shelling out to a command-line tool when the kernel already
+has the answer.
+
+There is still one signal `xdna-top` cares about that the direct sensor path may
+not replace yet: **per-context attribution**. We need to know which PID owns a
+context and whether that context's counters moved. Today, AMD's XRT tooling
+exposes that table:
 
 The `amdxdna` driver exposes the NPU through AMD's XRT runtime, and XRT ships
 a CLI: `xrt-smi`. One report turns out to be gold:
@@ -56,9 +73,9 @@ a CLI: `xrt-smi`. One report turns out to be gold:
 xrt-smi examine --report aie-partitions
 ```
 
-It dumps the NPU's hardware-context table: which **PID** owns each context,
-and cumulative **submission** and **completion** counters per context. Those
-two counters are the entire activity story:
+It dumps the NPU's hardware-context table: which **PID** owns each context, and
+cumulative **submission** and **completion** counters per context. Those two
+counters are the request-attribution story:
 
 | Observation across two samples | Meaning |
 |---|---|
@@ -66,9 +83,11 @@ two counters are the entire activity story:
 | Submissions incrementing | Context is **actively executing** work |
 | Submissions > completions | Jobs are **in flight at this instant** |
 
-`xdna-top` samples the report, diffs counters against the previous sample, and
-derives each context's state from the delta. That's the "● ACTIVE" badge — not
-a guess, a measurement.
+`xdna-top` samples the context report, diffs counters against the previous
+sample, and derives each context's state from the delta. That's the "ACTIVE"
+badge - not a guess, a measurement. As the direct IOCTL backend grows, `xrt-smi`
+becomes a compatibility and context-attribution source rather than the preferred
+low-level telemetry path.
 
 ## A real capture, annotated
 
@@ -102,30 +121,38 @@ free.
 
 ## Fusing it
 
-Each poll tick, the gauge layer takes one sysfs reading and one parsed
-`xrt-smi` report, stamps them with a shared timestamp, and emits a single
-fused record — which the TUI renders, and `--json` mode prints raw so you can
-pipe it into anything (the hosted chart gallery is built from exactly these
-records).
+Each poll tick, the gauge layer takes the best available readings from each
+backend, stamps them with a shared timestamp, and emits a single fused record.
+Today that means iGPU values from sysfs and NPU context deltas from XRT. The
+roadmap adds direct AMDXDNA IOCTL probing for NPU device, driver, power, and
+column-utilization sensors.
 
-If a source is missing — no `xrt-smi` on PATH, unreadable sysfs node, a parse
-failure after an XRT update — that pane **degrades and says so** rather than
-crashing or, worse, silently showing stale numbers. A monitoring tool's first
-duty is to not lie about whether it's monitoring.
+The TUI renders the fused record, and `--json` mode prints it raw so you can
+pipe it into anything.
+
+If a source is missing - no sensor support, no `xrt-smi` on PATH, unreadable
+sysfs node, a parse failure after an XRT update - that pane **degrades and says
+so** rather than crashing or, worse, silently showing stale numbers. A
+monitoring tool's first duty is to not lie about whether it's monitoring.
 
 ## Honest limits
 
-- **The xrt-smi output format is a load-bearing dependency.** An XRT release
-  that reshapes the report breaks the NPU pane until the parser catches up
-  (it will fail visibly, per above). Pinned-format test fixtures guard the
-  parser.
+- **Direct sensors depend on kernel support.** AMDXDNA DRM IOCTLs can expose
+  richer NPU signals on newer kernels, but older stacks may not support the
+  sensor query. That is a degraded result, not a reason to invent data.
+- **The xrt-smi output format is still a dependency for context attribution.**
+  Until equivalent per-context PID/counter data is available through direct
+  probing, an XRT release that reshapes the report can break the context pane.
+  It will fail visibly, and pinned-format test fixtures guard the parser.
 - **5 Hz sampling bounds what you can see.** A burst shorter than ~200 ms can
   fall between samples; cumulative counters still record that it happened
   (the next delta jumps), but its precise timing is smeared.
-- **No NPU power/thermals.** The platform doesn't expose a per-NPU power rail
-  we trust yet; we won't print one until it does.
+- **Sensor values are not request attribution.** A column-utilization or power
+  sensor can say the NPU was doing something, but a concurrent workload could be
+  responsible. PID-owned context deltas remain the better proof for a supervised
+  request.
 - **If AMD fixes `amd-smi` on gfx1151**, the iGPU half of this tool becomes
-  redundant — happily. The NPU half and the unified view remain the point.
+  redundant - happily. The NPU half and the unified view remain the point.
 
 (The kernel also emits `amdxdna` ftrace tracepoints per job, which could
 corroborate the delta method — but tracefs needs elevated privileges, and

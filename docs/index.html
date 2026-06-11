@@ -1321,14 +1321,15 @@
 
               <g class="node">
                 <rect x="250" y="100" width="100" height="40" rx="6" fill="#ffffff" stroke="var(--accent-sky)" stroke-width="1.5" />
-                <text x="300" y="125" fill="var(--primary)" font-size="11" font-family="Outfit" font-weight="600" text-anchor="middle">xrt-smi (NPU)</text>
+                <text x="300" y="119" fill="var(--primary)" font-size="10" font-family="Outfit" font-weight="600" text-anchor="middle">IOCTL + XRT</text>
+                <text x="300" y="132" fill="var(--primary)" font-size="9" font-family="Inter" text-anchor="middle">(NPU)</text>
               </g>
 
               <!-- TUI Daemon/App -->
               <g class="node node-core">
                 <rect x="130" y="160" width="140" height="50" rx="8" fill="var(--primary)" stroke="var(--secondary-light)" stroke-width="1.5" />
                 <text x="200" y="185" fill="#ffffff" font-size="12" font-family="Outfit" font-weight="800" text-anchor="middle">xdna-top Core</text>
-                <text x="200" y="198" fill="#e0f2fe" font-size="9" font-family="Inter" text-anchor="middle">Fused Scraping (5 Hz)</text>
+                <text x="200" y="198" fill="#e0f2fe" font-size="9" font-family="Inter" text-anchor="middle">Fused Backends (5 Hz)</text>
               </g>
 
               <!-- Output modes -->
@@ -1395,7 +1396,7 @@
           </button>
           <button class="lesson-tab-btn" onclick="switchLesson(3)">
             <span class="lesson-num">03</span>
-            Scraping sysfs & XRT
+            sysfs, IOCTLs & XRT
           </button>
         </div>
 
@@ -1409,7 +1410,7 @@
             <div class="lesson-text">
               <p>To monitor a Strix Halo APU, you must understand that the iGPU and NPU operate under entirely different execution models:</p>
               <p><strong>The iGPU</strong> operates on a <strong>Temporal Execution Model</strong>. It has standard cores executing instruction streams over time. Threads are scheduled onto shader cores, and "busy %" measures how many cycles these cores spent doing non-idle work in a sampling window. This represents conventional temporal loading.</p>
-              <p><strong>The NPU (XDNA)</strong> utilizes a <strong>Spatial Dataflow Model</strong>. Instead of scheduling instructions to fixed cores, an array of AI Engine (AIE) tiles is physical-mapped and routed into a custom spatial layout. A workload claims a static <em>Hardware Context</em> (a partition of tiles), and data streams directly through the fabric. Consequently, there is <strong>no honest "NPU utilization %"</strong>; a partition is either allocated to route data or it is not.</p>
+              <p><strong>The NPU (XDNA)</strong> utilizes a <strong>Spatial Dataflow Model</strong>. Instead of scheduling instructions to fixed cores, an array of AI Engine (AIE) tiles is physical-mapped and routed into a custom spatial layout. A workload claims a static <em>Hardware Context</em> (a partition of tiles), and data streams directly through the fabric. Consequently, utilization needs careful wording: a direct driver sensor such as column utilization is useful when available, but it is not the same as proving a specific request used the NPU.</p>
             </div>
             
             <div class="playground-box">
@@ -1444,8 +1445,8 @@
             <span class="lesson-title-meta">Lesson 02 · Monitoring Algorithm</span>
             <h3>The Counter-Delta Trick</h3>
             <div class="lesson-text">
-              <p>Since the XDNA architecture does not offer a direct "utilization %," how do we know if it is active? We look at hardware-context counters.</p>
-              <p>Through AMD XRT, the driver tracks cumulative <strong>Submissions</strong> (work units pushed to NPU) and <strong>Completions</strong> (work units finished by NPU) per context. Naively looking at the driver's status column tells us "Active" as long as a model remains loaded in memory. To find actual usage, <code>xdna-top</code> tracks counter changes across samples:</p>
+              <p>Since a generic XDNA "utilization %" cannot prove request attribution, how do we know if a workload-owned context is active? We look at hardware-context counters.</p>
+              <p>Today, AMD XRT exposes cumulative <strong>Submissions</strong> (work units pushed to NPU) and <strong>Completions</strong> (work units finished by NPU) per context. Naively looking at the driver's status column tells us "Active" as long as a model remains loaded in memory. To find actual usage, <code>xdna-top</code> tracks counter changes across samples:</p>
             </div>
             
             <div class="playground-box">
@@ -1514,19 +1515,20 @@
           <!-- Lesson 3 -->
           <div class="lesson-body" id="lesson-3">
             <span class="lesson-title-meta">Lesson 03 · Telemetry Scraping</span>
-            <h3>Harvesting Linux sysfs & XRT Outputs</h3>
+            <h3>Harvesting Telemetry Backends</h3>
             <div class="lesson-text">
-              <p>On AMD Strix Halo running Linux, standard CLI monitoring utilities like <code>amd-smi</code> often fail or return <code>N/A</code>. To circumvent this, <code>xdna-top</code> reads the telemetry directly from raw file paths and command binaries in user space:</p>
+              <p>On AMD Strix Halo running Linux, standard CLI monitoring utilities like <code>amd-smi</code> often fail or return <code>N/A</code>. <code>xdna-top</code> treats the kernel as the source of truth and uses the lowest-level unprivileged source that exposes each signal:</p>
               <p><strong>iGPU Telemetry:</strong> Read from the kernel's DRM sysfs class path: <code>/sys/class/drm/card1/device/gpu_busy_percent</code> for load percent, and <code>/sys/class/drm/card1/device/hwmon/hwmon*/power1_input</code> for instantaneous power in microwatts.</p>
-              <p><strong>NPU Telemetry:</strong> Read by calling and parsing <code>xrt-smi examine --report aie-partitions</code>, extracting the owning PID, partition IDs, and active context counts.</p>
+              <p><strong>NPU Telemetry:</strong> Prefer direct AMDXDNA DRM IOCTL probes through <code>/dev/accel/*</code> for device, driver, power, and column-utilization sensors where the kernel supports them. Use <code>xrt-smi examine --report aie-partitions</code> as a compatibility and context-attribution source for PID, context ID, submissions, and completions.</p>
             </div>
             
             <div class="playground-box">
-              <div class="playground-title">Interactive Shell Scanner</div>
-              <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">Click a command below to mock execution and examine the raw output parsed by xdna-top:</p>
+              <div class="playground-title">Interactive Backend Scanner</div>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">Click a probe below to mock the kind of raw signal xdna-top consumes:</p>
               <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                 <button class="sim-btn" onclick="runShellCmd('cat_busy')">cat .../gpu_busy_percent</button>
                 <button class="sim-btn" onclick="runShellCmd('cat_power')">cat .../power1_input</button>
+                <button class="sim-btn" onclick="runShellCmd('amdxdna_sensors')">AMDXDNA sensor IOCTL</button>
                 <button class="sim-btn" onclick="runShellCmd('xrt_partitions')">xrt-smi examine --report aie-partitions</button>
               </div>
               
@@ -1700,19 +1702,115 @@
           </div>
         </div>
 
+        <!-- DRM -->
+        <div class="glossary-card" data-category="software" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">DRM</h3>
+            <span class="glossary-tag tag-software">Software</span>
+          </div>
+          <p class="glossary-def">Direct Rendering Manager. The Linux kernel subsystem that exposes GPU and accelerator devices, including file descriptors and driver-specific control operations.</p>
+          <div class="glossary-card-footer">
+            <span>/dev/dri, /dev/accel</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> The AMDXDNA NPU driver uses DRM-style device interfaces. Reading through this layer lets <code>xdna-top</code> ask the kernel for device and sensor facts directly instead of depending only on command output.
+          </div>
+        </div>
+
+        <!-- IOCTL -->
+        <div class="glossary-card" data-category="software" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">IOCTL</h3>
+            <span class="glossary-tag tag-software">Software</span>
+          </div>
+          <p class="glossary-def">Input/output control. A structured userspace-to-kernel request used when a device needs operations richer than ordinary file reads and writes.</p>
+          <div class="glossary-card-footer">
+            <span>Driver API</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> For newer AMDXDNA stacks, IOCTLs can query driver version and NPU sensors directly from <code>/dev/accel/*</code>. This is more robust than scraping a CLI when the kernel exposes the signal.
+          </div>
+        </div>
+
+        <!-- /dev/accel -->
+        <div class="glossary-card" data-category="software" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">/dev/accel</h3>
+            <span class="glossary-tag tag-software">Software</span>
+          </div>
+          <p class="glossary-def">Linux device-node namespace for accelerator devices. AMD XDNA NPUs appear here as entries such as <code>/dev/accel/accel0</code>.</p>
+          <div class="glossary-card-footer">
+            <span>Accel device node</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> Opening the accel device gives user-space tools a file descriptor they can use for direct AMDXDNA DRM IOCTL probes, while preserving the project's zero-root goal when normal device permissions allow access.
+          </div>
+        </div>
+
+        <!-- AMDXDNA IOCTL Backend -->
+        <div class="glossary-card" data-category="telemetry" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">AMDXDNA IOCTL Backend</h3>
+            <span class="glossary-tag tag-telemetry">Telemetry</span>
+          </div>
+          <p class="glossary-def">The planned direct NPU telemetry backend that asks the AMD XDNA kernel driver for device, driver, power, and column-utilization sensor data.</p>
+          <div class="glossary-card-footer">
+            <span>Preferred NPU backend</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> Direct kernel probes reduce dependence on external tools. <code>xrt-smi</code> remains useful for compatibility and per-context attribution until equivalent direct PID/counter data is available.
+          </div>
+        </div>
+
+        <!-- Column Utilization -->
+        <div class="glossary-card" data-category="telemetry" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">Column Utilization</h3>
+            <span class="glossary-tag tag-telemetry">Telemetry</span>
+          </div>
+          <p class="glossary-def">A direct AMDXDNA sensor value representing utilization for NPU columns when the kernel driver exposes that sensor.</p>
+          <div class="glossary-card-footer">
+            <span>Sensor value</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> This is a real sensor when available, but it is not the same as proof that a specific request used the NPU. For request attribution, <code>xdna-top</code> still prefers PID-owned context deltas.
+          </div>
+        </div>
+
+        <!-- Backend Provenance -->
+        <div class="glossary-card" data-category="telemetry" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">Backend Provenance</h3>
+            <span class="glossary-tag tag-telemetry">Telemetry</span>
+          </div>
+          <p class="glossary-def">Metadata that records which backend produced each telemetry signal, such as sysfs, AMDXDNA IOCTL, or xrt-smi.</p>
+          <div class="glossary-card-footer">
+            <span>Source attribution</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> Evidence is only useful when reviewers know where it came from. Snapshot and record artifacts should say whether a value came from direct kernel probing, a sysfs node, or an external compatibility tool.
+          </div>
+        </div>
+
         <!-- XRT -->
         <div class="glossary-card" data-category="software" onclick="toggleCard(this)">
           <div class="glossary-card-header">
             <h3 class="glossary-term">XRT</h3>
             <span class="glossary-tag tag-software">Software</span>
           </div>
-          <p class="glossary-def">Xilinx Runtime. The unified library and driver layer utilized by AMD to configure, load, and manage AI Engines and Ryzen AI NPU cores.</p>
+          <p class="glossary-def">Xilinx Runtime. The unified library and tooling layer AMD uses to configure, load, and inspect AI Engines and Ryzen AI NPU cores.</p>
           <div class="glossary-card-footer">
             <span>xrt-smi Command</span>
             <span class="expand-icon">▼</span>
           </div>
           <div class="glossary-details">
-            <strong>Why it matters:</strong> XRT handles low-level spatial scheduling on the NPU fabric. The <code>xrt-smi</code> utility exposes the partition reports that supply the hardware counter telemetry.
+            <strong>Why it matters:</strong> XRT remains an important compatibility path. The <code>xrt-smi</code> utility exposes partition reports with PID, context ID, submission, and completion counters, which are still the best unprivileged attribution signal today.
           </div>
         </div>
       </div>
@@ -1961,6 +2059,8 @@
         termEl.innerHTML = `<span class="term-prompt">user@strix-halo:~$</span> cat /sys/class/drm/card1/device/gpu_busy_percent\n<span style="color: #34d399;">76</span>\n\n<span class="term-prompt">user@strix-halo:~$</span> <span style="color: #64748b;"># iGPU is currently operating at 76% temporal utilization.</span>`;
       } else if (cmd === 'cat_power') {
         termEl.innerHTML = `<span class="term-prompt">user@strix-halo:~$</span> cat /sys/class/drm/card1/device/hwmon/hwmon4/power1_input\n<span style="color: #34d399;">24560000</span>\n\n<span class="term-prompt">user@strix-halo:~$</span> <span style="color: #64748b;"># Reading in microwatts. xdna-top translates 24,560,000 uW to 24.56 Watts.</span>`;
+      } else if (cmd === 'amdxdna_sensors') {
+        termEl.innerHTML = `<span class="term-prompt">user@strix-halo:~$</span> xdna-top snapshot --probe amdxdna-ioctl\n\nbackend: amdxdna_ioctl\naccel_device: /dev/accel/accel0\ndrm_version: 0.7\nsupports_sensors: true\nsensor.power_w: 4.20\nsensor.column_utilization_pct: 17.50\n\n<span class="term-prompt">user@strix-halo:~$</span> <span style="color: #64748b;"># Direct driver sensor values are useful, but request attribution still needs PID-owned context deltas.</span>`;
       } else if (cmd === 'xrt_partitions') {
         termEl.innerHTML = `<span class="term-prompt">user@strix-halo:~$</span> xrt-smi examine --report aie-partitions\n\n--------------------------------------------\nAI Engine Partitions\n--------------------------------------------\nPID      CTX   SUBMISSIONS   COMPLETIONS   STATUS\n158772    1        12480         12479      Active\n\n<span class="term-prompt">user@strix-halo:~$</span> <span style="color: #64748b;"># One active context owned by PID 158772 (local NPU inference).</span>`;
       }

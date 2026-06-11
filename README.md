@@ -39,9 +39,11 @@ When this tool was built, the NPU half didn't exist anywhere: nothing surfaced
 XDNA activity. (GNOME Resources 1.10, Feb 2026, has since added a desktop GUI
 view of AMD NPUs.) `xdna-top` remains the only *terminal* monitor for it, the
 only *unified* NPU + iGPU view on this silicon, and the only *per-context* one —
-owning PID and live submission counters, not a single aggregate number. It reads
-the NPU from AMD's own XRT (`xrt-smi`) and pairs it with iGPU telemetry scraped
-directly from `sysfs` — one terminal, one glance, both engines.
+owning PID and live submission counters, not a single aggregate number. Today it
+reads NPU context attribution through AMD's XRT tooling (`xrt-smi`) and pairs it
+with iGPU telemetry scraped directly from `sysfs`; the roadmap moves low-level
+NPU device and sensor probes toward direct AMDXDNA DRM IOCTLs through
+`/dev/accel/*`.
 
 Born from a practical need: while experimenting with **concurrent NPU + iGPU
 local LLM inference** on Strix Halo, "is the NPU actually executing?" turned out
@@ -60,14 +62,12 @@ Honesty matters in a measurement tool, so here is exactly what each pane is:
   state derived from counter deltas** (a context whose submissions are
   incrementing is doing work; an in-flight gap between submissions and
   completions means work is queued *right now*).
-- What it does **not** show: an NPU "utilization %." The XDNA fabric is a
-  spatial dataflow architecture: a single "compute busy" percentage isn't
-  meaningful there — and on current kernels there is nothing to read anyway.
-  We probed: on 6.17, `amdxdna` exposes no telemetry sysfs node at all, and
-  `xrt-smi`'s Estimated Power reads N/A even mid-generation (receipts in
-  [docs/bundle/](docs/bundle/)). The truthful unprivileged signal is
-  per-context submission-counter deltas, so that is what we show — and explain
-  in [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md).
+- What it does **not** show: a made-up generic NPU "utilization %." Newer
+  AMDXDNA stacks may expose direct sensor values such as column utilization,
+  and `xdna-top` should label those precisely when available. For request
+  attribution, the truthful unprivileged signal remains per-context
+  submission-counter deltas, so that is what we show — and explain in
+  [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md).
 
 ## Quick start
 
@@ -115,16 +115,28 @@ annotated real capture of an LLM generation lighting up the NPU pane — is in
 **[docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md)**, and the hosted interactive
 view lives at **[boxwrench.github.io/xdna-top](https://boxwrench.github.io/xdna-top/)**.
 
+## Related tools
+
+- [`amdgpu_top`](https://github.com/Umio-Yasuno/amdgpu_top) is the mature,
+  broad AMDGPU/APU monitor, with GPU metrics, sensors, fdinfo, process memory
+  views, TUI/GUI/JSON modes, and XDNA device support. If you want a general AMD
+  GPU monitor, start there.
+
+  `xdna-top` is complementary. It focuses on Ryzen AI workload evidence: NPU
+  context ownership, submission/completion deltas, and what the iGPU was doing
+  at the same time. The planned direct AMDXDNA backend is inspired by
+  `amdgpu_top`'s driver-facing approach while keeping `xdna-top` scoped to
+  workload evidence and NPU+iGPU concurrency.
+
 ## Roadmap
 
-- [ ] Evidence commands for eval and update workflows: `snapshot`, `record`,
-      `compare`, `assert`, and `workload-check`
-- [ ] Upgrade canary / doctor mode for kernel, BIOS, XRT, Ryzen AI, and distro
-      updates
-- [ ] Markdown environment reports for devlogs, bug reports, and eval evidence
-- [ ] Configurable poll rate / history window
-- [ ] Per-context history view
-- [ ] More APUs (Phoenix/Hawk Point XDNA1) — testers welcome
+- [ ] v0.2 evidence core: `snapshot`, `env-report`, `record`, and `assert`
+- [ ] v0.3 direct AMDXDNA backend probes plus `compare` and `baseline`
+- [ ] v0.4 supervised `workload-check` for endpoint and NPU-context evidence
+- [ ] v0.5 community/reporting work: theme registry, HTML reports, and more
+      Ryzen AI captures
+- [ ] Ongoing: configurable poll rate, per-context history, and more APUs
+      (Phoenix/Hawk Point XDNA1) — testers welcome
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for the prioritized command plan and
 [docs/SNAPSHOT-SCHEMA.md](docs/SNAPSHOT-SCHEMA.md) for the snapshot artifact
