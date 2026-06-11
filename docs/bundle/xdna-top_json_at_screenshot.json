@@ -1,0 +1,9 @@
+{
+  "gpu_busy_pct": 84,
+  "gpu_power_w": 84.094,
+  "npu_active": false,
+  "state": "PREFILL_BURST",
+  "igpu_degraded": false,
+  "npu_degraded": false,
+  "ts": 1781130696.2019207
+}

@@ -1,0 +1,200 @@
+"""Unit tests for the telemetry gauge."""
+
+import json
+from unittest.mock import patch, MagicMock
+import pytest
+from xdna_top.gauge import (
+    GpuState,
+    GaugeReading,
+    classify_state,
+    get_stable_state,
+    parse_xrt_smi,
+    HardwareGauge,
+    discover_npu_device,
+    run_xrt_smi,
+)
+
+
+def test_classify_state():
+    # IDLE
+    assert classify_state(5, 5.0, gpu_idle_busy_pct=10, gpu_prefill_power_w=35.0) == GpuState.IDLE
+    assert classify_state(10, 30.0, gpu_idle_busy_pct=10, gpu_prefill_power_w=35.0) == GpuState.IDLE
+
+    # ACTIVE (busy, power below prefill)
+    assert classify_state(15, 20.0, gpu_idle_busy_pct=10, gpu_prefill_power_w=35.0) == GpuState.ACTIVE
+    assert classify_state(50, 30.0, gpu_idle_busy_pct=10, gpu_prefill_power_w=35.0) == GpuState.ACTIVE
+
+    # PREFILL_BURST (busy, power at/above prefill)
+    assert classify_state(15, 35.0, gpu_idle_busy_pct=10, gpu_prefill_power_w=35.0) == GpuState.PREFILL_BURST
+    assert classify_state(90, 50.0, gpu_idle_busy_pct=10, gpu_prefill_power_w=35.0) == GpuState.PREFILL_BURST
+
+
+def test_get_stable_state():
+    # Single element
+    assert get_stable_state([GpuState.IDLE]) == GpuState.IDLE
+
+    # Majority vote
+    assert get_stable_state([GpuState.IDLE, GpuState.ACTIVE, GpuState.IDLE]) == GpuState.IDLE
+    assert get_stable_state([GpuState.PREFILL_BURST, GpuState.ACTIVE, GpuState.ACTIVE]) == GpuState.ACTIVE
+
+    # Tie break (priority: PREFILL_BURST > ACTIVE > IDLE)
+    assert get_stable_state([GpuState.IDLE, GpuState.ACTIVE]) == GpuState.ACTIVE
+    assert get_stable_state([GpuState.PREFILL_BURST, GpuState.ACTIVE]) == GpuState.PREFILL_BURST
+
+
+def test_parse_xrt_smi():
+    canned_idle = """
+------------------------------
+[0000:c6:00.1] : RyzenAI-npu5
+------------------------------
+AIE Partitions
+  Total Memory Usage: N/A
+  Partition Index   : 0
+    Columns: [0, 1, 2, 3, 4, 5, 6, 7]
+    HW Contexts:
+      |PID                 |Ctx ID     |Submissions |Migrations  |Err  |Priority |
+      |Process Name        |Status     |Completions |Suspensions |     |GOPS     |
+      |Memory Usage        |Instr BO   |            |            |     |FPS      |
+      |                    |           |            |            |     |Latency  |
+      |====================|===========|============|============|=====|=========|
+      |93941               |1          |15399       |0           |0    |N/A      |
+      |N/A                 |Active     |15399       |0           |     |N/A      |
+      |--------------------|-----------|------------|------------|-----|---------|
+      |93941               |2          |2800        |0           |0    |N/A      |
+      |N/A                 |Active     |2800        |0           |     |N/A      |
+"""
+    res = parse_xrt_smi(canned_idle)
+    assert len(res) == 2
+    assert res[0]["pid"] == 93941
+    assert res[0]["ctx_id"] == 1
+    assert res[0]["submissions"] == 15399
+    assert res[0]["completions"] == 15399
+    assert res[0]["status"] == "Active"
+
+
+@patch("xdna_top.gauge.run_xrt_smi")
+@patch("xdna_top.gauge.read_igpu")
+def test_hardware_gauge_direct_read(mock_read_igpu, mock_run_xrt_smi):
+    mock_read_igpu.return_value = (50, 25.0, False)  # active, not degraded
+    mock_run_xrt_smi.return_value = """
+|====================|===========|============|============|=====|=========|
+|93941               |1          |15000       |0           |0    |N/A      |
+|N/A                 |Active     |14999       |0           |     |N/A      |
+"""  # in-flight submissions > completions => npu_active
+    
+    gauge = HardwareGauge(gpu_idle_busy_pct=10, gpu_prefill_power_w=35.0)
+    reading = gauge.read_direct()
+    
+    assert reading.gpu_busy_pct == 50
+    assert reading.gpu_power_w == 25.0
+    assert reading.npu_active is True
+    assert reading.state == GpuState.ACTIVE
+    assert reading.igpu_degraded is False
+    assert reading.npu_degraded is False
+
+
+@patch("xdna_top.gauge.load_sysfs_paths")
+@patch("builtins.open")
+@patch("os.path.exists")
+def test_igpu_degradation_honest_vs_pessimism(mock_exists, mock_open, mock_load_paths):
+    # Simulate both paths missing
+    mock_exists.return_value = False
+    mock_load_paths.return_value = (None, None)
+    
+    # 1. Honest degradation (default, pessimistic_fallback=False)
+    gauge_honest = HardwareGauge(gpu_idle_busy_pct=10, pessimistic_fallback=False)
+    reading_honest = gauge_honest.read_direct()
+    
+    assert reading_honest.gpu_busy_pct is None
+    assert reading_honest.gpu_power_w is None
+    assert reading_honest.igpu_degraded is True
+    # Honest mode refuses to classify from invented inputs: state is UNKNOWN
+    # in the enum and null in JSON.
+    assert reading_honest.state == GpuState.UNKNOWN
+    assert reading_honest.to_dict()["state"] is None
+
+    # 2. Pessimistic fallback (pessimistic_fallback=True)
+    gauge_pessimistic = HardwareGauge(gpu_idle_busy_pct=10, pessimistic_fallback=True)
+    reading_pessimistic = gauge_pessimistic.read_direct()
+    
+    assert reading_pessimistic.gpu_busy_pct == 100
+    assert reading_pessimistic.gpu_power_w == 45.0
+    assert reading_pessimistic.igpu_degraded is True
+    assert reading_pessimistic.state == GpuState.PREFILL_BURST
+
+
+@patch("xdna_top.gauge.run_xrt_smi")
+@patch("xdna_top.gauge.load_sysfs_paths")
+@patch("builtins.open")
+@patch("os.path.exists")
+def test_degraded_honest_no_classified_state(mock_exists, mock_open, mock_load_paths, mock_run_xrt_smi):
+    # Both sysfs paths missing -> iGPU degraded. NPU mocked out so it can't
+    # influence iGPU state classification.
+    mock_exists.return_value = False
+    mock_load_paths.return_value = (None, None)
+    mock_run_xrt_smi.return_value = None
+
+    gauge_honest = HardwareGauge(gpu_idle_busy_pct=10, pessimistic_fallback=False)
+    reading = gauge_honest.read_direct()
+
+    # Honest degradation: values are null...
+    assert reading.gpu_busy_pct is None
+    assert reading.gpu_power_w is None
+    assert reading.igpu_degraded is True
+
+    # ...and state is NOT classified from invented inputs.
+    # JSON must be null, enum must be UNKNOWN, and it must never be a
+    # classified iGPU activity state.
+    assert reading.to_dict()["state"] is None
+    assert reading.state == GpuState.UNKNOWN
+    assert reading.state not in (GpuState.IDLE, GpuState.ACTIVE, GpuState.PREFILL_BURST)
+
+
+@patch("subprocess.run")
+def test_discover_npu_device(mock_run):
+    discover_npu_device.cache_clear()
+    # 1. Success case
+    mock_proc = MagicMock()
+    mock_proc.returncode = 0
+    mock_proc.stdout = """
+Device(s) Present
+|BDF             |Name          |
+|----------------|--------------|
+|[0000:c6:00.1]  |RyzenAI-npu5  |
+"""
+    mock_run.return_value = mock_proc
+    assert discover_npu_device() == "0000:c6:00.1"
+
+    # 2. Fail case
+    discover_npu_device.cache_clear()
+    mock_proc.returncode = 1
+    assert discover_npu_device() is None
+
+
+@patch("xdna_top.gauge.discover_npu_device")
+@patch("subprocess.run")
+def test_run_xrt_smi_device_arg(mock_run, mock_discover):
+    mock_discover.return_value = "0000:ab:00.1"
+    
+    mock_proc = MagicMock()
+    mock_proc.returncode = 0
+    mock_proc.stdout = "fake contexts output"
+    mock_run.return_value = mock_proc
+
+    # 1. No device passed -> uses discover_npu_device BDF
+    run_xrt_smi(device=None)
+    mock_run.assert_called_with(
+        ["xrt-smi", "examine", "--device", "0000:ab:00.1", "--report", "aie-partitions"],
+        capture_output=True,
+        text=True,
+        timeout=1.5,
+    )
+
+    # 2. Override device passed
+    run_xrt_smi(device="0000:99:99.9")
+    mock_run.assert_called_with(
+        ["xrt-smi", "examine", "--device", "0000:99:99.9", "--report", "aie-partitions"],
+        capture_output=True,
+        text=True,
+        timeout=1.5,
+    )

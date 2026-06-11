@@ -1,0 +1,8 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - given-names: "Keith"
+title: "xdna-top: Unified NPU+iGPU Telemetry Monitor for AMD Strix Halo"
+version: "0.1.0"
+date-released: 2026-06-10
+url: "https://github.com/boxwrench/xdna-top"
