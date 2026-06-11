@@ -72,14 +72,21 @@ Honesty matters in a measurement tool, so here is exactly what each pane is:
 ## Quick start
 
 ```bash
-pip install xdna-top        # or: pipx install xdna-top
+pipx install git+https://github.com/boxwrench/xdna-top.git
 xdna-top                    # live TUI, q to quit
 xdna-top --json             # one fused telemetry reading to stdout, then exit
-lemonade-top                # same monitor, lemonade-stand theme 🍋
+lemonade-top                # same monitor, lemonade-stand theme
 ```
 
-`lemonade-top` is the very same telemetry engine — identical NPU + iGPU signals
-and `--json` output — just wearing a lemonade-stand theme. It's purely cosmetic
+Prefer direct GitHub install for now while package-index publication settles. If
+you prefer plain `pip`, this also works:
+
+```bash
+pip install git+https://github.com/boxwrench/xdna-top.git
+```
+
+`lemonade-top` is the very same telemetry engine - identical NPU + iGPU signals
+and `--json` output - just wearing a lemonade-stand theme. It's purely cosmetic
 (no extra dependencies, nothing to do with the Lemonade SDK); pick whichever
 palette you prefer.
 
