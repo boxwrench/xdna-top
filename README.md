@@ -117,11 +117,18 @@ view lives at **[boxwrench.github.io/xdna-top](https://boxwrench.github.io/xdna-
 
 ## Roadmap
 
-- [ ] Real screenshot + asciinema demo (v0.1)
-- [ ] Hosted telemetry chart gallery (GitHub Pages)
+- [ ] Evidence commands for eval and update workflows: `snapshot`, `record`,
+      `compare`, `assert`, and `workload-check`
+- [ ] Upgrade canary / doctor mode for kernel, BIOS, XRT, Ryzen AI, and distro
+      updates
+- [ ] Markdown environment reports for devlogs, bug reports, and eval evidence
 - [ ] Configurable poll rate / history window
 - [ ] Per-context history view
 - [ ] More APUs (Phoenix/Hawk Point XDNA1) — testers welcome
+
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the prioritized command plan and
+[docs/SNAPSHOT-SCHEMA.md](docs/SNAPSHOT-SCHEMA.md) for the snapshot artifact
+draft.
 
 ## Contributing
 
