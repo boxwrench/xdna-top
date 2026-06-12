@@ -5,16 +5,17 @@ chat history. Keep it public, generic, and free of private project names.
 
 ## Current Milestone
 
-`v0.1.x`: positioning and schema groundwork.
+`v0.2`: evidence core implementation.
 
-This milestone is documentation-first. It should not change the current
-runtime behavior of:
+The first evidence command, `xdna-top snapshot`, has started. Continue preserving
+the current runtime behavior of:
 
 - `xdna-top`
 - `xdna-top --json`
 - `lemonade-top`
 
-The goal is to make the public direction clear before adding new commands.
+The goal is to build the evidence commands without turning `xdna-top` into a
+general AMDGPU monitor.
 
 ## Current Direction
 
@@ -46,8 +47,12 @@ Implementation entry points:
   rendering, and `--json`
 - [../src/xdna_top/gauge.py](../src/xdna_top/gauge.py): sysfs reads, XRT probe,
   context parsing, and fused reading model
+- [../src/xdna_top/snapshot.py](../src/xdna_top/snapshot.py): snapshot artifact
+  builder and JSON writer
 - [../tests/test_xdna_top.py](../tests/test_xdna_top.py) and
   [../tests/test_gauge.py](../tests/test_gauge.py): current behavior checks
+- [../tests/test_snapshot.py](../tests/test_snapshot.py): snapshot schema and
+  degraded-path checks
 
 ## Completed Groundwork
 
@@ -62,6 +67,10 @@ Implementation entry points:
   degraded reasons, direct backend fields, and sensor provenance.
 - Teaching docs and glossary now explain DRM, IOCTL, `/dev/accel`, AMDXDNA,
   XRT, column utilization, and backend provenance.
+- `xdna-top snapshot` now emits a schema-versioned JSON artifact using the
+  current sysfs and XRT sources.
+- Snapshot tests cover healthy and degraded paths without requiring real
+  hardware.
 
 ## Next Public Issues
 
@@ -96,17 +105,16 @@ Each issue should include:
 
 ## Next Implementation Step
 
-Start `v0.2` with `snapshot`.
+Continue `v0.2` with `env-report`.
 
 Recommended order:
 
-1. Refactor the CLI from single flags into subcommands while preserving current
-   behavior for bare `xdna-top` and `xdna-top --json`.
-2. Add a small snapshot builder module that wraps existing `HardwareGauge`,
-   `discover_npu_device`, `run_xrt_smi`, and sysfs path discovery.
-3. Emit the draft schema from [SNAPSHOT-SCHEMA.md](SNAPSHOT-SCHEMA.md).
-4. Add tests that mock missing XRT, missing sysfs paths, and valid context data.
-5. Only after `snapshot` is stable, add `env-report`, `record`, and `assert`.
+1. Implement `xdna-top env-report <snapshot.json> --markdown`.
+2. Render only facts captured in the snapshot; do not probe the system again.
+3. Include platform, command availability, backend provenance, degraded flags,
+   one fused reading, and NPU/iGPU visibility.
+4. Add tests for healthy and degraded snapshot reports.
+5. After `env-report`, implement `record`, then `assert`.
 
 Do not start with `workload-check`. It depends on the evidence artifact and has
 the largest design surface.

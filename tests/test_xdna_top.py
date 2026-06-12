@@ -167,6 +167,20 @@ def test_json_flag(mock_argv, mock_gauge_class):
         assert printed_json["state"] == "ACTIVE"
 
 
+@patch("xdna_top.main.snapshot_main")
+@patch("sys.argv", ["xdna-top", "snapshot", "--out", "bench/platform.json"])
+def test_snapshot_subcommand(mock_snapshot_main):
+    mock_snapshot_main.return_value = 0
+
+    ret = main()
+
+    assert ret == 0
+    mock_snapshot_main.assert_called_once()
+    args = mock_snapshot_main.call_args[0][0]
+    assert args.command == "snapshot"
+    assert args.out == "bench/platform.json"
+
+
 @patch("xdna_top.main.HardwareGauge")
 @patch("sys.argv")
 def test_lemonade_json_flag(mock_argv, mock_gauge_class):

@@ -18,6 +18,7 @@ from rich.text import Text
 from rich.align import Align
 
 from xdna_top.gauge import HardwareGauge, GpuState, run_xrt_smi, parse_xrt_smi
+from xdna_top.snapshot import snapshot_main
 
 
 @dataclass(frozen=True)
@@ -266,14 +267,58 @@ def build_layout(theme: TuiTheme = DEFAULT_THEME) -> Layout:
     return layout
 
 
-def build_parser(description: str = "xdna-top: NPU+iGPU Telemetry Monitor") -> argparse.ArgumentParser:
+def _add_hardware_args(parser: argparse.ArgumentParser, *, suppress_defaults: bool = False) -> None:
+    default = argparse.SUPPRESS if suppress_defaults else None
+    parser.add_argument(
+        "--idle-busy-pct",
+        type=int,
+        default=default if suppress_defaults else 10,
+        help="GPU idle/busy threshold percent",
+    )
+    parser.add_argument(
+        "--prefill-power-w",
+        type=float,
+        default=default if suppress_defaults else 35.0,
+        help="GPU prefill power threshold (W)",
+    )
+    parser.add_argument(
+        "--hysteresis-samples",
+        type=int,
+        default=default if suppress_defaults else 3,
+        help="Hysteresis majority vote window size",
+    )
+    parser.add_argument(
+        "--bench-dir",
+        type=str,
+        default=default if suppress_defaults else "/tmp/xdna_top",
+        help="Directory for latest gauge readings",
+    )
+    parser.add_argument(
+        "--npu-device",
+        type=str,
+        default=default if suppress_defaults else None,
+        help="NPU device BDF override",
+    )
+
+
+def build_parser(
+    description: str = "xdna-top: NPU+iGPU Telemetry Monitor",
+    *,
+    include_commands: bool = True,
+) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--json", action="store_true", help="Print a single fused reading and exit.")
-    parser.add_argument("--idle-busy-pct", type=int, default=10, help="GPU idle/busy threshold percent")
-    parser.add_argument("--prefill-power-w", type=float, default=35.0, help="GPU prefill power threshold (W)")
-    parser.add_argument("--hysteresis-samples", type=int, default=3, help="Hysteresis majority vote window size")
-    parser.add_argument("--bench-dir", type=str, default="/tmp/xdna_top", help="Directory for latest gauge readings")
-    parser.add_argument("--npu-device", type=str, default=None, help="NPU device BDF override")
+    _add_hardware_args(parser)
+
+    if include_commands:
+        subparsers = parser.add_subparsers(dest="command")
+        snapshot_parser = subparsers.add_parser(
+            "snapshot",
+            help="Capture a schema-versioned platform and telemetry snapshot.",
+        )
+        snapshot_parser.add_argument("--out", type=str, default=None, help="Output JSON path. Defaults to stdout.")
+        _add_hardware_args(snapshot_parser, suppress_defaults=True)
+
     return parser
 
 
@@ -391,6 +436,8 @@ def run_monitor(args: argparse.Namespace, theme: TuiTheme = DEFAULT_THEME) -> in
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
+    if getattr(args, "command", None) == "snapshot":
+        return snapshot_main(args)
     return run_monitor(args)
 
 

@@ -75,6 +75,7 @@ Honesty matters in a measurement tool, so here is exactly what each pane is:
 pipx install git+https://github.com/boxwrench/xdna-top.git
 xdna-top                    # live TUI, q to quit
 xdna-top --json             # one fused telemetry reading to stdout, then exit
+xdna-top snapshot --out platform.json
 lemonade-top                # same monitor, lemonade-stand theme
 ```
 
@@ -101,6 +102,7 @@ degraded instead of crashing.
 - Rolling ASCII sparklines for iGPU busy and power
 - Per-context NPU table: PID, submissions, completions, derived activity
 - `--json` mode for scripts, logging, and dashboards
+- `snapshot` mode for schema-versioned platform and telemetry evidence
 - Pessimistic fallbacks everywhere — built for imperfect driver stacks
 - Zero daemon, zero root*, zero ROCm dependency
   <sub>*standard sysfs/xrt permissions apply</sub>
