@@ -65,17 +65,26 @@ Implementation entry points:
 
 ## Next Public Issues
 
-Open one issue per unit of work. Good first public issues:
+Public tracking issues:
 
-- `v0.2: implement xdna-top snapshot`
-- `v0.2: implement xdna-top env-report`
-- `v0.2: implement xdna-top record`
-- `v0.2: implement xdna-top assert`
-- `v0.3: prototype read-only AMDXDNA IOCTL backend`
-- `v0.3: implement snapshot compare`
-- `v0.3: implement local baseline save/check`
-- `v0.4: design supervised workload-check`
-- `v0.5: add theme registry and THEMES.md`
+- [#1](https://github.com/boxwrench/xdna-top/issues/1): `v0.2:
+  implement xdna-top snapshot`
+- [#2](https://github.com/boxwrench/xdna-top/issues/2): `v0.2:
+  implement xdna-top env-report`
+- [#3](https://github.com/boxwrench/xdna-top/issues/3): `v0.2:
+  implement xdna-top record`
+- [#4](https://github.com/boxwrench/xdna-top/issues/4): `v0.2:
+  implement xdna-top assert`
+- [#5](https://github.com/boxwrench/xdna-top/issues/5): `v0.3:
+  prototype read-only AMDXDNA IOCTL backend`
+- [#6](https://github.com/boxwrench/xdna-top/issues/6): `v0.3:
+  implement snapshot compare`
+- [#7](https://github.com/boxwrench/xdna-top/issues/7): `v0.3:
+  implement local baseline save/check`
+- [#8](https://github.com/boxwrench/xdna-top/issues/8): `v0.4:
+  design supervised workload-check`
+- [#9](https://github.com/boxwrench/xdna-top/issues/9): `v0.5:
+  add theme registry and THEMES.md`
 
 Each issue should include:
 
