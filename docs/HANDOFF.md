@@ -7,8 +7,8 @@ chat history. Keep it public, generic, and free of private project names.
 
 `v0.2`: evidence core implementation.
 
-The first evidence command, `xdna-top snapshot`, has started. Continue preserving
-the current runtime behavior of:
+The first two evidence commands, `xdna-top snapshot` and `xdna-top env-report`,
+have started. Continue preserving the current runtime behavior of:
 
 - `xdna-top`
 - `xdna-top --json`
@@ -49,10 +49,14 @@ Implementation entry points:
   context parsing, and fused reading model
 - [../src/xdna_top/snapshot.py](../src/xdna_top/snapshot.py): snapshot artifact
   builder and JSON writer
+- [../src/xdna_top/env_report.py](../src/xdna_top/env_report.py): Markdown
+  report renderer for captured snapshots
 - [../tests/test_xdna_top.py](../tests/test_xdna_top.py) and
   [../tests/test_gauge.py](../tests/test_gauge.py): current behavior checks
 - [../tests/test_snapshot.py](../tests/test_snapshot.py): snapshot schema and
   degraded-path checks
+- [../tests/test_env_report.py](../tests/test_env_report.py): Markdown report
+  rendering and invalid-input checks
 
 ## Completed Groundwork
 
@@ -71,6 +75,8 @@ Implementation entry points:
   current sysfs and XRT sources.
 - Snapshot tests cover healthy and degraded paths without requiring real
   hardware.
+- `xdna-top env-report <snapshot.json> --markdown` now renders a report from
+  captured snapshot facts without probing the machine again.
 
 ## Next Public Issues
 
@@ -105,16 +111,17 @@ Each issue should include:
 
 ## Next Implementation Step
 
-Continue `v0.2` with `env-report`.
+Continue `v0.2` with `record`.
 
 Recommended order:
 
-1. Implement `xdna-top env-report <snapshot.json> --markdown`.
-2. Render only facts captured in the snapshot; do not probe the system again.
-3. Include platform, command availability, backend provenance, degraded flags,
-   one fused reading, and NPU/iGPU visibility.
-4. Add tests for healthy and degraded snapshot reports.
-5. After `env-report`, implement `record`, then `assert`.
+1. Implement `xdna-top record --duration <seconds> --interval <seconds>
+   --out <path>`.
+2. Write typed JSONL telemetry events with `schema_version`, timestamps,
+   readings, and context data where available.
+3. Preserve degraded status and backend provenance where practical.
+4. Add tests for interval/duration behavior and JSONL shape.
+5. After `record`, implement `assert`.
 
 Do not start with `workload-check`. It depends on the evidence artifact and has
 the largest design surface.

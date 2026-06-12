@@ -181,6 +181,21 @@ def test_snapshot_subcommand(mock_snapshot_main):
     assert args.out == "bench/platform.json"
 
 
+@patch("xdna_top.main.env_report_main")
+@patch("sys.argv", ["xdna-top", "env-report", "bench/platform.json", "--markdown"])
+def test_env_report_subcommand(mock_env_report_main):
+    mock_env_report_main.return_value = 0
+
+    ret = main()
+
+    assert ret == 0
+    mock_env_report_main.assert_called_once()
+    args = mock_env_report_main.call_args[0][0]
+    assert args.command == "env-report"
+    assert args.snapshot == "bench/platform.json"
+    assert args.markdown is True
+
+
 @patch("xdna_top.main.HardwareGauge")
 @patch("sys.argv")
 def test_lemonade_json_flag(mock_argv, mock_gauge_class):

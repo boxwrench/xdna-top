@@ -17,6 +17,7 @@ from rich.table import Table
 from rich.text import Text
 from rich.align import Align
 
+from xdna_top.env_report import env_report_main
 from xdna_top.gauge import HardwareGauge, GpuState, run_xrt_smi, parse_xrt_smi
 from xdna_top.snapshot import snapshot_main
 
@@ -319,6 +320,18 @@ def build_parser(
         snapshot_parser.add_argument("--out", type=str, default=None, help="Output JSON path. Defaults to stdout.")
         _add_hardware_args(snapshot_parser, suppress_defaults=True)
 
+        env_report_parser = subparsers.add_parser(
+            "env-report",
+            help="Render a Markdown report from a captured snapshot.",
+        )
+        env_report_parser.add_argument("snapshot", help="Snapshot JSON path.")
+        env_report_parser.add_argument(
+            "--markdown",
+            action="store_true",
+            help="Render Markdown output. Currently the only supported format.",
+        )
+        env_report_parser.add_argument("--out", type=str, default=None, help="Output Markdown path. Defaults to stdout.")
+
     return parser
 
 
@@ -438,6 +451,8 @@ def main() -> int:
     args = parser.parse_args()
     if getattr(args, "command", None) == "snapshot":
         return snapshot_main(args)
+    if getattr(args, "command", None) == "env-report":
+        return env_report_main(args)
     return run_monitor(args)
 
 
