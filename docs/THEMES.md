@@ -21,6 +21,8 @@ compatibility alias: it defaults to the `lemonade` theme but still honors
 
 ## Available themes
 
+![xdna-top themes gallery](themes/gallery.png)
+
 | Name | Look |
 |---|---|
 | `default` | cyan/magenta on the standard terminal palette |
@@ -29,6 +31,9 @@ compatibility alias: it defaults to the `lemonade` theme but still honors
 | `phosphor` | green monochrome CRT terminal |
 | `amber` | amber monochrome CRT terminal |
 | `halo` | deep navy and silver |
+
+The gallery above is rendered with illustrative values to show each palette; the
+metric columns, units, state values, and numbers are identical across all themes.
 
 ## Contributing a theme
 

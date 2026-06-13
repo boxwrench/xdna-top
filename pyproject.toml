@@ -17,6 +17,14 @@ dependencies = [
     "rich",
 ]
 
+[project.optional-dependencies]
+# Dev-only tooling for regenerating docs/themes/gallery.png. Not needed to run
+# xdna-top. See docs/themes/render_gallery.py.
+docs = [
+    "cairosvg",
+    "pillow",
+]
+
 [project.scripts]
 xdna-top = "xdna_top.main:main"
 lemonade-top = "xdna_top.lemonade:main"

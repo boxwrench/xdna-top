@@ -123,6 +123,18 @@ degraded instead of crashing.
 - Zero daemon, zero root*, zero ROCm dependency
   <sub>*standard sysfs/xrt permissions apply</sub>
 
+## Themes
+
+Pick a skin with `--theme <name>` (or set `XDNA_TOP_THEME`); run `xdna-top
+--list-themes` to see them all. Themes change only colors and chrome — never the
+metric names, states, units, or measured values — so a screenshot stays
+claims-accurate in any theme.
+
+![xdna-top themes gallery](docs/themes/gallery.png)
+
+> Rendered with illustrative values to show the palettes. See
+> [docs/THEMES.md](docs/THEMES.md) for the full list and how to contribute one.
+
 ## How it works (30 seconds)
 
 `sysfs` supplies the iGPU's own driver counters; `xrt-smi` exposes the NPU's
