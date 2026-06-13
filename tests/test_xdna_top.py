@@ -244,6 +244,21 @@ def test_compare_subcommand(mock_compare_main):
     assert args.after == "after.json"
 
 
+@patch("xdna_top.main.baseline_main")
+@patch("sys.argv", ["xdna-top", "baseline", "check", "known-good"])
+def test_baseline_subcommand(mock_baseline_main):
+    mock_baseline_main.return_value = 0
+
+    ret = main()
+
+    assert ret == 0
+    mock_baseline_main.assert_called_once()
+    args = mock_baseline_main.call_args[0][0]
+    assert args.command == "baseline"
+    assert args.action == "check"
+    assert args.name == "known-good"
+
+
 @patch("xdna_top.main.HardwareGauge")
 @patch("sys.argv")
 def test_lemonade_json_flag(mock_argv, mock_gauge_class):

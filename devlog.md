@@ -134,3 +134,31 @@ Verified off-hardware: captured a real snapshot, synthesized a drifted copy
 (kernel bump, accel0 gone), and confirmed `compare` reports `CHANGED`/`REGRESSION`
 with exit 1, and exit 0 on identical inputs.
 
+## 2026-06-13 — v0.3: `xdna-top baseline`
+Implemented the named-baseline workflow, the last off-hardware v0.3 command.
+
+1. **Workflow (`src/xdna_top/baseline.py`)**:
+   - `baseline save <name>` captures a snapshot and stores it under the XDG state
+     dir (`$XDG_STATE_HOME/xdna-top/baselines/`, default `~/.local/state/...`),
+     overridable with `--dir`. `baseline check <name>` re-snapshots and diffs
+     against the saved one via `compare.compare_snapshots`. `baseline list` shows
+     saved names.
+   - `check` reuses compare's exit codes (`0` clean, `1` drift); `2` covers a
+     missing baseline, an unsafe name, or an unreadable snapshot. Only `save`
+     probes hardware.
+   - Baseline names are validated against path traversal (`[A-Za-z0-9._-]`, no
+     `/` or `..`), and `check` never re-probes when the baseline is absent.
+2. **CLI**: added a `baseline` subcommand with nested `save`/`check`/`list`
+   actions and dispatch in `main.py`.
+3. **Tests (`tests/test_baseline.py`)**: XDG/override path resolution, name/path
+   safety, save→check round trip, drift detection, missing-baseline guard, and
+   exit codes — all by mocking `build_snapshot`, no real hardware. Full suite:
+   83 passed.
+4. **Docs**: README quick start/features/roadmap; storage + exit-code note in the
+   ROADMAP baseline section; HANDOFF marks the off-hardware v0.3 commands done,
+   leaving only the hardware-gated `amdxdna_ioctl` backend for `exp/`.
+
+Verified off-hardware: ran the full `save → list → check` flow against a temp
+`--dir`, confirming clean exit 0 vs itself, exit 1 on a synthesized degraded
+regression, and exit 2 for a missing name and a path-traversal name.
+

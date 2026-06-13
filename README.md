@@ -80,6 +80,8 @@ xdna-top env-report platform.json --markdown
 xdna-top record --duration 60 --interval 0.2 --out telemetry.jsonl
 xdna-top assert telemetry.jsonl --require-npu-activity   # exit 0/1 for CI
 xdna-top compare before.json after.json   # flag high-signal platform drift
+xdna-top baseline save known-good          # store a named known-good snapshot
+xdna-top baseline check known-good         # re-check the platform after updates
 lemonade-top                # same monitor, lemonade-stand theme
 ```
 
@@ -111,6 +113,7 @@ degraded instead of crashing.
 - `record` mode for streaming typed JSONL telemetry events over a time window
 - `assert` mode for named pass/fail evidence checks with CI-friendly exit codes
 - `compare` mode for spotting high-signal platform drift between two snapshots
+- `baseline` mode for saving a known-good snapshot and re-checking it after updates
 - Pessimistic fallbacks everywhere — built for imperfect driver stacks
 - Zero daemon, zero root*, zero ROCm dependency
   <sub>*standard sysfs/xrt permissions apply</sub>
@@ -141,7 +144,8 @@ view lives at **[boxwrench.github.io/xdna-top](https://boxwrench.github.io/xdna-
 ## Roadmap
 
 - [x] v0.2 evidence core: `snapshot`, `env-report`, `record`, and `assert`
-- [ ] v0.3 direct AMDXDNA backend probes plus `compare` (done) and `baseline`
+- [ ] v0.3 `compare` (done), `baseline` (done), plus read-only direct AMDXDNA
+      backend probes
 - [ ] v0.4 supervised `workload-check` for endpoint and NPU-context evidence
 - [ ] v0.5 community/reporting work: theme registry, HTML reports, and more
       Ryzen AI captures

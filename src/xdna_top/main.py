@@ -18,6 +18,7 @@ from rich.text import Text
 from rich.align import Align
 
 from xdna_top.assertions import CHECKS, assert_main
+from xdna_top.baseline import baseline_main
 from xdna_top.compare import compare_main
 from xdna_top.env_report import env_report_main
 from xdna_top.gauge import HardwareGauge, GpuState, run_xrt_smi, parse_xrt_smi
@@ -374,6 +375,40 @@ def build_parser(
         compare_parser.add_argument("before", help="Baseline snapshot JSON path.")
         compare_parser.add_argument("after", help="Newer snapshot JSON path.")
 
+        baseline_parser = subparsers.add_parser(
+            "baseline",
+            help="Save and check named local baseline snapshots.",
+        )
+        baseline_sub = baseline_parser.add_subparsers(dest="action")
+
+        baseline_save_parser = baseline_sub.add_parser(
+            "save",
+            help="Capture a snapshot and store it as a named baseline.",
+        )
+        baseline_save_parser.add_argument("name", help="Baseline name, e.g. known-good.")
+        baseline_check_parser = baseline_sub.add_parser(
+            "check",
+            help="Compare a fresh snapshot against a named baseline.",
+        )
+        baseline_check_parser.add_argument("name", help="Baseline name to check against.")
+        baseline_list_parser = baseline_sub.add_parser(
+            "list",
+            help="List saved baseline names.",
+        )
+        for baseline_action_parser in (
+            baseline_save_parser,
+            baseline_check_parser,
+            baseline_list_parser,
+        ):
+            baseline_action_parser.add_argument(
+                "--dir",
+                dest="baseline_dir",
+                default=None,
+                help="Baselines directory override (defaults to XDG state dir).",
+            )
+        for baseline_action_parser in (baseline_save_parser, baseline_check_parser):
+            _add_hardware_args(baseline_action_parser, suppress_defaults=True)
+
     return parser
 
 
@@ -501,6 +536,8 @@ def main() -> int:
         return assert_main(args)
     if getattr(args, "command", None) == "compare":
         return compare_main(args)
+    if getattr(args, "command", None) == "baseline":
+        return baseline_main(args)
     return run_monitor(args)
 
 

@@ -391,6 +391,12 @@ xdna-top baseline check known-good
 Baseline names in public docs should stay generic, such as `known-good` or
 `post-kernel-update`.
 
+Named snapshots are stored under the XDG state directory
+(`$XDG_STATE_HOME/xdna-top/baselines/`, defaulting to
+`~/.local/state/xdna-top/baselines/`), overridable with `--dir`. `check` reuses
+the `compare` rules and exit codes (`0` clean, `1` drift, `2` on a missing
+baseline, unsafe name, or unreadable snapshot), and only `save` probes hardware.
+
 Why later: this is a workflow convenience over snapshot and compare, not a new
 measurement capability.
 

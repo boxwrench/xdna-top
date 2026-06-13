@@ -9,8 +9,9 @@ chat history. Keep it public, generic, and free of private project names.
 
 All four evidence-core commands have landed: `xdna-top snapshot`,
 `xdna-top env-report`, `xdna-top record`, and `xdna-top assert`. `v0.3` is now in
-progress: `xdna-top compare` is implemented; the remaining v0.3 work is
-`baseline` and the read-only direct AMDXDNA backend.
+progress: `xdna-top compare` and `xdna-top baseline` are implemented; the only
+remaining v0.3 work is the read-only direct AMDXDNA backend, which needs the
+hardware and belongs on its own branch.
 
 Continue preserving the current runtime behavior of:
 
@@ -61,6 +62,8 @@ Implementation entry points:
   loader, named checks, and CI exit codes for `assert`
 - [../src/xdna_top/compare.py](../src/xdna_top/compare.py): high-signal snapshot
   diff rules and CI exit codes for `compare`
+- [../src/xdna_top/baseline.py](../src/xdna_top/baseline.py): named snapshot
+  save/check/list workflow over `snapshot` + `compare`
 - [../tests/test_xdna_top.py](../tests/test_xdna_top.py) and
   [../tests/test_gauge.py](../tests/test_gauge.py): current behavior checks
 - [../tests/test_snapshot.py](../tests/test_snapshot.py): snapshot schema and
@@ -73,6 +76,8 @@ Implementation entry points:
   per-check pass/fail, and exit codes for both artifact types
 - [../tests/test_compare.py](../tests/test_compare.py): per-rule change/regression
   classification and compare exit codes
+- [../tests/test_baseline.py](../tests/test_baseline.py): name/path safety,
+  save/check round trip, and baseline exit codes
 
 ## Completed Groundwork
 
@@ -111,6 +116,12 @@ Implementation entry points:
 - Compare tests cover each rule's change/regression classification (including the
   conditional `aie-partitions` rule) and the CLI exit codes, with no real
   hardware.
+- `xdna-top baseline save/check/list` now wraps `snapshot` + `compare` into a
+  named local workflow under the XDG state dir (override with `--dir`). Names are
+  validated against path traversal; `check` reuses `compare` exit codes and never
+  re-probes when the baseline is absent.
+- Baseline tests cover name/path safety, the save/check round trip, drift
+  detection, and exit codes by mocking `build_snapshot` (no real hardware).
 
 ## Next Public Issues
 
@@ -145,26 +156,21 @@ Each issue should include:
 
 ## Next Implementation Step
 
-The v0.2 evidence core and `xdna-top compare` are done. Continue `v0.3` with the
-remaining off-hardware command, then the hardware-only backend on its own branch:
+The v0.2 evidence core plus `xdna-top compare` and `xdna-top baseline` are done.
+The remaining v0.3 item, the read-only `amdxdna_ioctl` backend (#5), needs the
+hardware and should be built on a separate `exp/amdxdna-backend` branch under the
+rules in the "Backend Experiment" section below. `compare` and `baseline` do not
+depend on it.
 
-1. Implement `xdna-top baseline save <name>` / `baseline check <name>` as a thin
-   workflow over `snapshot` + `compare`, storing named snapshots under a local
-   directory (for example `~/.local/state/xdna-top/baselines/`). `check` reuses
-   `compare.compare_snapshots` and its exit codes; only `save` probes hardware
-   (mock `build_snapshot` in tests). Keep baseline names generic in docs, such as
-   `known-good` or `post-kernel-update`.
-2. The read-only `amdxdna_ioctl` backend (#5) is the hardware-dependent part of
-   v0.3 and should stay on a separate `exp/amdxdna-backend` branch. `compare` and
-   `baseline` do not depend on it.
+Until hardware is available, pick from the off-hardware backlog (any order, all
+testable with mocks):
 
-Off-hardware backlog (good to pick up in any order, all testable with mocks):
-
-- `baseline` check-side (#7) — pure compare over a saved snapshot.
-- `xdna-top mark` — append a typed `{"type":"mark",...}` line to a record JSONL.
+- `xdna-top mark` — append a typed `{"type":"mark",...}` line to a record JSONL,
+  reusing the record stream writer. Pairs with `record` for trial annotations.
 - `env-report` from a `record` stream — summarize first/last reading and any
-  observed activity, reusing the Markdown renderer.
-- Theme registry behind `--theme <name>` (#9), keeping `lemonade-top` as an alias.
+  observed activity, reusing the Markdown renderer. Currently snapshot-only.
+- Theme registry behind `--theme <name>` (#9), keeping `lemonade-top` as an alias
+  (v0.5, low risk, good first-contribution surface).
 
 Do not start with `workload-check`. It depends on the evidence artifact and has
 the largest design surface.
