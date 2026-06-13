@@ -106,7 +106,7 @@ def build_snapshot(
         "schema_version": SCHEMA_VERSION,
         "kind": SNAPSHOT_KIND,
         "captured_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        "host": _host_facts(),
+        "host": host_facts(),
         "commands": {
             "xrt_smi": {
                 "path": xrt["path"],
@@ -167,7 +167,7 @@ def build_snapshot(
     }
 
 
-def _host_facts() -> dict[str, Any]:
+def host_facts() -> dict[str, Any]:
     return {
         "hostname": socket.gethostname(),
         "kernel": {

@@ -244,6 +244,47 @@ List of non-fatal probe errors.
 Errors should not prevent snapshot creation unless the output path cannot be
 written or the JSON artifact would be invalid.
 
+## Record Stream
+
+`xdna-top record` writes a JSONL stream rather than a single object. Each line is
+a self-describing event with a `type` and `schema_version`, so consumers (such as
+`xdna-top assert`) can select events by type without positional assumptions.
+
+The stream is framed by a `meta` header line and a `summary` footer line, with
+zero or more `telemetry` lines in between:
+
+```json
+{"type":"meta","schema_version":"1.0","kind":"xdna-top.record","started_at":"2026-06-13T02:16:39Z","params":{"duration_s":60.0,"interval_s":0.2},"host":{}}
+{"type":"telemetry","schema_version":"1.0","ts":123.4,"reading":{},"contexts":[]}
+{"type":"summary","schema_version":"1.0","kind":"xdna-top.record","started_at":"2026-06-13T02:16:39Z","ended_at":"2026-06-13T02:17:39Z","samples":301}
+```
+
+### `meta`
+
+Written first. Carries the record schema version, the same `host` facts block as
+a snapshot, and the requested capture window in `params`.
+
+### `telemetry`
+
+One per sample.
+
+- `ts`: capture timestamp for the sample
+- `reading`: the fused gauge reading, including `igpu_degraded` / `npu_degraded`
+  flags so degraded samples stay visible and machine-readable
+- `contexts`: per-context NPU data, each tagged with its `source` backend (for
+  example `xrt_smi`). An empty list means no contexts were observed, including
+  when the NPU source is unavailable
+
+### `summary`
+
+Written last, including after a `KeyboardInterrupt`, so a partial recording still
+ends with a valid summary line. Reports `ended_at` and the number of `samples`
+written.
+
+A `duration` of `0` produces exactly one `telemetry` sample. Each line is flushed
+as it is written, so the stream is tail-able and a partial artifact remains valid
+if a recording is interrupted.
+
 ## Compare Guidance
 
 Initial compare should treat these as high-signal changes:

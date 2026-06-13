@@ -77,6 +77,7 @@ xdna-top                    # live TUI, q to quit
 xdna-top --json             # one fused telemetry reading to stdout, then exit
 xdna-top snapshot --out platform.json
 xdna-top env-report platform.json --markdown
+xdna-top record --duration 60 --interval 0.2 --out telemetry.jsonl
 lemonade-top                # same monitor, lemonade-stand theme
 ```
 
@@ -105,6 +106,7 @@ degraded instead of crashing.
 - `--json` mode for scripts, logging, and dashboards
 - `snapshot` mode for schema-versioned platform and telemetry evidence
 - `env-report` mode for Markdown summaries from captured snapshots
+- `record` mode for streaming typed JSONL telemetry events over a time window
 - Pessimistic fallbacks everywhere — built for imperfect driver stacks
 - Zero daemon, zero root*, zero ROCm dependency
   <sub>*standard sysfs/xrt permissions apply</sub>

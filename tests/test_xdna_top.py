@@ -196,6 +196,22 @@ def test_env_report_subcommand(mock_env_report_main):
     assert args.markdown is True
 
 
+@patch("xdna_top.main.record_main")
+@patch("sys.argv", ["xdna-top", "record", "--duration", "30", "--interval", "0.5", "--out", "bench/telemetry.jsonl"])
+def test_record_subcommand(mock_record_main):
+    mock_record_main.return_value = 0
+
+    ret = main()
+
+    assert ret == 0
+    mock_record_main.assert_called_once()
+    args = mock_record_main.call_args[0][0]
+    assert args.command == "record"
+    assert args.duration == 30.0
+    assert args.interval == 0.5
+    assert args.out == "bench/telemetry.jsonl"
+
+
 @patch("xdna_top.main.HardwareGauge")
 @patch("sys.argv")
 def test_lemonade_json_flag(mock_argv, mock_gauge_class):

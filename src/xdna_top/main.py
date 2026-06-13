@@ -19,6 +19,7 @@ from rich.align import Align
 
 from xdna_top.env_report import env_report_main
 from xdna_top.gauge import HardwareGauge, GpuState, run_xrt_smi, parse_xrt_smi
+from xdna_top.record import record_main
 from xdna_top.snapshot import snapshot_main
 
 
@@ -332,6 +333,25 @@ def build_parser(
         )
         env_report_parser.add_argument("--out", type=str, default=None, help="Output Markdown path. Defaults to stdout.")
 
+        record_parser = subparsers.add_parser(
+            "record",
+            help="Record typed JSONL telemetry events over a time window.",
+        )
+        record_parser.add_argument(
+            "--duration",
+            type=float,
+            default=60.0,
+            help="Total recording duration in seconds.",
+        )
+        record_parser.add_argument(
+            "--interval",
+            type=float,
+            default=0.2,
+            help="Seconds between telemetry samples.",
+        )
+        record_parser.add_argument("--out", type=str, default=None, help="Output JSONL path. Defaults to stdout.")
+        _add_hardware_args(record_parser, suppress_defaults=True)
+
     return parser
 
 
@@ -453,6 +473,8 @@ def main() -> int:
         return snapshot_main(args)
     if getattr(args, "command", None) == "env-report":
         return env_report_main(args)
+    if getattr(args, "command", None) == "record":
+        return record_main(args)
     return run_monitor(args)
 
 

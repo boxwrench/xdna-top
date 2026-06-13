@@ -46,3 +46,32 @@ Implemented core improvements based on initial review:
 4. **Citation Formatting**:
    - Corrected person-form formatting in `CITATION.cff`.
 
+## 2026-06-13 — Evidence core: `xdna-top record`
+Implemented the third v0.2 evidence command, `xdna-top record`, which streams
+typed JSONL telemetry events over a time window.
+
+1. **Recorder (`src/xdna_top/record.py`)**:
+   - `record --duration <s> --interval <s> --out <path>` writes a JSONL stream
+     framed by a `meta` header and a `summary` footer, with one `telemetry`
+     event per sample in between.
+   - Each `telemetry` event carries the fused gauge reading (with
+     `igpu_degraded`/`npu_degraded` flags preserved) and per-context NPU data
+     tagged with its `source` backend.
+   - Deadline-driven sampling loop with injectable clock/sleep; `duration 0`
+     yields a single sample; `KeyboardInterrupt` stops cleanly and still writes
+     a summary. Lines are flushed per-write so the stream is tail-able and
+     partial artifacts stay valid.
+   - Exposed `host_facts()` from `snapshot.py` (was `_host_facts`) so the record
+     header reuses the same host block.
+2. **CLI**: wired `record` subcommand and dispatch into `main.py`; the
+   `lemonade-top` alias stays command-free.
+3. **Tests (`tests/test_record.py`)**: sampling-window count via a deterministic
+   fake clock, JSONL event shape, degraded path (no `xrt-smi`), interrupt
+   handling, and CLI dispatch. Full suite: 36 passed.
+4. **Docs**: README quick start/features, a Record Stream section in
+   `SNAPSHOT-SCHEMA.md`, and HANDOFF updated to point the next step at `assert`.
+
+Verified off-hardware: `xdna-top record` produces a valid degraded JSONL
+artifact (null readings, empty contexts, exit 0) with no `xrt-smi` or sysfs
+present.
+
