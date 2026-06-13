@@ -79,9 +79,14 @@ Read these before changing implementation:
 
 - [ROADMAP.md](ROADMAP.md): release order, scope boundaries, and issue policy
 - [SNAPSHOT-SCHEMA.md](SNAPSHOT-SCHEMA.md): artifact shape for `snapshot`,
-  `env-report`, `compare`, and `baseline`
-- [HOW-IT-WORKS.md](HOW-IT-WORKS.md): teaching guide and glossary
+  `env-report`, `record`, `assert`, `compare`, and `baseline`
+- [HOW-IT-WORKS.md](HOW-IT-WORKS.md): teaching guide, now including the
+  "From live view to evidence" tour of the evidence commands
+- [THEMES.md](THEMES.md): theme list, `--theme`/`XDNA_TOP_THEME` usage, and how to
+  contribute a theme
 - [../README.md](../README.md): public positioning and related-tools language
+- [index.html](index.html): the GitHub Pages dashboard; its interactive glossary
+  now has an "Evidence" category covering snapshot/record/mark/assert/compare/baseline
 
 Implementation entry points:
 
@@ -129,6 +134,9 @@ Implementation entry points:
   degraded reasons, direct backend fields, and sensor provenance.
 - Teaching docs and glossary now explain DRM, IOCTL, `/dev/accel`, AMDXDNA,
   XRT, column utilization, and backend provenance.
+- The teaching guide (HOW-IT-WORKS.md) and the dashboard glossary (index.html)
+  now also cover the evidence commands and concepts: snapshot, env-report,
+  record, mark, assert, compare, baseline, schema version, and degraded flags.
 - `xdna-top snapshot` now emits a schema-versioned JSON artifact using the
   current sysfs and XRT sources.
 - Snapshot tests cover healthy and degraded paths without requiring real

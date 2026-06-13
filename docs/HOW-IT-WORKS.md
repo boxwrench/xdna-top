@@ -135,6 +135,41 @@ sysfs node, a parse failure after an XRT update - that pane **degrades and says
 so** rather than crashing or, worse, silently showing stale numbers. A
 monitoring tool's first duty is to not lie about whether it's monitoring.
 
+## From live view to evidence
+
+The live TUI answers "what is happening right now?" The evidence commands answer
+"can I prove what happened, later, to someone else?" They are all thin views over
+the *same* fused reading, so nothing new is measured - it is just captured in a
+versioned, machine-readable shape. Every artifact carries a `schema_version` and
+the same degraded flags as the live view.
+
+- **`xdna-top snapshot`** writes one JSON object: host, devices, backends, one
+  fused reading, and degraded reasons. It is the point-in-time record everything
+  else compares against.
+- **`xdna-top env-report <file>`** renders a paste-ready Markdown summary from a
+  captured snapshot *or* a recording. It never re-probes the machine, so the
+  report stays reproducible.
+- **`xdna-top record`** streams typed JSONL events (`meta`, then `telemetry` per
+  sample, then `summary`) over a window. Because it captures counter movement
+  *over time*, it is the strongest evidence that the NPU actually did work.
+  **`xdna-top mark "<label>"`** appends a marker event so a script can tag exactly
+  when a trial or request happened.
+- **`xdna-top assert <file> --require-...`** turns an artifact into a CI gate: each
+  named check prints its observed value next to its requirement and the process
+  exits non-zero if any fails. A missing signal fails honestly; it is never
+  converted into a guessed pass.
+- **`xdna-top compare a.json b.json`** diffs two snapshots and surfaces only
+  high-signal platform drift (kernel, accel device, backend/sensor availability,
+  NPU BDF, sysfs paths, degraded regressions). **`xdna-top baseline save/check`**
+  wraps that into a named known-good canary you can re-check after a kernel, BIOS,
+  distro, or XRT update.
+
+The discipline throughout is *measured language*. A recording lets you say
+"observed PID 1234 context 1 submission_delta=42 during the request window" - which
+is true and checkable - rather than "the request ran on the NPU", which a
+concurrent workload could have faked. The evidence model exists precisely so the
+claim never outruns the measurement.
+
 ## Honest limits
 
 - **Direct sensors depend on kernel support.** AMDXDNA DRM IOCTLs can expose

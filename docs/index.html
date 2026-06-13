@@ -1044,6 +1044,7 @@
     .tag-hardware { background: #fef3c7; color: #d97706; }
     .tag-software { background: #e0f2fe; color: #0369a1; }
     .tag-telemetry { background: #ecfdf5; color: #047857; }
+    .tag-evidence { background: #f3e8ff; color: #7c3aed; }
 
     .glossary-def {
       color: var(--text-muted);
@@ -1554,7 +1555,7 @@
     <div class="container">
       <div class="section-title-wrap">
         <h2>Telemetry Glossary</h2>
-        <p>A comprehensive glossary of NPU architecture, hardware telemetry terms, and AMD XDNA specific concepts.</p>
+        <p>A comprehensive glossary of NPU architecture, hardware telemetry terms, AMD XDNA specific concepts, and the evidence-command workflow.</p>
       </div>
 
       <div class="glossary-controls">
@@ -1570,6 +1571,7 @@
           <button class="filter-btn" onclick="filterCategory('hardware')">Hardware</button>
           <button class="filter-btn" onclick="filterCategory('software')">Software</button>
           <button class="filter-btn" onclick="filterCategory('telemetry')">Telemetry</button>
+          <button class="filter-btn" onclick="filterCategory('evidence')">Evidence</button>
         </div>
       </div>
 
@@ -1811,6 +1813,150 @@
           </div>
           <div class="glossary-details">
             <strong>Why it matters:</strong> XRT remains an important compatibility path. The <code>xrt-smi</code> utility exposes partition reports with PID, context ID, submission, and completion counters, which are still the best unprivileged attribution signal today.
+          </div>
+        </div>
+
+        <!-- Evidence Artifact -->
+        <div class="glossary-card" data-category="evidence" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">Evidence Artifact</h3>
+            <span class="glossary-tag tag-evidence">Evidence</span>
+          </div>
+          <p class="glossary-def">A versioned, machine-readable capture of platform and telemetry facts that can be reread later without the original machine. <code>xdna-top</code> produces two: a <code>snapshot</code> JSON object and a <code>record</code> JSONL stream.</p>
+          <div class="glossary-card-footer">
+            <span>schema_version, captured facts</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> Pretty output is for humans; evidence artifacts make a measured claim reproducible across scripts, devlogs, bug reports, and CI gates. Every other evidence command is a view over one of these artifacts.
+          </div>
+        </div>
+
+        <!-- Snapshot -->
+        <div class="glossary-card" data-category="evidence" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">Snapshot</h3>
+            <span class="glossary-tag tag-evidence">Evidence</span>
+          </div>
+          <p class="glossary-def">A point-in-time JSON record of host, devices, backends, one fused telemetry reading, and degraded flags. Produced by <code>xdna-top snapshot</code> and rendered to Markdown by <code>xdna-top env-report</code>.</p>
+          <div class="glossary-card-footer">
+            <span>xdna-top snapshot</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> A stable snapshot schema is the foundation for comparison and baselines. <code>env-report</code> summarizes captured facts only — it never re-probes the machine, so a report stays reproducible.
+          </div>
+        </div>
+
+        <!-- Telemetry Recording -->
+        <div class="glossary-card" data-category="evidence" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">Telemetry Recording</h3>
+            <span class="glossary-tag tag-evidence">Evidence</span>
+          </div>
+          <p class="glossary-def">A JSONL stream of typed events (<code>meta</code>, <code>telemetry</code>, <code>summary</code>) captured over a time window by <code>xdna-top record</code>. Each telemetry line carries a fused reading and per-context NPU data.</p>
+          <div class="glossary-card-footer">
+            <span>xdna-top record</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> A recording captures counter movement over a request window, which is the strongest evidence that the NPU did work — far stronger than a single snapshot's instantaneous reading.
+          </div>
+        </div>
+
+        <!-- Event Marker -->
+        <div class="glossary-card" data-category="evidence" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">Event Marker</h3>
+            <span class="glossary-tag tag-evidence">Evidence</span>
+          </div>
+          <p class="glossary-def">A typed <code>mark</code> event appended to a recording with <code>xdna-top mark "&lt;label&gt;"</code>, tagging a moment in the stream (for example <code>trial-1-start</code>).</p>
+          <div class="glossary-card-footer">
+            <span>xdna-top mark</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> Markers let a script annotate exactly when a trial, request, or compaction step happened, so later analysis can line up telemetry deltas with the events that caused them.
+          </div>
+        </div>
+
+        <!-- Assertion -->
+        <div class="glossary-card" data-category="evidence" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">Assertion</h3>
+            <span class="glossary-tag tag-evidence">Evidence</span>
+          </div>
+          <p class="glossary-def">A named pass/fail check over a snapshot or recording, run with <code>xdna-top assert</code>. Each check prints the observed value next to its requirement and the process exits non-zero if any check fails.</p>
+          <div class="glossary-card-footer">
+            <span>xdna-top assert (exit 0/1)</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> Assertions turn evidence into a CI gate, for example <code>--require-npu-activity</code>. Unavailable signals fail honestly rather than being converted into guessed values.
+          </div>
+        </div>
+
+        <!-- Snapshot Compare -->
+        <div class="glossary-card" data-category="evidence" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">Snapshot Compare</h3>
+            <span class="glossary-tag tag-evidence">Evidence</span>
+          </div>
+          <p class="glossary-def">A diff of two snapshots that surfaces only high-signal platform drift (kernel, accel device, backend/sensor availability, NPU BDF, sysfs paths, degraded regressions) via <code>xdna-top compare</code>.</p>
+          <div class="glossary-card-footer">
+            <span>xdna-top compare</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> Compare highlights drift that affects trust in an experiment instead of drowning you in generic JSON noise. Like <code>git diff --exit-code</code>, it exits non-zero when meaningful drift is found.
+          </div>
+        </div>
+
+        <!-- Baseline -->
+        <div class="glossary-card" data-category="evidence" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">Baseline (Canary)</h3>
+            <span class="glossary-tag tag-evidence">Evidence</span>
+          </div>
+          <p class="glossary-def">A named known-good snapshot saved locally with <code>xdna-top baseline save</code> and re-checked with <code>baseline check</code> after a kernel, BIOS, distro, or XRT update.</p>
+          <div class="glossary-card-footer">
+            <span>xdna-top baseline save/check</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> A baseline turns an upgrade into a checkable event: <code>baseline check</code> reuses the compare rules and exit codes to tell you whether an update silently changed how the platform exposes telemetry.
+          </div>
+        </div>
+
+        <!-- Schema Version -->
+        <div class="glossary-card" data-category="evidence" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">Schema Version</h3>
+            <span class="glossary-tag tag-evidence">Evidence</span>
+          </div>
+          <p class="glossary-def">An explicit version string stamped on every artifact (<code>schema_version</code>) so that comparison and tooling can evolve the format without misreading older captures.</p>
+          <div class="glossary-card-footer">
+            <span>stable artifact contract</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> Versioning the schema is what keeps a snapshot saved today comparable to one captured after a future update, and lets <code>compare</code> flag a schema change itself as high-signal drift.
+          </div>
+        </div>
+
+        <!-- Degraded Flag -->
+        <div class="glossary-card" data-category="evidence" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">Degraded Flag</h3>
+            <span class="glossary-tag tag-evidence">Evidence</span>
+          </div>
+          <p class="glossary-def">A machine-readable marker (with reasons) set when a signal source is missing or unreadable, instead of substituting a guessed value. Present in readings, snapshots, and recordings.</p>
+          <div class="glossary-card-footer">
+            <span>a missing signal is a result</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> A monitoring tool's first duty is to not lie about whether it is monitoring. Degraded data stays visible and machine-readable so reviewers and assertions can treat a missing signal as a result, not an excuse to invent one.
           </div>
         </div>
       </div>
