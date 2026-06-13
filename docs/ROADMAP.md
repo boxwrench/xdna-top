@@ -356,6 +356,34 @@ PASS require-context-source: observed backends.npu.signals.contexts=xrt_smi
 FAIL require-npu-activity: observed submission_delta=0, required >0
 ```
 
+#### Windowed checks: `--between START END`
+
+Whole-stream checks answer "did the NPU do work *somewhere* in this recording?"
+For a contention experiment the sharper question is "did the NPU do work *during
+the request itself*?" — between two `mark`s, not just concurrently. `--between`
+restricts the requested `--require-*` checks to the telemetry slice bounded by
+the **first** mark labelled `START` and the **last** mark labelled `END`:
+
+```bash
+xdna-top mark --out trial.jsonl request-start
+# ... issue the request against the background job ...
+xdna-top mark --out trial.jsonl request-end
+xdna-top assert trial.jsonl --require-npu-activity \
+  --between request-start request-end
+```
+
+The window is named in each check label, and resolution problems fail honestly
+(non-zero exit) rather than passing vacuously:
+
+```text
+PASS require-npu-activity[request-start..request-end]: observed submission_delta=42, npu_active_samples=18/20
+FAIL require-npu-activity[request-start..MISSING]: observed end mark 'request-end' not found, required resolvable window
+```
+
+A missing mark, an end that precedes the start, an empty window (no telemetry in
+range), or `--between` against a `snapshot` (which has no timeline) each fail
+with a named reason. Without `--between`, behaviour is unchanged (full stream).
+
 ### `xdna-top compare`
 
 Compare snapshots without drowning the user in generic diff noise.

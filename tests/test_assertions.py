@@ -10,8 +10,10 @@ from xdna_top.assertions import (
     Artifact,
     assert_main,
     evaluate,
+    evaluate_windowed,
     format_result,
     load_artifact,
+    resolve_window,
 )
 from xdna_top.record import RECORD_KIND, RECORD_SCHEMA_VERSION
 from xdna_top.snapshot import SNAPSHOT_KIND
@@ -64,6 +66,15 @@ def _telemetry(ts, submissions, npu_active, *, source="xrt_smi", degraded=False)
                 "source": source,
             }
         ],
+    }
+
+
+def _mark(ts, label):
+    return {
+        "type": "mark",
+        "schema_version": RECORD_SCHEMA_VERSION,
+        "ts": ts,
+        "label": label,
     }
 
 
@@ -178,6 +189,172 @@ def test_record_not_degraded_fails_when_any_sample_degraded():
     result = evaluate("require-not-degraded", artifact)
     assert not result.ok
     assert "degraded_samples=1/2" in result.observed
+
+
+# --- windowed activity guard (--between) ------------------------------------
+
+
+def test_resolve_window_first_start_last_end():
+    marks = [
+        _mark(1.0, "start"),
+        _mark(3.0, "start"),
+        _mark(5.0, "end"),
+        _mark(9.0, "end"),
+    ]
+    start_ts, end_ts, label, error = resolve_window(marks, "start", "end")
+    assert (start_ts, end_ts) == (1.0, 9.0)
+    assert label == "[start..end]"
+    assert error is None
+
+
+def test_windowed_activity_passes_inside_window():
+    events = [
+        _mark(1.0, "request-start"),
+        _telemetry(1.5, 10, False),
+        _telemetry(2.0, 60, True),
+        _mark(2.5, "request-end"),
+    ]
+    artifact = Artifact(kind="record", snapshot=None, events=events)
+    result = evaluate_windowed(
+        "require-npu-activity", artifact, "request-start", "request-end"
+    )
+    assert result.ok
+    assert result.name == "require-npu-activity[request-start..request-end]"
+    assert "submission_delta=50" in result.observed
+    assert (
+        format_result(result)
+        == "PASS require-npu-activity[request-start..request-end]: "
+        "observed submission_delta=50, npu_active_samples=1/2"
+    )
+
+
+def test_windowed_activity_fails_when_activity_only_outside_window():
+    events = [
+        _telemetry(0.5, 10, True),
+        _telemetry(0.8, 90, True),  # the real work happened before the window
+        _mark(1.0, "request-start"),
+        _telemetry(1.5, 90, False),
+        _telemetry(2.0, 90, False),
+        _mark(2.5, "request-end"),
+    ]
+    artifact = Artifact(kind="record", snapshot=None, events=events)
+    result = evaluate_windowed(
+        "require-npu-activity", artifact, "request-start", "request-end"
+    )
+    assert not result.ok
+    assert "submission_delta=0" in result.observed
+
+
+def test_windowed_missing_end_label_fails_honestly():
+    events = [_mark(1.0, "request-start"), _telemetry(1.5, 50, True)]
+    artifact = Artifact(kind="record", snapshot=None, events=events)
+    result = evaluate_windowed(
+        "require-npu-activity", artifact, "request-start", "request-end"
+    )
+    assert not result.ok
+    assert result.name == "require-npu-activity[request-start..MISSING]"
+    assert "end mark 'request-end' not found" in result.observed
+
+
+def test_windowed_missing_start_label_fails_honestly():
+    events = [_mark(2.5, "request-end"), _telemetry(1.5, 50, True)]
+    artifact = Artifact(kind="record", snapshot=None, events=events)
+    result = evaluate_windowed(
+        "require-npu-activity", artifact, "request-start", "request-end"
+    )
+    assert not result.ok
+    assert result.name == "require-npu-activity[MISSING..request-end]"
+    assert "start mark 'request-start' not found" in result.observed
+
+
+def test_windowed_end_before_start_fails():
+    events = [
+        _mark(5.0, "request-start"),
+        _mark(1.0, "request-end"),
+        _telemetry(3.0, 50, True),
+    ]
+    artifact = Artifact(kind="record", snapshot=None, events=events)
+    result = evaluate_windowed(
+        "require-npu-activity", artifact, "request-start", "request-end"
+    )
+    assert not result.ok
+    assert "end precedes start" in result.observed
+
+
+def test_windowed_empty_window_fails_not_vacuously():
+    events = [
+        _mark(1.0, "request-start"),
+        _mark(2.0, "request-end"),
+        _telemetry(5.0, 50, True),  # outside the window
+    ]
+    artifact = Artifact(kind="record", snapshot=None, events=events)
+    result = evaluate_windowed(
+        "require-npu-activity", artifact, "request-start", "request-end"
+    )
+    assert not result.ok
+    assert "0 samples in window" in result.observed
+
+
+def test_windowed_duplicate_labels_use_first_start_last_end():
+    # Activity straddles the widest window only; a narrower (wrong) choice of
+    # endpoints would see a single point and a zero delta.
+    events = [
+        _mark(1.0, "s"),
+        _mark(3.0, "s"),
+        _telemetry(2.0, 10, False),
+        _telemetry(8.0, 99, False),
+        _mark(5.0, "e"),
+        _mark(9.0, "e"),
+    ]
+    artifact = Artifact(kind="record", snapshot=None, events=events)
+    result = evaluate_windowed("require-npu-activity", artifact, "s", "e")
+    assert result.ok
+    assert result.name == "require-npu-activity[s..e]"
+    assert "submission_delta=89" in result.observed
+
+
+def test_windowed_snapshot_misuse_is_usage_error(tmp_path, capsys):
+    path = tmp_path / "s.json"
+    path.write_text(json.dumps(_healthy_snapshot()), encoding="utf-8")
+    rc = assert_main(
+        _args(path, require_npu_activity=True, between=["request-start", "request-end"])
+    )
+    assert rc == 2
+    assert "--between requires a record stream" in capsys.readouterr().err
+
+
+def test_windowed_assert_main_full_stream_unchanged(tmp_path, capsys):
+    # Without --between, behaviour is the full-stream path (between absent).
+    path = tmp_path / "r.jsonl"
+    path.write_text(
+        _record_lines([_telemetry(1.0, 10, False), _telemetry(1.2, 52, True)]),
+        encoding="utf-8",
+    )
+    rc = assert_main(_args(path, require_npu_activity=True))
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "PASS require-npu-activity:" in out  # no window suffix
+
+
+def test_windowed_assert_main_cli_happy(tmp_path, capsys):
+    path = tmp_path / "r.jsonl"
+    path.write_text(
+        _record_lines(
+            [
+                _mark(1.0, "request-start"),
+                _telemetry(1.5, 10, False),
+                _telemetry(2.0, 60, True),
+                _mark(2.5, "request-end"),
+            ]
+        ),
+        encoding="utf-8",
+    )
+    rc = assert_main(
+        _args(path, require_npu_activity=True, between=["request-start", "request-end"])
+    )
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "PASS require-npu-activity[request-start..request-end]" in out
 
 
 # --- CLI entry point --------------------------------------------------------

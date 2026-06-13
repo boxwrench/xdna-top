@@ -488,6 +488,16 @@ def build_parser(
             help="Evaluate named pass/fail checks over a snapshot or record artifact.",
         )
         assert_parser.add_argument("artifact", help="Snapshot JSON or record JSONL path.")
+        assert_parser.add_argument(
+            "--between",
+            nargs=2,
+            metavar=("START", "END"),
+            default=None,
+            help=(
+                "Restrict checks to telemetry between the first START mark and the "
+                "last END mark (record streams only)."
+            ),
+        )
         for check_name, dest, _check_fn in CHECKS:
             assert_parser.add_argument(
                 f"--{check_name}",

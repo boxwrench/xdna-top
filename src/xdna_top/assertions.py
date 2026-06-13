@@ -35,6 +35,14 @@ class Artifact:
             if isinstance(e, dict) and e.get("type") == "telemetry"
         ]
 
+    @property
+    def marks(self) -> list[dict[str, Any]]:
+        return [
+            e
+            for e in self.events
+            if isinstance(e, dict) and e.get("type") == "mark"
+        ]
+
 
 @dataclass
 class CheckResult:
@@ -87,6 +95,98 @@ def evaluate(name: str, artifact: Artifact) -> CheckResult:
     return CheckResult(name=name, ok=ok, observed=observed, requirement=requirement)
 
 
+def _mark_ts(mark: dict[str, Any]) -> float | None:
+    ts = mark.get("ts")
+    if isinstance(ts, bool) or not isinstance(ts, (int, float)):
+        return None
+    return float(ts)
+
+
+def resolve_window(
+    marks: list[dict[str, Any]], start_label: str, end_label: str
+) -> tuple[float | None, float | None, str, str | None]:
+    """Resolve a [start, end] time window from mark events.
+
+    Window rule for duplicate labels: ``start`` is the timestamp of the **first**
+    mark labelled ``start_label``; ``end`` is the timestamp of the **last** mark
+    labelled ``end_label``. Returns ``(start_ts, end_ts, window_label, error)``.
+    When a label is absent the corresponding timestamp is ``None``, the window
+    label shows ``MISSING`` in its place, and ``error`` names the missing mark(s).
+    A resolvable window returns ``error is None``.
+    """
+    start_ts: float | None = None
+    for mark in marks:
+        if mark.get("label") == start_label:
+            start_ts = _mark_ts(mark)
+            break
+    end_ts: float | None = None
+    for mark in marks:
+        if mark.get("label") == end_label:
+            ts = _mark_ts(mark)
+            if ts is not None:
+                end_ts = ts
+
+    start_name = start_label if start_ts is not None else "MISSING"
+    end_name = end_label if end_ts is not None else "MISSING"
+    window_label = f"[{start_name}..{end_name}]"
+
+    missing: list[str] = []
+    if start_ts is None:
+        missing.append(f"start mark {start_label!r} not found")
+    if end_ts is None:
+        missing.append(f"end mark {end_label!r} not found")
+    error = "; ".join(missing) if missing else None
+    return start_ts, end_ts, window_label, error
+
+
+def evaluate_windowed(
+    name: str, artifact: Artifact, start_label: str, end_label: str
+) -> CheckResult:
+    """Run a single named check over only the telemetry inside a mark window.
+
+    The window is resolved from the artifact's mark events (see
+    :func:`resolve_window`). Resolution problems — a missing mark, an end that
+    precedes the start, or a window containing no telemetry — fail the check
+    honestly with a named reason rather than passing vacuously.
+    """
+    start_ts, end_ts, window_label, error = resolve_window(
+        artifact.marks, start_label, end_label
+    )
+    windowed_name = f"{name}{window_label}"
+    if error is not None:
+        return CheckResult(
+            name=windowed_name, ok=False, observed=error, requirement="resolvable window"
+        )
+    assert start_ts is not None and end_ts is not None  # guaranteed by error is None
+    if end_ts < start_ts:
+        return CheckResult(
+            name=windowed_name,
+            ok=False,
+            observed=f"end precedes start (start={start_ts}, end={end_ts})",
+            requirement="end >= start",
+        )
+    sliced = [
+        e
+        for e in artifact.telemetry
+        if _mark_ts(e) is not None and start_ts <= float(e["ts"]) <= end_ts
+    ]
+    if not sliced:
+        return CheckResult(
+            name=windowed_name,
+            ok=False,
+            observed="0 samples in window",
+            requirement=">0 samples in window",
+        )
+    window = Artifact(kind="record", snapshot=None, events=sliced)
+    base = evaluate(name, window)
+    return CheckResult(
+        name=windowed_name,
+        ok=base.ok,
+        observed=base.observed,
+        requirement=base.requirement,
+    )
+
+
 def format_result(result: CheckResult) -> str:
     if result.ok:
         return f"PASS {result.name}: observed {result.observed}"
@@ -108,9 +208,23 @@ def assert_main(args: Any) -> int:
         print(f"assert failed: {exc}", file=sys.stderr)
         return 2
 
+    between = getattr(args, "between", None)
+    if between:
+        start_label, end_label = between
+        if artifact.kind != "record":
+            print(
+                "assert: --between requires a record stream artifact; a snapshot has "
+                "no telemetry timeline to window",
+                file=sys.stderr,
+            )
+            return 2
+
     failed = False
     for name in checks:
-        result = evaluate(name, artifact)
+        if between:
+            result = evaluate_windowed(name, artifact, between[0], between[1])
+        else:
+            result = evaluate(name, artifact)
         print(format_result(result))
         if not result.ok:
             failed = True

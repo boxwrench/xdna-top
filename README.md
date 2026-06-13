@@ -81,6 +81,8 @@ xdna-top record --duration 60 --interval 0.2 --out telemetry.jsonl
 xdna-top mark --out telemetry.jsonl "trial-1-start"      # annotate the stream
 xdna-top env-report telemetry.jsonl --markdown           # report from a recording
 xdna-top assert telemetry.jsonl --require-npu-activity   # exit 0/1 for CI
+xdna-top assert telemetry.jsonl --require-npu-activity \
+  --between request-start request-end                    # prove activity *in* the window
 xdna-top compare before.json after.json   # flag high-signal platform drift
 xdna-top baseline save known-good          # store a named known-good snapshot
 xdna-top baseline check known-good         # re-check the platform after updates
@@ -115,7 +117,8 @@ degraded instead of crashing.
 - `env-report` mode for Markdown summaries from captured snapshots or recordings
 - `record` mode for streaming typed JSONL telemetry events over a time window
 - `mark` mode for annotating a recording with named trial markers
-- `assert` mode for named pass/fail evidence checks with CI-friendly exit codes
+- `assert` mode for named pass/fail evidence checks with CI-friendly exit codes,
+  including `--between` to require activity within a marked request window
 - `compare` mode for spotting high-signal platform drift between two snapshots
 - `baseline` mode for saving a known-good snapshot and re-checking it after updates
 - Themes via `--theme`/`XDNA_TOP_THEME` (colors only — never the measured values)
