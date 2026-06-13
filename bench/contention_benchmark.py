@@ -372,48 +372,43 @@ def generate_markdown_table(m1_path: Path, m2_path: Path) -> str:
     comparison = m2.get("comparison", {})
     npu_perf_watt = comparison.get("perf_watt", {}).get("npu", 0.0)
     cpu_perf_watt = comparison.get("perf_watt", {}).get("cpu", 0.0)
-    npu_marg = comparison.get("marginal_decode_power_w", {}).get("npu", 0.0)
-    cpu_marg = comparison.get("marginal_decode_power_w", {}).get("cpu", 0.0)
 
     if not npu_perf_watt and npu_bg[0] and npu_pwr[0]:
         npu_perf_watt = npu_bg[0] / npu_pwr[0]
     if not cpu_perf_watt and cpu_bg[0] and cpu_pwr[0]:
         cpu_perf_watt = cpu_bg[0] / cpu_pwr[0]
-    if not npu_marg and npu_pwr[0] and base_pwr[0]:
-        npu_marg = npu_pwr[0] - base_pwr[0]
-    if not cpu_marg and cpu_pwr[0] and base_pwr[0]:
-        cpu_marg = cpu_pwr[0] - base_pwr[0]
 
-    npu_marg_eff = marginal_watt_efficiency(npu_bg[0], npu_marg)
-    cpu_marg_eff = marginal_watt_efficiency(cpu_bg[0], cpu_marg)
+    # Marginal-watt efficiency is intentionally NOT rendered in the table (below
+    # reliable resolution; thermally confounded). It is still computed into the
+    # JSON `comparison` block by run_benchmark for auditability.
 
     def per_watt(v: float) -> str:
         return f"{v:.3f}" if v > 0.0 else "-"
-
-    def marg(v: float) -> str:
-        return f"{v:+.2f} W" if v else "-"
 
     return "\n".join(
         [
             "# Strix Halo Generation & Contention Benchmark Results",
             "",
             "| Condition | iGPU Prefill (tok/s) | iGPU Decode (tok/s) | iGPU Decode Loss % | "
-            "Background Throughput (tok/s) | Avg Decode Power (PPT, W) | Marginal Power (W) | "
-            "tok/s per Total-Board Watt | tok/s per Marginal Watt |",
-            "| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |",
+            "Background Throughput (tok/s) | Avg Decode Power (PPT, W) | "
+            "tok/s per Total-Board Watt |",
+            "| :--- | :---: | :---: | :---: | :---: | :---: | :---: |",
             f"| **Baseline** (iGPU Only) | {_fmt(*base_prefill)} | {_fmt(*base_decode)} | 0.00% | - | "
-            f"{_fmt(*base_pwr)} | - | - | - |",
+            f"{_fmt(*base_pwr)} | - |",
             f"| **NPU (Concurrent)** | {_fmt(*npu_prefill)} | {_fmt(*npu_decode)} | "
             f"{_fmt(*npu_loss, pct=True) if npu_decode[0] else '-'} | "
-            f"{_fmt(*npu_bg) if npu_bg[0] else '-'} | {_fmt(*npu_pwr)} | {marg(npu_marg)} | "
-            f"{per_watt(npu_perf_watt)} | {per_watt(npu_marg_eff)} |",
+            f"{_fmt(*npu_bg) if npu_bg[0] else '-'} | {_fmt(*npu_pwr)} | "
+            f"{per_watt(npu_perf_watt)} |",
             f"| **CPU (Concurrent)** | {_fmt(*cpu_prefill)} | {_fmt(*cpu_decode)} | "
             f"{_fmt(*cpu_loss, pct=True) if cpu_decode[0] else '-'} | "
-            f"{_fmt(*cpu_bg) if cpu_bg[0] else '-'} | {_fmt(*cpu_pwr)} | {marg(cpu_marg)} | "
-            f"{per_watt(cpu_perf_watt)} | {per_watt(cpu_marg_eff)} |",
+            f"{_fmt(*cpu_bg) if cpu_bg[0] else '-'} | {_fmt(*cpu_pwr)} | "
+            f"{per_watt(cpu_perf_watt)} |",
             "",
             "*Power is package (PPT) total-board (CPU+iGPU+NPU); the NPU's isolated draw "
-            "is not separable. Prefill contention is below this HTTP harness's resolution.*",
+            "is not separable. Prefill contention is below this HTTP harness's resolution. "
+            "Marginal-watt efficiency is withheld from this table as below reliable "
+            "resolution (thermally confounded); the raw marginal-power values remain in "
+            "the JSON `comparison` block.*",
             "",
         ]
     )

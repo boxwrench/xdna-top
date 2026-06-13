@@ -79,7 +79,7 @@ def test_attribution_consumes_real_captured_snapshot_file():
     assert attribution["igpu_signal_source"] in ("sysfs", None)
 
 
-def test_generate_markdown_table_generic_with_marginal_watt(tmp_path):
+def test_generate_markdown_table_generic_total_board_perf_watt(tmp_path):
     m1 = {
         "baseline": {
             "prefill": {"igpu_throughput_tok_s": {"mean": 1000.0, "stddev": 0.0}},
@@ -122,10 +122,13 @@ def test_generate_markdown_table_generic_with_marginal_watt(tmp_path):
     assert "# Strix Halo Generation & Contention Benchmark Results" in md
     assert "REM" not in md  # generic framing only
     assert "Avg Decode Power (PPT, W)" in md
-    assert "tok/s per Marginal Watt" in md
-    # marginal-watt: npu 15/15 = 1.000 ; cpu 5/25 = 0.200
-    assert "1.000" in md
-    assert "0.200" in md
+    # Total-board perf/watt IS rendered (the stable, reportable efficiency metric).
+    assert "tok/s per Total-Board Watt" in md
+    assert "0.429" in md  # npu total-board perf/watt
+    assert "0.111" in md  # cpu total-board perf/watt
+    # Marginal-watt is intentionally withheld from the rendered table.
+    assert "tok/s per Marginal Watt" not in md
+    assert "Marginal Power" not in md
 
 
 def test_generate_markdown_table_partial_fallback(tmp_path):
