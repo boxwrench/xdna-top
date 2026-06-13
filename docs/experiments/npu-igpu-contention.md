@@ -4,102 +4,124 @@ date: 2026-06-13
 kernel: 6.17.0-35-generic
 hardware: AMD RYZEN AI MAX+ 395 (Strix Halo, gfx1151)
 xrt_version: 2.21.75
-headline: Offloading a background generation job to the NPU costs ~2.8% iGPU decode loss and is ~4.6x more marginal-watt efficient than the CPU control arm.
+headline: For a latency-tolerant background generation job next to an interactive iGPU model, the NPU does ~3x the throughput at ~3x better total-board perf/watt and contends slightly LESS with the main lane (~3.8% vs ~4.8% decode loss) than spare CPU cores.
 artifacts:
-  - artifacts/contention-baseline.snapshot.json
-  - artifacts/contention-baseline.record.jsonl
+  - artifacts/measurements/run1.m1_contention.json
+  - artifacts/measurements/run1.m2_cpu_arm.json
+  - artifacts/measurements/run2.m1_contention.json
+  - artifacts/measurements/run2.m2_cpu_arm.json
+  - artifacts/measurements/run3.m1_contention.json
+  - artifacts/measurements/run3.m2_cpu_arm.json
+  - artifacts/evidence/baseline.snapshot.json
+  - artifacts/evidence/npu.snapshot.json
+  - artifacts/evidence/cpu.snapshot.json
 ---
 
 # NPU vs CPU Background-Job Contention on Strix Halo
 
 **What this is.** Honest, reproducible numbers for deciding *what to run where* on
 an AMD Strix Halo APU — the XDNA NPU, the gfx1151 iGPU, and the CPU all share one
-unified ~212 GB/s memory bus. The engines are **compute-isolated but
+unified ~256 GB/s memory bus. The engines are **compute-isolated but
 bandwidth-shared**, so the whole story is memory-bandwidth contention. Built and
 reproduced with xdna-top, which exists because `amd-smi` is broken on gfx1151.
 
 The workload is a plain **background LLM text-generation job** on each engine; it
 is not tied to any particular application. We ask one question: if an interactive
 model is already running on the iGPU (the "main lane"), what does it cost to run a
-second generation job concurrently on the **NPU** versus on **spare CPU cores**?
+second generation job concurrently on the **NPU** versus on **spare CPU cores**,
+and which placement does more work per watt?
 
-Numbers are **mean ± stddev** over N = 5 trials. Anything below measurement
-resolution is labelled as such rather than published with false precision.
+## The short answer
+
+**Place a second, latency-tolerant generation job on the NPU, not on spare CPU
+cores.** The NPU does **~3× the background throughput** at **~3× better
+total-board perf/watt**, and it contends **slightly *less*** with the interactive
+main lane (~3.8% vs ~4.8% decode loss). Both offloads cost the main lane a real,
+single-digit-percent hit — the NPU's win is **throughput and efficiency**, not
+zero impact.
 
 ## Test platform
 
 - **SoC / APU:** AMD RYZEN AI MAX+ 395 (Strix Halo)
-- **NPU:** RyzenAI-npu5 (gfx1151), firmware 1.1.2.65
-- **iGPU:** Radeon 8060S (gfx1151)
-- **Kernel:** Linux 6.17.0-35-generic
-- **XRT:** 2.21.75
-- **Unified memory:** 128 GB LPDDR5x (~212 GB/s shared bus)
+- **NPU:** RyzenAI-npu5 (gfx1151) — background job: FLM `gemma4-it:e2b`
+- **iGPU:** Radeon 8060S (gfx1151) — interactive main lane: `qwen3.5-35b-a3b` (llama.cpp/ROCm)
+- **CPU:** background job: `gemma-4-12b` Q4 on 4 threads (llama.cpp, `--gpu-layers 0`)
+- **Kernel:** Linux 6.17.0-35-generic · **XRT:** 2.21.75
+- **Unified memory:** 128 GB LPDDR5x (shared bus)
 
-Each engine is driven through an OpenAI-compatible generation endpoint: the iGPU
-is the interactive main lane, and the background job runs on either the NPU or on
-spare CPU cores.
+Each engine is driven through an OpenAI-compatible generation endpoint.
 
-## Results — decode slice (N = 5)
+## Results
 
-| Condition | iGPU Prefill (tok/s) | iGPU Decode (tok/s) | iGPU Decode Loss % | Background Throughput (tok/s) | Avg Decode Power (PPT, W) | Marginal Power (W) | tok/s per Total-Board Watt | tok/s per Marginal Watt |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Baseline** (iGPU only) | 39592.49 ± 12420.74 | 45.81 ± 0.15 | 0.00% | - | 72.66 ± 5.70 | - | - | - |
-| **NPU** (concurrent) | 46818.90 ± 8407.69 | 44.54 ± 0.07 | 2.76% ± 0.16% | 13.67 ± 0.94 | 82.95 ± 4.87 | +10.29 W | 0.164 | **1.33** |
-| **CPU** (concurrent) | 47192.10 ± 9904.26 | 45.86 ± 0.55 | -0.11% ± 1.21% | 4.48 ± 0.17 | 88.09 ± 6.92 | +15.43 W | 0.051 | **0.29** |
+Aggregated over **three independent runs of N = 20 trials each (60 decode samples
+per condition)**. Per-run means are shown as a range so the run-to-run spread is
+visible; pooled mean ± stddev is over all 60 samples.
+
+| Condition | iGPU Decode (tok/s) | iGPU Decode Loss % | Background Throughput (tok/s) | Avg Decode Power (PPT, W) | tok/s per Total-Board Watt |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Baseline** (iGPU only) | 48.16 ± 0.10 | 0.00% | — | 83.64 | — |
+| **NPU** (concurrent) | 46.32 ± 0.22 | **3.81%** (runs 3.4–4.2%) | **12.15 ± 1.20** | 84.86 | **0.143** |
+| **CPU** (concurrent) | 45.86 ± 0.43 | **4.77%** (runs 4.2–5.1%) | 4.11 ± 0.80 | 84.58 | 0.049 |
 
 ### Headline findings
 
-- **Throughput.** The background job runs at **13.67 ± 0.94 tok/s** on the NPU
-  versus **4.48 ± 0.17 tok/s** on 4 CPU cores — a **~3.0× speedup**.
-- **Total-board efficiency.** The NPU delivers **0.164 tok/s per total-board watt**
-  versus **0.051** for the CPU arm — a **~3.2×** improvement (perf/watt here is
-  background throughput ÷ total-board package power).
-- **Marginal-watt efficiency (new).** Dividing background throughput by the *added*
-  watts each engine costs over baseline gives **NPU ≈ 1.33** vs **CPU ≈ 0.29
-  tok/s per marginal watt** — a **~4.6×** advantage. This isolates the cost of the
-  offload itself: the NPU adds +10.29 W for 13.67 tok/s; the CPU adds +15.43 W for
-  4.48 tok/s.
-- **Contention.** A concurrent NPU job costs a negligible **2.76% ± 0.16%** decode
-  loss on the iGPU main lane. The CPU arm shows no measurable decode loss
-  (−0.11% ± 1.21%, i.e. within noise).
+- **Throughput — ~3×.** The background job runs at **12.15 ± 1.20 tok/s** on the
+  NPU versus **4.11 ± 0.80 tok/s** on 4 CPU cores — a **2.96× speedup**. Reproduced
+  across every run.
+- **Total-board efficiency — ~3×.** The NPU delivers **0.143 tok/s per total-board
+  watt** versus **0.049** for the CPU arm — a **2.95×** improvement (background
+  throughput ÷ total-board package power).
+- **Contention — both ~4–5%, NPU slightly lower.** A concurrent NPU job costs
+  **~3.8%** iGPU decode loss; the CPU arm costs **~4.8%**. The NPU consistently
+  contends about **one point less**, run to run. Neither offload is free: both pull
+  on the same shared memory bus.
 
 ## Honest method
 
-- **Measured:** iGPU prefill/decode throughput, background-job throughput, and
-  package (PPT) power, each as mean ± stddev over N = 5 trials on real hardware.
-  Decode loss % is derived per trial from the baseline decode mean.
+- **Measured:** iGPU decode throughput, background-job throughput, and package
+  (PPT) power, each on real hardware. Decode loss % is computed per trial against
+  the run's own baseline decode mean. Reported as pooled mean ± stddev over 3×20
+  trials, with the per-run range shown so run-to-run variance is explicit.
+- **Why three runs.** An earlier single N=5 measurement reported a lower, tighter
+  NPU contention (~2.8%) and a near-zero CPU contention. That did **not** reproduce:
+  three independent N=20 runs put NPU at ~3.4–4.2% and CPU at ~4.2–5.1%. We report
+  the fuller-variance result. The throughput (~3×) and total-board perf/watt (~3×)
+  advantages reproduced in every run.
+- **Marginal-watt efficiency: withdrawn.** Dividing throughput by the *added* watts
+  each engine costs over baseline is **below this setup's reliable resolution** and
+  is **not reported**. The marginal power deltas are tiny (NPU ≈ +0.7–2.3 W, CPU
+  ≈ +0.4–2.1 W) and are dominated by thermal drift: across the study the package
+  temperature climbed from ~48 °C to ~87 °C (k10temp) under sustained load, so idle
+  baseline power rose to meet concurrent power and the marginal-watt ratio became
+  unstable (it swung from ~5× to ~18× across runs). We keep the **total-board**
+  perf/watt number, which is stable, and explicitly do not headline marginal-watt.
 - **Package (PPT) power, not isolated engine power.** Power is read from the amdgpu
   `power1` rail, labelled **PPT** (Package Power Tracking) — the whole-SoC rail
   (CPU + iGPU + NPU combined). It is the correct denominator for *total-board*
   perf/watt, but **the NPU's individual draw is not separable** from this shared
-  rail. The marginal-watt figure is a *difference* of total-board means, so it
-  attributes the added board cost to the offload without claiming a per-engine
-  sensor. (See the repo's `tools/probe_sensors.py` for the read-only inventory of
+  rail. (See the repo's `tools/probe_sensors.py` for the read-only inventory of
   which signals this stack exposes; NPU-isolated power is not one of them.)
-- **Prefill withheld.** Prefill throughput carries very high variance (~8–12k
-  tok/s stddev) from the fast prefill pass plus HTTP latency. The prefill
-  contention signal is smaller than that stddev, so prefill contention loss is
-  **below the measurement resolution of this harness** and is not reported.
-- **Attribution.** Each condition's evidence is an xdna-top `snapshot` (PID →
-  NPU hardware-context attribution, backend provenance, degraded flags) plus a
-  continuous `record` trace, so a claim of "the work ran on the NPU" is backed by
-  a schema'd artifact, not a screenshot.
+- **Prefill withheld.** Prefill throughput carries very high variance (~6–14k tok/s
+  stddev) from the fast prefill pass plus HTTP latency; the prefill contention
+  signal is smaller than that stddev, so prefill contention is **below the
+  measurement resolution of this harness** and is not reported.
+- **Attribution.** Each condition's evidence is an xdna-top `snapshot` (PID → NPU
+  hardware-context attribution, backend provenance, degraded flags) plus a
+  continuous `record` trace, so "the work ran on the NPU" is backed by a schema'd
+  artifact, not a screenshot.
 
 ## Artifacts
 
-The committed evidence under [`artifacts/`](artifacts/) is captured with
-xdna-top's shipped primitives on the test platform:
+All numbers above are backed by committed evidence under
+[`artifacts/`](artifacts/):
 
-- [`artifacts/contention-baseline.snapshot.json`](artifacts/contention-baseline.snapshot.json)
-  — a schema'd platform + telemetry snapshot (NPU detection, backend provenance,
-  degraded flags).
-- [`artifacts/contention-baseline.record.jsonl`](artifacts/contention-baseline.record.jsonl)
-  — a continuous telemetry trace (typed JSONL: `meta` → `telemetry` samples →
-  `summary`).
-
-The benchmark harness (`bench/contention_benchmark.py`) emits one such
-`snapshot` + `record` pair per condition via `capture_condition_evidence`, and
-reads its attribution back through `attribution_from_snapshot`.
+- [`measurements/`](artifacts/measurements/) — the three runs' raw measurement JSON
+  (`runN.m1_contention.json` = baseline + NPU arm; `runN.m2_cpu_arm.json` = CPU arm),
+  including every per-trial sample, mean, and stddev the table aggregates.
+- [`evidence/`](artifacts/evidence/) — the per-condition `snapshot` + `record` pair
+  for one representative run (`baseline`, `npu`, `cpu`), demonstrating the schema'd,
+  PID-attributed evidence the harness emits for each condition via
+  `capture_condition_evidence`.
 
 ## Reproduce
 
@@ -108,14 +130,14 @@ background engine(s), then:
 
 ```bash
 # Per-condition evidence (snapshot + record) is captured automatically.
-python bench/contention_benchmark.py --trials 5 --output-dir bench/out
+python bench/contention_benchmark.py --trials 20 --output-dir bench/out \
+  --npu-model gemma4-it:e2b --cpu-model gemma-4-12b-it-qat-q4_0
 
 # Re-render the table from existing condition artifacts:
 python bench/contention_benchmark.py --generate-table-only --output-dir bench/out
 ```
 
-To capture a standalone evidence pair for any running workload with the shipped
-CLI:
+To capture a standalone evidence pair for any running workload with the shipped CLI:
 
 ```bash
 xdna-top snapshot --out condition.snapshot.json
@@ -127,16 +149,19 @@ xdna-top assert condition.record.jsonl --require-npu-activity \
 ## How to read this for your use-case
 
 If you have an interactive model on the iGPU and a second, latency-tolerant
-generation job to place, the NPU is the better home: ~3× the throughput of spare
-CPU cores, ~4.6× better marginal-watt efficiency, and only a ~2.8% hit to the
-main lane. The CPU arm barely touches iGPU decode but is far slower and less
-efficient per added watt.
+generation job to place, the NPU is the better home: **~3× the throughput of spare
+CPU cores at ~3× the total-board efficiency**, and it leans on your main model
+*slightly less* (~3.8% vs ~4.8% decode loss). This is a placement decision the
+data supports — not "use the NPU because it's there." If your second job is
+throughput-sensitive or you care about perf/watt on a shared power budget, the NPU
+wins clearly; if it is latency-critical on the main lane, note that *either*
+offload costs the interactive model a real ~4–5%.
 
 ## Not yet measured (boundaries)
 
 - Main-lane inter-token latency (p50/p99) under contention — a small throughput
   loss can still spike tail latency.
-- Sustained multi-minute runs for thermal throttling.
+- Sustained multi-minute steady-state past the warm-up thermal ramp seen here.
 - Achieved memory bandwidth (GB/s) attribution — a clean counter may not exist on
   gfx1151; treated as a probe.
-- Deep tile-level NPU utilization beyond existence-of-activity.
+- NPU-isolated power, and deep tile-level NPU utilization beyond existence-of-activity.

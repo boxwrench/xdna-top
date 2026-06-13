@@ -6,10 +6,17 @@ Auto-generated index of xdna-top experiment reports. Each entry is a self-contai
 
 | Experiment | Date | Platform | Headline |
 | --- | --- | --- | --- |
-| [NPU vs CPU Background-Job Contention on Strix Halo](npu-igpu-contention.md) | 2026-06-13 | AMD RYZEN AI MAX+ 395 (Strix Halo, gfx1151), kernel 6.17.0-35-generic, XRT 2.21.75 | Offloading a background generation job to the NPU costs ~2.8% iGPU decode loss and is ~4.6x more marginal-watt efficient than the CPU control arm. |
+| [NPU vs CPU Background-Job Contention on Strix Halo](npu-igpu-contention.md) | 2026-06-13 | AMD RYZEN AI MAX+ 395 (Strix Halo, gfx1151), kernel 6.17.0-35-generic, XRT 2.21.75 | For a latency-tolerant background generation job next to an interactive iGPU model, the NPU does ~3x the throughput at ~3x better total-board perf/watt and contends slightly LESS with the main lane (~3.8% vs ~4.8% decode loss) than spare CPU cores. |
 
 ## Raw artifacts
 
 - **NPU vs CPU Background-Job Contention on Strix Halo**
-  - [`artifacts/contention-baseline.snapshot.json`](artifacts/contention-baseline.snapshot.json)
-  - [`artifacts/contention-baseline.record.jsonl`](artifacts/contention-baseline.record.jsonl)
+  - [`artifacts/measurements/run1.m1_contention.json`](artifacts/measurements/run1.m1_contention.json)
+  - [`artifacts/measurements/run1.m2_cpu_arm.json`](artifacts/measurements/run1.m2_cpu_arm.json)
+  - [`artifacts/measurements/run2.m1_contention.json`](artifacts/measurements/run2.m1_contention.json)
+  - [`artifacts/measurements/run2.m2_cpu_arm.json`](artifacts/measurements/run2.m2_cpu_arm.json)
+  - [`artifacts/measurements/run3.m1_contention.json`](artifacts/measurements/run3.m1_contention.json)
+  - [`artifacts/measurements/run3.m2_cpu_arm.json`](artifacts/measurements/run3.m2_cpu_arm.json)
+  - [`artifacts/evidence/baseline.snapshot.json`](artifacts/evidence/baseline.snapshot.json)
+  - [`artifacts/evidence/npu.snapshot.json`](artifacts/evidence/npu.snapshot.json)
+  - [`artifacts/evidence/cpu.snapshot.json`](artifacts/evidence/cpu.snapshot.json)

@@ -71,7 +71,7 @@ def test_attribution_consumes_real_captured_snapshot_file():
     from pathlib import Path
 
     root = Path(__file__).resolve().parent.parent
-    path = root / "docs" / "experiments" / "artifacts" / "contention-baseline.snapshot.json"
+    path = root / "docs" / "experiments" / "artifacts" / "evidence" / "npu.snapshot.json"
     if not path.exists():
         pytest.skip("committed snapshot artifact not present")
     attribution = cb.attribution_from_snapshot(json.loads(path.read_text(encoding="utf-8")))

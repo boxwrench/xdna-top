@@ -2279,7 +2279,7 @@
       <ul class="evidence-list">
         <li class="evidence-entry">
           <a href="experiments/npu-igpu-contention.md"><strong>NPU vs CPU Background-Job Contention on Strix Halo</strong></a> <span class="evidence-date">2026-06-13</span><br>
-          <span class="evidence-headline">Offloading a background generation job to the NPU costs ~2.8% iGPU decode loss and is ~4.6x more marginal-watt efficient than the CPU control arm.</span><br>
+          <span class="evidence-headline">For a latency-tolerant background generation job next to an interactive iGPU model, the NPU does ~3x the throughput at ~3x better total-board perf/watt and contends slightly LESS with the main lane (~3.8% vs ~4.8% decode loss) than spare CPU cores.</span><br>
           <span class="evidence-platform">AMD RYZEN AI MAX+ 395 (Strix Halo, gfx1151) · kernel 6.17.0-35-generic · XRT 2.21.75</span>
         </li>
       </ul>
