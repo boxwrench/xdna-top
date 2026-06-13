@@ -8,8 +8,9 @@ chat history. Keep it public, generic, and free of private project names.
 `v0.2`: evidence core — implemented.
 
 All four evidence-core commands have landed: `xdna-top snapshot`,
-`xdna-top env-report`, `xdna-top record`, and `xdna-top assert`. The next
-milestone is `v0.3` (direct backend probes plus `compare` and `baseline`).
+`xdna-top env-report`, `xdna-top record`, and `xdna-top assert`. `v0.3` is now in
+progress: `xdna-top compare` is implemented; the remaining v0.3 work is
+`baseline` and the read-only direct AMDXDNA backend.
 
 Continue preserving the current runtime behavior of:
 
@@ -58,6 +59,8 @@ Implementation entry points:
   recorder, sampling loop, and event builders
 - [../src/xdna_top/assertions.py](../src/xdna_top/assertions.py): artifact
   loader, named checks, and CI exit codes for `assert`
+- [../src/xdna_top/compare.py](../src/xdna_top/compare.py): high-signal snapshot
+  diff rules and CI exit codes for `compare`
 - [../tests/test_xdna_top.py](../tests/test_xdna_top.py) and
   [../tests/test_gauge.py](../tests/test_gauge.py): current behavior checks
 - [../tests/test_snapshot.py](../tests/test_snapshot.py): snapshot schema and
@@ -68,6 +71,8 @@ Implementation entry points:
   shape, and degraded-path checks
 - [../tests/test_assertions.py](../tests/test_assertions.py): artifact loading,
   per-check pass/fail, and exit codes for both artifact types
+- [../tests/test_compare.py](../tests/test_compare.py): per-rule change/regression
+  classification and compare exit codes
 
 ## Completed Groundwork
 
@@ -99,6 +104,13 @@ Implementation entry points:
   honestly instead of guessing.
 - Assert tests cover the artifact loader, every check on healthy and degraded
   inputs, and exit codes, with no real hardware.
+- `xdna-top compare before.json after.json` now diffs two snapshots over the
+  curated high-signal field list, tagging each change `CHANGED` or `REGRESSION`,
+  and exits `0`/`1`/`2` like `git diff --exit-code` so it can gate CI and back
+  `baseline check`.
+- Compare tests cover each rule's change/regression classification (including the
+  conditional `aie-partitions` rule) and the CLI exit codes, with no real
+  hardware.
 
 ## Next Public Issues
 
@@ -133,25 +145,22 @@ Each issue should include:
 
 ## Next Implementation Step
 
-The v0.2 evidence core is complete. Move to `v0.3`, starting with the commands
-that build on the snapshot schema and need no hardware:
+The v0.2 evidence core and `xdna-top compare` are done. Continue `v0.3` with the
+remaining off-hardware command, then the hardware-only backend on its own branch:
 
-1. Implement `xdna-top compare before.json after.json` as a pure diff over two
-   snapshots. Emphasize the high-signal changes listed under "Compare Guidance"
-   in [SNAPSHOT-SCHEMA.md](SNAPSHOT-SCHEMA.md) (kernel, accel device, backend
-   availability, sensor support, BDF, sysfs paths, `degraded.overall` regressions)
-   rather than generic JSON noise. Exit non-zero when high-signal drift is found.
-2. Implement `xdna-top baseline save <name>` / `baseline check <name>` as a thin
+1. Implement `xdna-top baseline save <name>` / `baseline check <name>` as a thin
    workflow over `snapshot` + `compare`, storing named snapshots under a local
    directory (for example `~/.local/state/xdna-top/baselines/`). `check` reuses
-   the compare logic; only `save` probes hardware.
-3. The read-only `amdxdna_ioctl` backend (#5) is the hardware-dependent part of
+   `compare.compare_snapshots` and its exit codes; only `save` probes hardware
+   (mock `build_snapshot` in tests). Keep baseline names generic in docs, such as
+   `known-good` or `post-kernel-update`.
+2. The read-only `amdxdna_ioctl` backend (#5) is the hardware-dependent part of
    v0.3 and should stay on a separate `exp/amdxdna-backend` branch. `compare` and
    `baseline` do not depend on it.
 
 Off-hardware backlog (good to pick up in any order, all testable with mocks):
 
-- `compare` (#6) and `baseline` check-side (#7) — pure functions over snapshots.
+- `baseline` check-side (#7) — pure compare over a saved snapshot.
 - `xdna-top mark` — append a typed `{"type":"mark",...}` line to a record JSONL.
 - `env-report` from a `record` stream — summarize first/last reading and any
   observed activity, reusing the Markdown renderer.

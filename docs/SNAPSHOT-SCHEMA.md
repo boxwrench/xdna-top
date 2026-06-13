@@ -305,6 +305,14 @@ Initial compare should treat these as high-signal changes:
 - `devices.igpu.power_path` changed
 - `degraded.overall` changed from `false` to `true`
 
+`xdna-top compare before.json after.json` reports only these high-signal changes
+and, like `git diff --exit-code`, exits `0` when none are found, `1` when any are
+found, and `2` on an unreadable snapshot. Each line is tagged `CHANGED` or
+`REGRESSION`; capability losses (sensor support lost, accel device disappeared,
+NPU BDF lost, `degraded.overall` `false`→`true`, a working `aie-partitions`
+report breaking while contexts depend on `xrt-smi`) are tagged `REGRESSION`,
+while neutral drift and recoveries are tagged `CHANGED`.
+
 ## Assertion Guidance
 
 Assertions should print names, observed values, and thresholds.

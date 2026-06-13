@@ -107,3 +107,30 @@ no-hardware host and ran `assert` against them — correct FAILs and exit 1 on
 degraded data, exit 2 on no-requirements, and exit 0 PASS lines on a synthesized
 healthy snapshot.
 
+## 2026-06-13 — v0.3 start: `xdna-top compare`
+Implemented the first v0.3 command, `xdna-top compare`, an upgrade canary that
+diffs two snapshots and surfaces only high-signal platform drift.
+
+1. **Diff (`src/xdna_top/compare.py`)**:
+   - `compare before.json after.json` runs a curated rule set over the
+     "Compare Guidance" fields (schema version, kernel release, NPU primary and
+     sensor backends, DRM version, sensor support, `xrt-smi` availability, the
+     conditional `aie-partitions` report, accel device presence, NPU BDF,
+     hardware-context presence, iGPU sysfs paths, `degraded.overall`).
+   - Each change is tagged `CHANGED` or `REGRESSION`; capability losses are
+     regressions while neutral drift and recoveries are plain changes.
+   - Exit codes mirror `git diff --exit-code`: `0` clean, `1` drift, `2` on an
+     unreadable snapshot — so it can gate CI and back `baseline check`.
+   - The `aie-partitions` rule only fires on a working `0` report breaking, and
+     only when contexts depend on `xrt-smi`, to avoid noise.
+2. **CLI**: wired the `compare` subcommand and dispatch in `main.py`.
+3. **Tests (`tests/test_compare.py`)**: per-rule change/regression classification,
+   the conditional `aie-partitions` rule, format strings, and CLI exit codes —
+   all hardware-free. Full suite: 66 passed.
+4. **Docs**: README quick start/features and roadmap; an exit-code note added to
+   the Compare Guidance in `SNAPSHOT-SCHEMA.md`; HANDOFF repointed at `baseline`.
+
+Verified off-hardware: captured a real snapshot, synthesized a drifted copy
+(kernel bump, accel0 gone), and confirmed `compare` reports `CHANGED`/`REGRESSION`
+with exit 1, and exit 0 on identical inputs.
+

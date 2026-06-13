@@ -229,6 +229,21 @@ def test_assert_subcommand(mock_assert_main):
     assert args.require_npu_sensors is False
 
 
+@patch("xdna_top.main.compare_main")
+@patch("sys.argv", ["xdna-top", "compare", "before.json", "after.json"])
+def test_compare_subcommand(mock_compare_main):
+    mock_compare_main.return_value = 0
+
+    ret = main()
+
+    assert ret == 0
+    mock_compare_main.assert_called_once()
+    args = mock_compare_main.call_args[0][0]
+    assert args.command == "compare"
+    assert args.before == "before.json"
+    assert args.after == "after.json"
+
+
 @patch("xdna_top.main.HardwareGauge")
 @patch("sys.argv")
 def test_lemonade_json_flag(mock_argv, mock_gauge_class):

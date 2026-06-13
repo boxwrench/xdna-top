@@ -18,6 +18,7 @@ from rich.text import Text
 from rich.align import Align
 
 from xdna_top.assertions import CHECKS, assert_main
+from xdna_top.compare import compare_main
 from xdna_top.env_report import env_report_main
 from xdna_top.gauge import HardwareGauge, GpuState, run_xrt_smi, parse_xrt_smi
 from xdna_top.record import record_main
@@ -366,6 +367,13 @@ def build_parser(
                 help=f"Require {check_name.replace('require-', '').replace('-', ' ')}.",
             )
 
+        compare_parser = subparsers.add_parser(
+            "compare",
+            help="Diff two snapshots and report high-signal platform drift.",
+        )
+        compare_parser.add_argument("before", help="Baseline snapshot JSON path.")
+        compare_parser.add_argument("after", help="Newer snapshot JSON path.")
+
     return parser
 
 
@@ -491,6 +499,8 @@ def main() -> int:
         return record_main(args)
     if getattr(args, "command", None) == "assert":
         return assert_main(args)
+    if getattr(args, "command", None) == "compare":
+        return compare_main(args)
     return run_monitor(args)
 
 
