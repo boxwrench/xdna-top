@@ -1,0 +1,112 @@
+{
+  "backends": {
+    "igpu": {
+      "primary": "sysfs",
+      "signals": {
+        "busy_pct": "sysfs",
+        "power_w": "sysfs"
+      }
+    },
+    "npu": {
+      "fallbacks_used": [],
+      "primary": "xrt_smi",
+      "signals": {
+        "contexts": "xrt_smi",
+        "device": "xrt_smi",
+        "sensors": null
+      }
+    }
+  },
+  "captured_at": "2026-06-13T19:32:14.789587Z",
+  "commands": {
+    "xrt_smi": {
+      "aie_partitions_returncode": 0,
+      "available": true,
+      "examine_returncode": 0,
+      "path": "/usr/bin/xrt-smi",
+      "version_output": "Version : 2.21.75 virtio-pci Version : 6.17.0-35-generic amdxdna Version : 6.17.0-35-generic NPU Firmware Version : 1.1.2.65"
+    }
+  },
+  "degraded": {
+    "igpu": {
+      "degraded": false,
+      "reasons": []
+    },
+    "npu": {
+      "degraded": false,
+      "reasons": []
+    },
+    "overall": false
+  },
+  "devices": {
+    "accel": {
+      "entries": [
+        {
+          "exists": true,
+          "path": "/dev/accel/accel0"
+        }
+      ]
+    },
+    "igpu": {
+      "busy_path": "/sys/class/drm/card0/device/gpu_busy_percent",
+      "busy_path_exists": true,
+      "power_path": "/sys/class/hwmon/hwmon5/power1_input",
+      "power_path_exists": true
+    },
+    "npu": {
+      "bdf": "0000:c6:00.1",
+      "contexts": [],
+      "detected": true,
+      "driver": {
+        "drm_version": null,
+        "supports_sensors": false
+      },
+      "name": "RyzenAI-npu5",
+      "report_shape": {
+        "context_count": 0,
+        "has_aie_partitions": true,
+        "has_hw_contexts": false
+      },
+      "sensors": {
+        "column_utilization_pct": {
+          "source": null,
+          "value": null
+        },
+        "power_w": {
+          "source": null,
+          "value": null
+        }
+      }
+    }
+  },
+  "errors": [],
+  "host": {
+    "hostname": "Nimo",
+    "kernel": {
+      "release": "6.17.0-35-generic",
+      "version": "#35~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Tue May 26 19:30:42 UTC 2"
+    },
+    "os": {
+      "id": "linuxmint",
+      "pretty_name": "Linux Mint 22.3",
+      "version_id": "22.3"
+    },
+    "python": {
+      "version": "3.11.15"
+    },
+    "xdna_top": {
+      "version": "0.2.0"
+    }
+  },
+  "kind": "xdna-top.snapshot",
+  "schema_version": "1.0",
+  "telemetry": {
+    "gpu_busy_pct": 0,
+    "gpu_power_w": 30.075,
+    "igpu_degraded": false,
+    "npu_active": false,
+    "npu_degraded": false,
+    "state": "IDLE",
+    "ts": 1781379134.7895162
+  }
+}
