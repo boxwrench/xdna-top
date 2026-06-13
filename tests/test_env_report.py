@@ -2,7 +2,13 @@
 
 import json
 
-from xdna_top.env_report import env_report_main, load_snapshot, render_markdown
+from xdna_top.env_report import (
+    env_report_main,
+    load_snapshot,
+    render_markdown,
+    render_record_markdown,
+)
+from xdna_top.record import RECORD_KIND, RECORD_SCHEMA_VERSION
 
 
 def sample_snapshot(degraded: bool = False) -> dict:
@@ -147,3 +153,79 @@ def test_env_report_main_writes_file(tmp_path):
     report = out_path.read_text(encoding="utf-8")
     assert "# xdna-top Environment Report" in report
     assert "- Kernel: 6.17.0-test" in report
+
+
+def sample_record() -> list[dict]:
+    def telemetry(ts, submissions, npu_active):
+        return {
+            "type": "telemetry",
+            "schema_version": RECORD_SCHEMA_VERSION,
+            "ts": ts,
+            "reading": {
+                "gpu_busy_pct": 42,
+                "gpu_power_w": 12.5,
+                "state": "ACTIVE",
+                "npu_active": npu_active,
+                "igpu_degraded": False,
+                "npu_degraded": False,
+            },
+            "contexts": [
+                {"pid": 1234, "ctx_id": 1, "submissions": submissions, "source": "xrt_smi"}
+            ],
+        }
+
+    return [
+        {
+            "type": "meta",
+            "kind": RECORD_KIND,
+            "schema_version": RECORD_SCHEMA_VERSION,
+            "started_at": "2026-06-13T02:16:39Z",
+            "params": {"duration_s": 1.0, "interval_s": 0.5},
+            "host": {
+                "hostname": "workstation",
+                "kernel": {"release": "6.17.0-test"},
+                "os": {"pretty_name": "Linux Mint 22.3"},
+                "python": {"version": "3.12.3"},
+                "xdna_top": {"version": "0.1.0"},
+            },
+        },
+        telemetry(1.0, 10, False),
+        {"type": "mark", "schema_version": RECORD_SCHEMA_VERSION, "ts": 1.1, "label": "trial-start"},
+        telemetry(1.5, 52, True),
+        {"type": "summary", "kind": RECORD_KIND, "ended_at": "2026-06-13T02:16:40Z", "samples": 2},
+    ]
+
+
+def test_render_record_markdown_summarizes_stream():
+    report = render_record_markdown(sample_record())
+
+    assert "# xdna-top Telemetry Report" in report
+    assert "- Telemetry samples: 2" in report
+    assert "- Started at: 2026-06-13T02:16:39Z" in report
+    assert "- Ended at: 2026-06-13T02:16:40Z" in report
+    assert "- Kernel: 6.17.0-test" in report
+    assert "- NPU active samples: 1/2" in report
+    assert "- Max context submission delta: 42" in report
+    assert "- Context sources: xrt_smi" in report
+    assert "- Observed contexts (PID/ctx): 1234/1" in report
+    assert "- Observed window: 0.5 s" in report
+    # First/last readings and the mark are rendered.
+    assert "## First Reading" in report
+    assert "## Last Reading" in report
+    assert "## Marks" in report
+    assert "trial-start" in report
+
+
+def test_env_report_main_renders_record_jsonl(tmp_path):
+    path = tmp_path / "telemetry.jsonl"
+    path.write_text(
+        "\n".join(json.dumps(e) for e in sample_record()) + "\n", encoding="utf-8"
+    )
+    out_path = tmp_path / "report.md"
+
+    args = type("Args", (), {"snapshot": str(path), "out": str(out_path)})
+    assert env_report_main(args) == 0
+
+    report = out_path.read_text(encoding="utf-8")
+    assert "# xdna-top Telemetry Report" in report
+    assert "- Telemetry samples: 2" in report

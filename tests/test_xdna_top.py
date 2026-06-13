@@ -212,6 +212,21 @@ def test_record_subcommand(mock_record_main):
     assert args.out == "bench/telemetry.jsonl"
 
 
+@patch("xdna_top.main.mark_main")
+@patch("sys.argv", ["xdna-top", "mark", "trial-1-start", "--out", "bench/trial.jsonl"])
+def test_mark_subcommand(mock_mark_main):
+    mock_mark_main.return_value = 0
+
+    ret = main()
+
+    assert ret == 0
+    mock_mark_main.assert_called_once()
+    args = mock_mark_main.call_args[0][0]
+    assert args.command == "mark"
+    assert args.label == "trial-1-start"
+    assert args.out == "bench/trial.jsonl"
+
+
 @patch("xdna_top.main.assert_main")
 @patch("sys.argv", ["xdna-top", "assert", "telemetry.jsonl", "--require-npu", "--require-npu-activity"])
 def test_assert_subcommand(mock_assert_main):

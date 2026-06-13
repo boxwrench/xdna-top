@@ -308,6 +308,10 @@ and exact command versions.
 It should not probe the system again. It should summarize captured facts from
 the snapshot so reports remain reproducible.
 
+`env-report` also accepts a `record` JSONL stream: it auto-detects the artifact
+and renders a telemetry report (recording window, host, observed activity,
+first/last reading, and any marks) from the captured events alone.
+
 ### `xdna-top record`
 
 Record telemetry as JSONL over a time window.
@@ -566,7 +570,9 @@ compare.
 
 ### Event markers
 
-Allow scripts to annotate telemetry logs.
+Allow scripts to annotate telemetry logs. Implemented: `xdna-top mark` appends a
+typed `mark` event to a record stream, and `env-report` surfaces marks in its
+record report.
 
 Example:
 

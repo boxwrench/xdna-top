@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from xdna_top.assertions import load_artifact
 from xdna_top.snapshot import SNAPSHOT_KIND
 
 
@@ -126,15 +127,160 @@ def write_report(report: str, out_path: str | Path | None) -> None:
     path.write_text(report, encoding="utf-8")
 
 
+def render_record_markdown(events: list[Any]) -> str:
+    """Render a concise Markdown report from a captured record JSONL stream."""
+    meta = _first_event(events, "meta")
+    summary = _first_event(events, "summary")
+    telemetry = [
+        e for e in events if isinstance(e, dict) and e.get("type") == "telemetry"
+    ]
+    marks = [e for e in events if isinstance(e, dict) and e.get("type") == "mark"]
+
+    host = meta.get("host", {})
+    params = meta.get("params", {})
+    first = (telemetry[0].get("reading") or {}) if telemetry else {}
+    last = (telemetry[-1].get("reading") or {}) if telemetry else {}
+
+    active_samples = sum(
+        1 for e in telemetry if (e.get("reading") or {}).get("npu_active") is True
+    )
+    degraded_samples = sum(
+        1
+        for e in telemetry
+        if (e.get("reading") or {}).get("igpu_degraded") is True
+        or (e.get("reading") or {}).get("npu_degraded") is True
+    )
+    sources = sorted(
+        {
+            ctx.get("source")
+            for e in telemetry
+            for ctx in (e.get("contexts") or [])
+            if isinstance(ctx, dict) and ctx.get("source")
+        }
+    )
+    observed_contexts = sorted(
+        {
+            f"{ctx.get('pid')}/{ctx.get('ctx_id')}"
+            for e in telemetry
+            for ctx in (e.get("contexts") or [])
+            if isinstance(ctx, dict)
+        }
+    )
+
+    lines = [
+        "# xdna-top Telemetry Report",
+        "",
+        "## Recording",
+        "",
+        f"- Schema version: {_value(meta.get('schema_version'))}",
+        f"- Started at: {_value(meta.get('started_at'))}",
+        f"- Ended at: {_value(summary.get('ended_at'))}",
+        f"- Requested duration: {_metric(params.get('duration_s'), 's')}",
+        f"- Requested interval: {_metric(params.get('interval_s'), 's')}",
+        f"- Telemetry samples: {len(telemetry)}",
+        f"- Observed window: {_window_seconds(telemetry)}",
+        "",
+        "## Host",
+        "",
+        *_host_lines(host),
+        "",
+        "## Observed Activity",
+        "",
+        f"- NPU active samples: {active_samples}/{len(telemetry)}",
+        f"- Max context submission delta: {_max_submission_delta(telemetry)}",
+        f"- Degraded samples: {degraded_samples}/{len(telemetry)}",
+        f"- Context sources: {_list(sources)}",
+        f"- Observed contexts (PID/ctx): {_list(observed_contexts)}",
+        "",
+        "## First Reading",
+        "",
+        *_reading_lines(first),
+        "",
+        "## Last Reading",
+        "",
+        *_reading_lines(last),
+    ]
+
+    if marks:
+        lines.extend(["", "## Marks", ""])
+        for mark in marks:
+            lines.append(
+                f"- {_value(mark.get('ts'))}: {_value(mark.get('label'))}"
+            )
+
+    return "\n".join(lines) + "\n"
+
+
 def env_report_main(args: Any) -> int:
     try:
-        snapshot = load_snapshot(args.snapshot)
-        report = render_markdown(snapshot)
+        artifact = load_artifact(args.snapshot)
+        if artifact.kind == "snapshot":
+            report = render_markdown(artifact.snapshot)
+        else:
+            report = render_record_markdown(artifact.events)
         write_report(report, args.out)
     except Exception as exc:
         print(f"env-report failed: {exc}", file=sys.stderr)
         return 2
     return 0
+
+
+def _first_event(events: list[Any], event_type: str) -> dict[str, Any]:
+    for event in events:
+        if isinstance(event, dict) and event.get("type") == event_type:
+            return event
+    return {}
+
+
+def _host_lines(host: dict[str, Any]) -> list[str]:
+    os_info = host.get("os", {})
+    kernel = host.get("kernel", {})
+    python = host.get("python", {})
+    xdna_top = host.get("xdna_top", {})
+    return [
+        f"- Hostname: {_value(host.get('hostname'))}",
+        f"- OS: {_value(os_info.get('pretty_name') or os_info.get('id'))}",
+        f"- Kernel: {_value(kernel.get('release'))}",
+        f"- Python: {_value(python.get('version'))}",
+        f"- xdna-top: {_value(xdna_top.get('version'))}",
+    ]
+
+
+def _reading_lines(reading: dict[str, Any]) -> list[str]:
+    return [
+        f"- iGPU busy: {_metric(reading.get('gpu_busy_pct'), '%')}",
+        f"- iGPU power: {_metric(reading.get('gpu_power_w'), 'W')}",
+        f"- iGPU state: {_value(reading.get('state'))}",
+        f"- NPU active: {_bool(reading.get('npu_active'))}",
+        f"- Timestamp: {_value(reading.get('ts'))}",
+    ]
+
+
+def _window_seconds(telemetry: list[dict[str, Any]]) -> str:
+    stamps = [e.get("ts") for e in telemetry if isinstance(e.get("ts"), (int, float))]
+    if len(stamps) < 2:
+        return "unavailable"
+    return f"{round(max(stamps) - min(stamps), 3)} s"
+
+
+def _max_submission_delta(telemetry: list[dict[str, Any]]) -> int:
+    per_key: dict[tuple[Any, Any], list[float]] = {}
+    for event in telemetry:
+        for ctx in event.get("contexts") or []:
+            if not isinstance(ctx, dict):
+                continue
+            submissions = ctx.get("submissions")
+            if not isinstance(submissions, (int, float)) or isinstance(
+                submissions, bool
+            ):
+                continue
+            key = (ctx.get("pid"), ctx.get("ctx_id"))
+            if key not in per_key:
+                per_key[key] = [submissions, submissions]
+            else:
+                per_key[key][0] = min(per_key[key][0], submissions)
+                per_key[key][1] = max(per_key[key][1], submissions)
+    return int(max((hi - lo for lo, hi in per_key.values()), default=0))
 
 
 def _get(obj: dict[str, Any], *keys: str) -> Any:

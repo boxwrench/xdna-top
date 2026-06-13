@@ -1,6 +1,7 @@
 """Tests for JSONL telemetry recording."""
 
 import json
+from argparse import Namespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -9,7 +10,9 @@ from xdna_top.gauge import GaugeReading, GpuState
 from xdna_top.record import (
     RECORD_KIND,
     RECORD_SCHEMA_VERSION,
+    build_mark_event,
     build_telemetry_event,
+    mark_main,
     record_stream,
     run_record,
 )
@@ -182,3 +185,36 @@ def test_run_record_rejects_nonpositive_interval(tmp_path):
     rc = run_record(duration=1.0, interval=0.0, out_path=tmp_path / "x.jsonl")
     assert rc == 2
     assert not (tmp_path / "x.jsonl").exists()
+
+
+def test_build_mark_event_shape():
+    event = build_mark_event("trial-1-start", ts=42.0)
+    assert event == {
+        "type": "mark",
+        "schema_version": RECORD_SCHEMA_VERSION,
+        "ts": 42.0,
+        "label": "trial-1-start",
+    }
+
+
+def test_mark_main_appends_without_truncating(tmp_path):
+    out = tmp_path / "trial.jsonl"
+    out.write_text(
+        json.dumps({"type": "telemetry", "ts": 1.0}) + "\n", encoding="utf-8"
+    )
+
+    rc = mark_main(Namespace(label="compaction-start", out=str(out)))
+    assert rc == 0
+
+    lines = [json.loads(line) for line in out.read_text().splitlines()]
+    assert [e["type"] for e in lines] == ["telemetry", "mark"]
+    assert lines[1]["label"] == "compaction-start"
+
+
+def test_mark_main_creates_file_when_absent(tmp_path):
+    out = tmp_path / "nested" / "trial.jsonl"
+    rc = mark_main(Namespace(label="start", out=str(out)))
+    assert rc == 0
+    event = json.loads(out.read_text().strip())
+    assert event["type"] == "mark"
+    assert event["label"] == "start"

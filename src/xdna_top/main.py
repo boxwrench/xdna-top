@@ -22,7 +22,7 @@ from xdna_top.baseline import baseline_main
 from xdna_top.compare import compare_main
 from xdna_top.env_report import env_report_main
 from xdna_top.gauge import HardwareGauge, GpuState, run_xrt_smi, parse_xrt_smi
-from xdna_top.record import record_main
+from xdna_top.record import mark_main, record_main
 from xdna_top.snapshot import snapshot_main
 
 
@@ -326,9 +326,9 @@ def build_parser(
 
         env_report_parser = subparsers.add_parser(
             "env-report",
-            help="Render a Markdown report from a captured snapshot.",
+            help="Render a Markdown report from a captured snapshot or record stream.",
         )
-        env_report_parser.add_argument("snapshot", help="Snapshot JSON path.")
+        env_report_parser.add_argument("snapshot", help="Snapshot JSON or record JSONL path.")
         env_report_parser.add_argument(
             "--markdown",
             action="store_true",
@@ -354,6 +354,13 @@ def build_parser(
         )
         record_parser.add_argument("--out", type=str, default=None, help="Output JSONL path. Defaults to stdout.")
         _add_hardware_args(record_parser, suppress_defaults=True)
+
+        mark_parser = subparsers.add_parser(
+            "mark",
+            help="Append a typed mark event to a record JSONL stream.",
+        )
+        mark_parser.add_argument("label", help="Marker label, e.g. trial-1-start.")
+        mark_parser.add_argument("--out", type=str, default=None, help="Record JSONL path to append to. Defaults to stdout.")
 
         assert_parser = subparsers.add_parser(
             "assert",
@@ -532,6 +539,8 @@ def main() -> int:
         return env_report_main(args)
     if getattr(args, "command", None) == "record":
         return record_main(args)
+    if getattr(args, "command", None) == "mark":
+        return mark_main(args)
     if getattr(args, "command", None) == "assert":
         return assert_main(args)
     if getattr(args, "command", None) == "compare":

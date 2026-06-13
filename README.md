@@ -78,6 +78,8 @@ xdna-top --json             # one fused telemetry reading to stdout, then exit
 xdna-top snapshot --out platform.json
 xdna-top env-report platform.json --markdown
 xdna-top record --duration 60 --interval 0.2 --out telemetry.jsonl
+xdna-top mark --out telemetry.jsonl "trial-1-start"      # annotate the stream
+xdna-top env-report telemetry.jsonl --markdown           # report from a recording
 xdna-top assert telemetry.jsonl --require-npu-activity   # exit 0/1 for CI
 xdna-top compare before.json after.json   # flag high-signal platform drift
 xdna-top baseline save known-good          # store a named known-good snapshot
@@ -109,8 +111,9 @@ degraded instead of crashing.
 - Per-context NPU table: PID, submissions, completions, derived activity
 - `--json` mode for scripts, logging, and dashboards
 - `snapshot` mode for schema-versioned platform and telemetry evidence
-- `env-report` mode for Markdown summaries from captured snapshots
+- `env-report` mode for Markdown summaries from captured snapshots or recordings
 - `record` mode for streaming typed JSONL telemetry events over a time window
+- `mark` mode for annotating a recording with named trial markers
 - `assert` mode for named pass/fail evidence checks with CI-friendly exit codes
 - `compare` mode for spotting high-signal platform drift between two snapshots
 - `baseline` mode for saving a known-good snapshot and re-checking it after updates

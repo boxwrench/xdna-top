@@ -36,6 +36,34 @@ def build_telemetry_event(
     }
 
 
+def build_mark_event(label: str, ts: float | None = None) -> dict[str, Any]:
+    """Build one typed mark event for annotating a record stream."""
+    return {
+        "type": "mark",
+        "schema_version": RECORD_SCHEMA_VERSION,
+        "ts": ts if ts is not None else time.time(),
+        "label": label,
+    }
+
+
+def append_event(event: dict[str, Any], out_path: str | Path | None) -> None:
+    """Append one JSONL event to a record stream, or stdout when no path given."""
+    line = _dump(event)
+    if out_path is None:
+        sys.stdout.write(line)
+        sys.stdout.flush()
+        return
+    path = Path(out_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(line)
+
+
+def mark_main(args: Any) -> int:
+    append_event(build_mark_event(args.label), args.out)
+    return 0
+
+
 def sample_contexts(npu_device: str | None) -> list[dict[str, Any]]:
     """Probe NPU hardware contexts, tagging each with its source backend."""
     npu_out = run_xrt_smi(device=npu_device)
@@ -188,7 +216,7 @@ def _open_writer(
     if out_path is None:
 
         def write_stdout(event: dict[str, Any]) -> None:
-            sys.stdout.write(json.dumps(event) + "\n")
+            sys.stdout.write(_dump(event))
             sys.stdout.flush()
 
         yield write_stdout
@@ -199,7 +227,11 @@ def _open_writer(
     with path.open("w", encoding="utf-8") as handle:
 
         def write_file(event: dict[str, Any]) -> None:
-            handle.write(json.dumps(event) + "\n")
+            handle.write(_dump(event))
             handle.flush()
 
         yield write_file
+
+
+def _dump(event: dict[str, Any]) -> str:
+    return json.dumps(event) + "\n"

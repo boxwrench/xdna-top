@@ -162,3 +162,34 @@ Verified off-hardware: ran the full `save → list → check` flow against a tem
 `--dir`, confirming clean exit 0 vs itself, exit 1 on a synthesized degraded
 regression, and exit 2 for a missing name and a path-traversal name.
 
+## 2026-06-13 — Stream annotations: `mark` and record-aware `env-report`
+Two small off-hardware additions that round out the recording workflow.
+
+1. **`xdna-top mark` (`src/xdna_top/record.py`)**:
+   - `mark "<label>" --out <jsonl>` appends a typed
+     `{"type":"mark","schema_version":"1.0","ts":...,"label":...}` event to a
+     record stream in append mode (creating the file/dirs if absent), or to
+     stdout. Shares the record line serializer (`_dump`).
+   - Lets scripts annotate trials (`trial-1-start`, `compaction-start`) inline
+     with `record` telemetry.
+2. **`env-report` from a record stream (`src/xdna_top/env_report.py`)**:
+   - `env_report_main` now auto-detects the artifact via the shared
+     `assertions.load_artifact`. Snapshots still render the "Environment Report";
+     record streams render a new "Telemetry Report" (recording window, host,
+     observed activity — active samples, max submission delta, degraded samples,
+     context sources/PIDs — first/last reading, and a Marks section).
+   - Snapshot rendering is unchanged; host/reading rendering is factored into
+     shared helpers.
+3. **CLI**: added the `mark` subcommand and dispatch; broadened the `env-report`
+   positional help to "Snapshot JSON or record JSONL path".
+4. **Tests**: mark event/append behavior (append without truncation, create when
+   absent) in `test_record.py`; record Markdown summary including marks in
+   `test_env_report.py`; CLI dispatch for `mark`. Full suite: 89 passed.
+5. **Docs**: README quick start/features, ROADMAP env-report + Event markers
+   notes, and HANDOFF (these backlog items done; theme registry now the only
+   remaining off-hardware work).
+
+Verified off-hardware: recorded a stream, appended two marks, and rendered it
+with `env-report` — the Telemetry Report and Marks section both appear, and the
+snapshot path of `env-report` still renders the Environment Report.
+

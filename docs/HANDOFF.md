@@ -122,6 +122,15 @@ Implementation entry points:
   re-probes when the baseline is absent.
 - Baseline tests cover name/path safety, the save/check round trip, drift
   detection, and exit codes by mocking `build_snapshot` (no real hardware).
+- `xdna-top mark "<label>" --out <jsonl>` now appends a typed
+  `{"type":"mark",...}` event to a record stream (append mode, creating the file
+  if needed), so scripts can annotate trials alongside `record`.
+- `xdna-top env-report` now accepts a record JSONL stream as well as a snapshot:
+  it auto-detects the artifact and renders a "Telemetry Report" (recording window,
+  host, observed activity, first/last reading, and any marks) reusing the
+  Markdown helpers. Snapshot rendering is unchanged.
+- Mark and record-report tests cover the mark event/append behavior and the
+  record Markdown summary, including marks, with no real hardware.
 
 ## Next Public Issues
 
@@ -162,15 +171,15 @@ hardware and should be built on a separate `exp/amdxdna-backend` branch under th
 rules in the "Backend Experiment" section below. `compare` and `baseline` do not
 depend on it.
 
-Until hardware is available, pick from the off-hardware backlog (any order, all
-testable with mocks):
+Until hardware is available, the remaining off-hardware work is the v0.5 theme
+registry: add `--theme <name>` backed by a registry (the two themes already exist
+as `DEFAULT_THEME` and `LEMONADE_THEME` in `main.py`), optionally read
+`XDNA_TOP_THEME`, and keep `lemonade-top` as a compatibility alias. Themes must
+only affect colors, borders, header art, and glyphs — never metric names, states,
+units, or values. This is low risk and a good first-contribution surface; see the
+"Theme registry" and candidate-theme list in [ROADMAP.md](ROADMAP.md).
 
-- `xdna-top mark` — append a typed `{"type":"mark",...}` line to a record JSONL,
-  reusing the record stream writer. Pairs with `record` for trial annotations.
-- `env-report` from a `record` stream — summarize first/last reading and any
-  observed activity, reusing the Markdown renderer. Currently snapshot-only.
-- Theme registry behind `--theme <name>` (#9), keeping `lemonade-top` as an alias
-  (v0.5, low risk, good first-contribution surface).
+The `mark` and record-aware `env-report` backlog items are now done.
 
 Do not start with `workload-check`. It depends on the evidence artifact and has
 the largest design surface.
