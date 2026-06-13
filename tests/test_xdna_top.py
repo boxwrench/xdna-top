@@ -212,6 +212,23 @@ def test_record_subcommand(mock_record_main):
     assert args.out == "bench/telemetry.jsonl"
 
 
+@patch("xdna_top.main.assert_main")
+@patch("sys.argv", ["xdna-top", "assert", "telemetry.jsonl", "--require-npu", "--require-npu-activity"])
+def test_assert_subcommand(mock_assert_main):
+    mock_assert_main.return_value = 0
+
+    ret = main()
+
+    assert ret == 0
+    mock_assert_main.assert_called_once()
+    args = mock_assert_main.call_args[0][0]
+    assert args.command == "assert"
+    assert args.artifact == "telemetry.jsonl"
+    assert args.require_npu is True
+    assert args.require_npu_activity is True
+    assert args.require_npu_sensors is False
+
+
 @patch("xdna_top.main.HardwareGauge")
 @patch("sys.argv")
 def test_lemonade_json_flag(mock_argv, mock_gauge_class):

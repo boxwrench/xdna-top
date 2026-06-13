@@ -319,3 +319,21 @@ FAIL require-igpu-power: observed devices.igpu.power_path_exists=false, required
 ```
 
 Assertions should never convert missing data into guessed values.
+
+`xdna-top assert` accepts either a `snapshot` JSON object or a `record` JSONL
+stream and selects the right reading per artifact type. It exits `0` only when
+every requested check passes, `1` when any check fails, and `2` on a usage error
+(no `--require-*` flags) or an unreadable artifact.
+
+| Check | Snapshot reading | Record reading |
+|---|---|---|
+| `--require-npu` | `devices.npu.detected` is true | at least one telemetry sample has NPU contexts |
+| `--require-npu-sensors` | `devices.npu.driver.supports_sensors` is true | unavailable (snapshot-only field) |
+| `--require-context-source` | `backends.npu.signals.contexts` is non-null | telemetry contexts carry a `source` |
+| `--require-igpu` | `telemetry.igpu_degraded` is false | no telemetry sample is iGPU-degraded |
+| `--require-not-degraded` | `degraded.overall` is false | no telemetry sample is degraded |
+| `--require-npu-activity` | `telemetry.npu_active` is true | max context submission delta > 0, or any active sample |
+
+A check that needs a signal the artifact does not carry (for example sensor
+support on a record stream) fails and reports the value as unavailable rather
+than guessing.

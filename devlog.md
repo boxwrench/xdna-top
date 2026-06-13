@@ -75,3 +75,35 @@ Verified off-hardware: `xdna-top record` produces a valid degraded JSONL
 artifact (null readings, empty contexts, exit 0) with no `xrt-smi` or sysfs
 present.
 
+## 2026-06-13 — Evidence core complete: `xdna-top assert`
+Implemented the fourth and final v0.2 evidence command, `xdna-top assert`,
+closing out the evidence core (`snapshot`, `env-report`, `record`, `assert`).
+
+1. **Checks (`src/xdna_top/assertions.py`)**:
+   - `assert <artifact> --require-*` loads either a snapshot JSON object or a
+     record JSONL stream (auto-detected) and evaluates named checks.
+   - Checks: `require-npu`, `require-npu-sensors`, `require-context-source`,
+     `require-igpu`, `require-not-degraded`, `require-npu-activity`. Each prints
+     the observed value next to its requirement; snapshot and record artifacts
+     read the appropriate field/aggregate.
+   - `require-npu-activity` on a record stream computes the max per-context
+     submission delta across the window (plus active-sample count) so it proves
+     measured counter movement, not assumed causality.
+   - Exit codes: `0` all pass, `1` any fail, `2` usage error (no `--require-*`)
+     or unreadable artifact. Unavailable signals fail honestly rather than being
+     guessed.
+2. **CLI**: wired the `assert` subcommand from the check registry and added
+   dispatch in `main.py`.
+3. **Tests (`tests/test_assertions.py`)**: artifact loader/classification, every
+   check on healthy and degraded inputs for both artifact types, output strings,
+   and CLI exit codes — all hardware-free. Full suite: 52 passed.
+4. **Docs**: README quick start/features and v0.2 roadmap box checked; an
+   expanded Assertion Guidance table in `SNAPSHOT-SCHEMA.md`; HANDOFF marks the
+   evidence core done and repoints the next step at v0.3 (`compare`, `baseline`),
+   with an explicit off-hardware backlog.
+
+Verified off-hardware: built real degraded `snapshot`/`record` artifacts on this
+no-hardware host and ran `assert` against them — correct FAILs and exit 1 on
+degraded data, exit 2 on no-requirements, and exit 0 PASS lines on a synthesized
+healthy snapshot.
+

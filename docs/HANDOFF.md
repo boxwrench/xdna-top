@@ -5,17 +5,19 @@ chat history. Keep it public, generic, and free of private project names.
 
 ## Current Milestone
 
-`v0.2`: evidence core implementation.
+`v0.2`: evidence core — implemented.
 
-Three evidence commands, `xdna-top snapshot`, `xdna-top env-report`, and
-`xdna-top record`, have landed. Continue preserving the current runtime behavior
-of:
+All four evidence-core commands have landed: `xdna-top snapshot`,
+`xdna-top env-report`, `xdna-top record`, and `xdna-top assert`. The next
+milestone is `v0.3` (direct backend probes plus `compare` and `baseline`).
+
+Continue preserving the current runtime behavior of:
 
 - `xdna-top`
 - `xdna-top --json`
 - `lemonade-top`
 
-The goal is to build the evidence commands without turning `xdna-top` into a
+The goal is to keep building evidence commands without turning `xdna-top` into a
 general AMDGPU monitor.
 
 ## Current Direction
@@ -54,6 +56,8 @@ Implementation entry points:
   report renderer for captured snapshots
 - [../src/xdna_top/record.py](../src/xdna_top/record.py): JSONL telemetry
   recorder, sampling loop, and event builders
+- [../src/xdna_top/assertions.py](../src/xdna_top/assertions.py): artifact
+  loader, named checks, and CI exit codes for `assert`
 - [../tests/test_xdna_top.py](../tests/test_xdna_top.py) and
   [../tests/test_gauge.py](../tests/test_gauge.py): current behavior checks
 - [../tests/test_snapshot.py](../tests/test_snapshot.py): snapshot schema and
@@ -62,6 +66,8 @@ Implementation entry points:
   rendering and invalid-input checks
 - [../tests/test_record.py](../tests/test_record.py): record timing, JSONL
   shape, and degraded-path checks
+- [../tests/test_assertions.py](../tests/test_assertions.py): artifact loading,
+  per-check pass/fail, and exit codes for both artifact types
 
 ## Completed Groundwork
 
@@ -87,6 +93,12 @@ Implementation entry points:
   footer, with per-context backend provenance and degraded flags preserved.
 - Record tests cover sampling-window count, JSONL shape, and degraded paths with
   a deterministic fake clock and no real hardware.
+- `xdna-top assert <artifact> --require-*` now evaluates named checks over both a
+  snapshot JSON and a record JSONL stream, prints observed values next to
+  requirements, and exits `0`/`1`/`2` for CI. Checks report unavailable signals
+  honestly instead of guessing.
+- Assert tests cover the artifact loader, every check on healthy and degraded
+  inputs, and exit codes, with no real hardware.
 
 ## Next Public Issues
 
@@ -121,22 +133,29 @@ Each issue should include:
 
 ## Next Implementation Step
 
-Continue `v0.2` with `assert`. `record` is implemented; `assert` is the last
-piece of the evidence core.
+The v0.2 evidence core is complete. Move to `v0.3`, starting with the commands
+that build on the snapshot schema and need no hardware:
 
-Recommended order:
+1. Implement `xdna-top compare before.json after.json` as a pure diff over two
+   snapshots. Emphasize the high-signal changes listed under "Compare Guidance"
+   in [SNAPSHOT-SCHEMA.md](SNAPSHOT-SCHEMA.md) (kernel, accel device, backend
+   availability, sensor support, BDF, sysfs paths, `degraded.overall` regressions)
+   rather than generic JSON noise. Exit non-zero when high-signal drift is found.
+2. Implement `xdna-top baseline save <name>` / `baseline check <name>` as a thin
+   workflow over `snapshot` + `compare`, storing named snapshots under a local
+   directory (for example `~/.local/state/xdna-top/baselines/`). `check` reuses
+   the compare logic; only `save` probes hardware.
+3. The read-only `amdxdna_ioctl` backend (#5) is the hardware-dependent part of
+   v0.3 and should stay on a separate `exp/amdxdna-backend` branch. `compare` and
+   `baseline` do not depend on it.
 
-1. Implement `xdna-top assert <artifact> [checks...]` over both a snapshot JSON
-   and a `record` JSONL stream.
-2. Name each check and print the observed value next to the requirement, as in
-   the Assertion Guidance in [SNAPSHOT-SCHEMA.md](SNAPSHOT-SCHEMA.md).
-3. For JSONL input, select events by `type` (consume `telemetry` events; ignore
-   `meta`/`summary` unless a check needs them). For example,
-   `--require-npu-activity` should look for any `telemetry` line whose contexts
-   show a positive submission/completion delta during the window.
-4. Exit `0` when all requirements pass and non-zero when any fail.
-5. Add tests for pass/fail exit codes and observed-value output, covering both
-   snapshot and JSONL inputs, with no real hardware.
+Off-hardware backlog (good to pick up in any order, all testable with mocks):
+
+- `compare` (#6) and `baseline` check-side (#7) — pure functions over snapshots.
+- `xdna-top mark` — append a typed `{"type":"mark",...}` line to a record JSONL.
+- `env-report` from a `record` stream — summarize first/last reading and any
+  observed activity, reusing the Markdown renderer.
+- Theme registry behind `--theme <name>` (#9), keeping `lemonade-top` as an alias.
 
 Do not start with `workload-check`. It depends on the evidence artifact and has
 the largest design surface.

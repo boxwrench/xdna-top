@@ -17,6 +17,7 @@ from rich.table import Table
 from rich.text import Text
 from rich.align import Align
 
+from xdna_top.assertions import CHECKS, assert_main
 from xdna_top.env_report import env_report_main
 from xdna_top.gauge import HardwareGauge, GpuState, run_xrt_smi, parse_xrt_smi
 from xdna_top.record import record_main
@@ -352,6 +353,19 @@ def build_parser(
         record_parser.add_argument("--out", type=str, default=None, help="Output JSONL path. Defaults to stdout.")
         _add_hardware_args(record_parser, suppress_defaults=True)
 
+        assert_parser = subparsers.add_parser(
+            "assert",
+            help="Evaluate named pass/fail checks over a snapshot or record artifact.",
+        )
+        assert_parser.add_argument("artifact", help="Snapshot JSON or record JSONL path.")
+        for check_name, dest, _check_fn in CHECKS:
+            assert_parser.add_argument(
+                f"--{check_name}",
+                dest=dest,
+                action="store_true",
+                help=f"Require {check_name.replace('require-', '').replace('-', ' ')}.",
+            )
+
     return parser
 
 
@@ -475,6 +489,8 @@ def main() -> int:
         return env_report_main(args)
     if getattr(args, "command", None) == "record":
         return record_main(args)
+    if getattr(args, "command", None) == "assert":
+        return assert_main(args)
     return run_monitor(args)
 
 
