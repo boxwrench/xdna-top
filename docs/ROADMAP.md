@@ -534,12 +534,18 @@ the telemetry roadmap.
 
 ### Theme registry
 
-Themes are a low-priority community feature and a good source of first
-contributions. Before adding more themes, generalize the implementation:
+Implemented: a `THEMES` registry backs `--theme <name>` and `XDNA_TOP_THEME`,
+`lemonade-top` is a thin alias defaulting to the `lemonade` theme, and the
+shipped themes are `default`, `lemonade`, `paper`, `phosphor`, `amber`, and
+`halo`. See [THEMES.md](THEMES.md). Remaining work is adding more candidate
+themes as data entries and a screenshot gallery.
 
-- add a theme registry
-- support `--theme <name>`
-- optionally support `XDNA_TOP_THEME`
+Themes are a low-priority community feature and a good source of first
+contributions. The generalized implementation provides:
+
+- a theme registry
+- support for `--theme <name>`
+- support for `XDNA_TOP_THEME`
 - keep `lemonade-top` as a compatibility alias
 - make each new theme a small data entry, not a new command
 

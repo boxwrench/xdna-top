@@ -7,7 +7,7 @@ import tty
 import termios
 import argparse
 from pathlib import Path
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from rich.layout import Layout
 from rich.panel import Panel
@@ -96,6 +96,116 @@ LEMONADE_THEME = TuiTheme(
         "  [yellow]████████[/yellow]",
     ),
 )
+
+
+# Additional themes vary only colors, borders, and header/footer chrome. They
+# keep the default's accurate pane titles and never touch metric names, states,
+# units, or values, so a screenshot in any theme stays claims-accurate.
+PAPER_THEME = replace(
+    DEFAULT_THEME,
+    header="[bold]xdna-top[/bold] - Unified NPU+iGPU Monitor [Strix Halo]",
+    footer="Press [bold]q[/bold] or [bold]Ctrl-C[/bold] to quit. Telemetry refresh rate: 5 Hz.",
+    stopped_message="[bold]xdna-top stopped cleanly.[/bold]",
+    header_border="blue",
+    footer_border="blue",
+    igpu_title="[bold blue]iGPU Telemetry[/bold blue]",
+    igpu_border="blue",
+    npu_title="[bold dark_orange]Ryzen AI NPU[/bold dark_orange]",
+    npu_border="dark_orange",
+    table_title_style="bold blue",
+    state_idle_style="blue",
+    state_active_style="bold blue",
+    state_prefill_style="bold dark_orange",
+    npu_idle_style="blue",
+    npu_active_style="bold dark_orange",
+)
+
+
+PHOSPHOR_THEME = replace(
+    DEFAULT_THEME,
+    header="[bold green]xdna-top[/bold green] - Unified NPU+iGPU Monitor [Strix Halo]",
+    footer="Press [bold green]q[/bold green] or [bold green]Ctrl-C[/bold green] to quit. Telemetry refresh rate: 5 Hz.",
+    stopped_message="[green]xdna-top stopped cleanly.[/green]",
+    header_border="green",
+    footer_border="green",
+    igpu_title="[bold green]iGPU Telemetry[/bold green]",
+    igpu_border="green",
+    npu_title="[bold green]Ryzen AI NPU[/bold green]",
+    npu_border="green",
+    table_title_style="bold green",
+    state_idle_style="green",
+    state_active_style="bright_green",
+    state_prefill_style="bold bright_green",
+    npu_idle_style="green",
+    npu_active_style="bold bright_green",
+)
+
+
+AMBER_THEME = replace(
+    DEFAULT_THEME,
+    header="[bold orange3]xdna-top[/bold orange3] - Unified NPU+iGPU Monitor [Strix Halo]",
+    footer="Press [bold orange3]q[/bold orange3] or [bold orange3]Ctrl-C[/bold orange3] to quit. Telemetry refresh rate: 5 Hz.",
+    stopped_message="[orange3]xdna-top stopped cleanly.[/orange3]",
+    header_border="orange3",
+    footer_border="orange3",
+    igpu_title="[bold orange3]iGPU Telemetry[/bold orange3]",
+    igpu_border="orange3",
+    npu_title="[bold orange3]Ryzen AI NPU[/bold orange3]",
+    npu_border="orange3",
+    table_title_style="bold orange3",
+    state_idle_style="yellow",
+    state_active_style="orange3",
+    state_prefill_style="bold orange3",
+    npu_idle_style="yellow",
+    npu_active_style="bold orange3",
+)
+
+
+HALO_THEME = replace(
+    DEFAULT_THEME,
+    header="[bold grey78]xdna-top[/bold grey78] - Unified NPU+iGPU Monitor [Strix Halo]",
+    footer="Press [bold steel_blue1]q[/bold steel_blue1] or [bold steel_blue1]Ctrl-C[/bold steel_blue1] to quit. Telemetry refresh rate: 5 Hz.",
+    stopped_message="[grey78]xdna-top stopped cleanly.[/grey78]",
+    header_border="deep_sky_blue4",
+    footer_border="deep_sky_blue4",
+    igpu_title="[bold steel_blue1]iGPU Telemetry[/bold steel_blue1]",
+    igpu_border="deep_sky_blue4",
+    npu_title="[bold grey78]Ryzen AI NPU[/bold grey78]",
+    npu_border="steel_blue",
+    table_title_style="bold steel_blue1",
+    state_idle_style="steel_blue",
+    state_active_style="deep_sky_blue1",
+    state_prefill_style="bold cyan",
+    npu_idle_style="grey78",
+    npu_active_style="bold cyan",
+)
+
+
+# Theme registry. New themes should be a small data entry here, not a new
+# command or renamed metric.
+THEMES: dict[str, TuiTheme] = {
+    "default": DEFAULT_THEME,
+    "lemonade": LEMONADE_THEME,
+    "paper": PAPER_THEME,
+    "phosphor": PHOSPHOR_THEME,
+    "amber": AMBER_THEME,
+    "halo": HALO_THEME,
+}
+
+
+def resolve_theme(name: str | None, *, default_name: str = "default") -> TuiTheme | None:
+    """Resolve a theme by name, falling back to XDNA_TOP_THEME then default_name.
+
+    Returns ``None`` when an explicitly requested name is unknown so the caller
+    can report it.
+    """
+    chosen = name or os.environ.get("XDNA_TOP_THEME") or default_name
+    return THEMES.get(chosen.lower())
+
+
+def list_themes() -> str:
+    """Return the available theme names, one per line."""
+    return "\n".join(sorted(THEMES))
 
 
 class KeyListener:
@@ -313,6 +423,17 @@ def build_parser(
 ) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--json", action="store_true", help="Print a single fused reading and exit.")
+    parser.add_argument(
+        "--theme",
+        type=str,
+        default=None,
+        help="TUI theme name (see --list-themes). Overrides XDNA_TOP_THEME.",
+    )
+    parser.add_argument(
+        "--list-themes",
+        action="store_true",
+        help="List available TUI theme names and exit.",
+    )
     _add_hardware_args(parser)
 
     if include_commands:
@@ -547,7 +668,22 @@ def main() -> int:
         return compare_main(args)
     if getattr(args, "command", None) == "baseline":
         return baseline_main(args)
-    return run_monitor(args)
+    return _run_monitor_with_theme(args, default_theme_name="default")
+
+
+def _run_monitor_with_theme(args: argparse.Namespace, *, default_theme_name: str) -> int:
+    """Resolve the requested theme and hand off to the monitor."""
+    if getattr(args, "list_themes", False):
+        print(list_themes())
+        return 0
+    theme = resolve_theme(getattr(args, "theme", None), default_name=default_theme_name)
+    if theme is None:
+        print(
+            f"unknown theme {args.theme!r}; available: {', '.join(sorted(THEMES))}",
+            file=sys.stderr,
+        )
+        return 2
+    return run_monitor(args, theme=theme)
 
 
 if __name__ == "__main__":

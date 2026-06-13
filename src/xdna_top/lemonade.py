@@ -1,6 +1,6 @@
 import sys
 
-from xdna_top.main import LEMONADE_THEME, build_parser, run_monitor
+from xdna_top.main import _run_monitor_with_theme, build_parser
 
 
 def main() -> int:
@@ -9,7 +9,7 @@ def main() -> int:
         include_commands=False,
     )
     args = parser.parse_args()
-    return run_monitor(args, theme=LEMONADE_THEME)
+    return _run_monitor_with_theme(args, default_theme_name="lemonade")
 
 
 if __name__ == "__main__":

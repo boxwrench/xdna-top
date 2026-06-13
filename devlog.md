@@ -193,3 +193,34 @@ Verified off-hardware: recorded a stream, appended two marks, and rendered it
 with `env-report` — the Telemetry Report and Marks section both appear, and the
 snapshot path of `env-report` still renders the Environment Report.
 
+## 2026-06-13 — Theme registry and on-hardware validation note
+Implemented the v0.5 theme registry and recorded the pending on-hardware
+validation work.
+
+1. **Theme registry (`src/xdna_top/main.py`)**:
+   - Added a `THEMES` dict and `resolve_theme`/`list_themes`, backing
+     `--theme <name>` and `XDNA_TOP_THEME` (resolution order `--theme` > env >
+     entry-point default). Unknown `--theme` exits 2 and lists valid names;
+     `--list-themes` prints them.
+   - New themes (`paper`, `phosphor`, `amber`, `halo`) are
+     `dataclasses.replace(DEFAULT_THEME, ...)` data entries that vary only colors
+     and chrome and keep the accurate pane titles. `lemonade-top` is now a thin
+     alias defaulting to `lemonade` but honoring `--theme`.
+2. **Tests (`tests/test_themes.py`)**: registry contents, name/env resolution,
+   `--list-themes`, CLI selection/error paths, and a parametrized
+   claims-accuracy guard that every theme still renders the PID/Submissions/
+   Completions/Status columns, units, state values, and observed numbers (also
+   proving every theme's color names are renderable). Full suite: 106 passed.
+3. **Docs**: new `docs/THEMES.md` (usage, theme table, contribution rules);
+   README quick start/features/roadmap; ROADMAP theme-registry note; and a new
+   "On-Hardware Validation (pending)" checklist in HANDOFF.
+
+On-hardware note: per the plan, HANDOFF now makes explicit that every v0.2/v0.3
+command and the themes were built and tested off the target hardware (mocked
+plus degraded smoke tests), and lists the full end-to-end checklist to run on the
+real Strix Halo machine before treating non-degraded behavior as proven.
+
+Verified off-hardware: `--list-themes`, `--theme <name> --json`, unknown-theme
+error, and `XDNA_TOP_THEME` via `lemonade-top` all behave as expected; all six
+themes render their panels without error.
+

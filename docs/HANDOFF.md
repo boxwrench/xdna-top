@@ -22,6 +22,43 @@ Continue preserving the current runtime behavior of:
 The goal is to keep building evidence commands without turning `xdna-top` into a
 general AMDGPU monitor.
 
+## On-Hardware Validation (pending)
+
+Important: every command added in the `v0.2`/`v0.3` evidence work and the theme
+registry was developed and tested **off the target hardware**. Coverage so far is
+unit tests with mocked `xrt-smi`/sysfs plus degraded-path smoke tests on a machine
+with no NPU. None of it has yet been exercised against a real Strix Halo NPU +
+iGPU, so the non-degraded paths are unproven on real silicon.
+
+When back on the target machine, validate the full surface end to end and record
+results in the devlog:
+
+- [ ] `python3 -m pytest -q` passes on the target box.
+- [ ] `xdna-top` TUI shows live iGPU busy/power sparklines and a populated NPU
+      context table (not the degraded banners).
+- [ ] `xdna-top --json` reports real values with `igpu_degraded`/`npu_degraded`
+      both false.
+- [ ] `xdna-top snapshot` captures a real NPU BDF/name, accel device present,
+      and per-context PID/submission/completion data; `degraded.overall` is false.
+- [ ] `xdna-top env-report <snapshot.json> --markdown` renders those real facts.
+- [ ] `xdna-top record --duration 10 --interval 0.2 --out trial.jsonl` during a
+      local LLM workload captures rising submission counters; interleave
+      `xdna-top mark` calls and confirm marks land in the stream.
+- [ ] `xdna-top env-report trial.jsonl` shows non-zero activity and the marks.
+- [ ] `xdna-top assert trial.jsonl --require-npu-activity` exits `0` during a
+      workload and non-zero on an idle capture; `assert snapshot.json
+      --require-npu --require-context-source` passes on healthy hardware.
+- [ ] `xdna-top compare` flags real drift between two snapshots (for example
+      before/after an `xrt`/kernel update).
+- [ ] `xdna-top baseline save known-good` then `baseline check known-good` after
+      an update behaves as expected.
+- [ ] `lemonade-top` and `xdna-top --theme <name>` (each of `default`, `lemonade`,
+      `paper`, `phosphor`, `amber`, `halo`) render correctly in a real terminal;
+      confirm themes change only colors/chrome, never metrics, units, or values.
+
+Until this checklist is done, treat non-degraded behavior as unverified and keep
+claims about live capture appropriately hedged.
+
 ## Current Direction
 
 `xdna-top` should be framed as a Ryzen AI workload-evidence tool, not as a
@@ -131,6 +168,15 @@ Implementation entry points:
   Markdown helpers. Snapshot rendering is unchanged.
 - Mark and record-report tests cover the mark event/append behavior and the
   record Markdown summary, including marks, with no real hardware.
+- A TUI theme registry now backs `--theme <name>` (and `XDNA_TOP_THEME`), with
+  `default`, `lemonade`, `paper`, `phosphor`, `amber`, and `halo`. `lemonade-top`
+  is now a thin alias that defaults to the `lemonade` theme but honors `--theme`.
+  New themes are `dataclasses.replace` data entries that vary only colors and
+  chrome; metric names, states, units, and values are theme-invariant.
+- Theme tests assert the registry, name/env resolution, `--list-themes`, and a
+  claims-accuracy guard that every theme still renders the PID/Submissions/
+  Completions/Status columns, units, state values, and observed numbers (which
+  also validates that every theme's color names are renderable).
 
 ## Next Public Issues
 
@@ -171,18 +217,21 @@ hardware and should be built on a separate `exp/amdxdna-backend` branch under th
 rules in the "Backend Experiment" section below. `compare` and `baseline` do not
 depend on it.
 
-Until hardware is available, the remaining off-hardware work is the v0.5 theme
-registry: add `--theme <name>` backed by a registry (the two themes already exist
-as `DEFAULT_THEME` and `LEMONADE_THEME` in `main.py`), optionally read
-`XDNA_TOP_THEME`, and keep `lemonade-top` as a compatibility alias. Themes must
-only affect colors, borders, header art, and glyphs — never metric names, states,
-units, or values. This is low risk and a good first-contribution surface; see the
-"Theme registry" and candidate-theme list in [ROADMAP.md](ROADMAP.md).
+All off-hardware command and theme work for `v0.2`/`v0.3`/`v0.5` is now done. The
+remaining items genuinely need the target machine:
 
-The `mark` and record-aware `env-report` backlog items are now done.
+1. Run the "On-Hardware Validation" checklist above and record results in the
+   devlog. This is the top priority once hardware is available, since it is what
+   turns the off-hardware unit/degraded coverage into proven live behavior.
+2. Build the read-only `amdxdna_ioctl` backend (#5) on a separate
+   `exp/amdxdna-backend` branch under the "Backend Experiment" rules below.
+3. Only after the evidence core is proven on hardware, design `workload-check`
+   (v0.4). It depends on the evidence artifact and has the largest design surface.
 
-Do not start with `workload-check`. It depends on the evidence artifact and has
-the largest design surface.
+Smaller community follow-ups that stay off-hardware: add more candidate themes
+from [ROADMAP.md](ROADMAP.md) (`fabric`, `team-red`, `lime`, `grapefruit`) as data
+entries, and a screenshot gallery for `THEMES.md`. These are good
+first-contribution issues, not blockers.
 
 ## Backend Experiment
 
