@@ -99,6 +99,14 @@ def discover_amdgpu_hwmon() -> str | None:
     return None
 
 
+def discover_hwmon_by_name(name: str) -> str | None:
+    """Find the first /sys/class/hwmon entry whose ``name`` matches (read-only)."""
+    for hwmon in sorted(glob.glob("/sys/class/hwmon/hwmon*")):
+        if _read(os.path.join(hwmon, "name")) == name:
+            return hwmon
+    return None
+
+
 def _hwmon_pair(hwmon: str, kind: str) -> tuple[str, str, str] | None:
     """Find first ``<kind>N_input`` in a hwmon dir; return (path, label, node)."""
     for inp in sorted(glob.glob(os.path.join(hwmon, f"{kind}*_input"))):
@@ -185,18 +193,49 @@ def probe_igpu_temp(hwmon: str | None) -> SignalResult:
     return SignalResult(name, True, f"{int(raw) / 1000.0:.1f} C ({label})", inp, "amdgpu hwmon")
 
 
-def probe_igpu_power(hwmon: str | None) -> SignalResult:
-    name = "iGPU power"
+def probe_package_power(hwmon: str | None) -> SignalResult:
+    # amdgpu's power1 on this APU is labelled PPT (Package Power Tracking): the
+    # whole-SoC package rail (CPU + iGPU + NPU combined), not an iGPU-only sensor.
+    # It is the correct source for total-board perf/watt, but the NPU's individual
+    # share is not separable from it. The signal name is built from the real
+    # power1_label rather than hard-coded, so a different rail name self-reports.
+    default_name = "package power"
     if not hwmon:
-        return SignalResult(name, False, None, "amdgpu hwmon", "no amdgpu hwmon found")
+        return SignalResult(default_name, False, None, "amdgpu hwmon", "no amdgpu hwmon found")
     found = _hwmon_pair(hwmon, "power")
     if not found:
-        return SignalResult(name, False, None, hwmon, "no power*_input node")
+        return SignalResult(default_name, False, None, hwmon, "no power*_input node")
     inp, label, _node = found
     raw = _read(inp)
     if raw is None or not raw.lstrip("-").isdigit():
-        return SignalResult(name, False, None, inp, "power node unreadable")
-    return SignalResult(name, True, f"{int(raw) / 1_000_000.0:.3f} W ({label})", inp, "amdgpu hwmon")
+        return SignalResult(default_name, False, None, inp, "power node unreadable")
+    return SignalResult(
+        f"package power ({label})",
+        True,
+        f"{int(raw) / 1_000_000.0:.3f} W",
+        inp,
+        "SoC package rail (CPU+iGPU+NPU); total-board perf/watt source, NPU share not separable",
+    )
+
+
+def probe_cpu_package_temp(hwmon: str | None) -> SignalResult:
+    name = "CPU/package temperature"
+    if not hwmon:
+        return SignalResult(name, False, None, "k10temp hwmon", "no k10temp hwmon found")
+    found = _hwmon_pair(hwmon, "temp")
+    if not found:
+        return SignalResult(name, False, None, hwmon, "no temp*_input node")
+    inp, label, _node = found
+    raw = _read(inp)
+    if raw is None or not raw.lstrip("-").isdigit():
+        return SignalResult(name, False, None, inp, "temp node unreadable")
+    return SignalResult(
+        name,
+        True,
+        f"{int(raw) / 1000.0:.1f} C ({label})",
+        inp,
+        "k10temp (CPU/SoC); useful for sustained/throttle checks",
+    )
 
 
 # --- orchestration -----------------------------------------------------------
@@ -205,13 +244,15 @@ def probe_igpu_power(hwmon: str | None) -> SignalResult:
 def collect() -> list[SignalResult]:
     bdf = discover_npu_bdf()
     hwmon = discover_amdgpu_hwmon()
+    k10 = discover_hwmon_by_name("k10temp")
     return [
         probe_npu_power(bdf),
         probe_npu_bandwidth("read"),
         probe_npu_bandwidth("write"),
         probe_npu_temp(bdf),
         probe_igpu_temp(hwmon),
-        probe_igpu_power(hwmon),
+        probe_package_power(hwmon),
+        probe_cpu_package_temp(k10),
     ]
 
 

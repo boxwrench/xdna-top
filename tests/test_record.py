@@ -203,12 +203,12 @@ def test_mark_main_appends_without_truncating(tmp_path):
         json.dumps({"type": "telemetry", "ts": 1.0}) + "\n", encoding="utf-8"
     )
 
-    rc = mark_main(Namespace(label="compaction-start", out=str(out)))
+    rc = mark_main(Namespace(label="phase-start", out=str(out)))
     assert rc == 0
 
     lines = [json.loads(line) for line in out.read_text().splitlines()]
     assert [e["type"] for e in lines] == ["telemetry", "mark"]
-    assert lines[1]["label"] == "compaction-start"
+    assert lines[1]["label"] == "phase-start"
 
 
 def test_mark_main_creates_file_when_absent(tmp_path):

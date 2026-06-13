@@ -10,7 +10,7 @@ where `amd-smi` comes up empty.
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Strix%20Halo-orange.svg)](docs/HOW-IT-WORKS.md)
-[![Status](https://img.shields.io/badge/status-v0.1%20alpha-yellow.svg)](#roadmap)
+[![Status](https://img.shields.io/badge/status-v0.2-blue.svg)](#roadmap)
 
 </div>
 
@@ -163,9 +163,9 @@ view lives at **[boxwrench.github.io/xdna-top](https://boxwrench.github.io/xdna-
 
 ## Roadmap
 
-- [x] v0.2 evidence core: `snapshot`, `env-report`, `record`, and `assert`
-- [ ] v0.3 `compare` (done), `baseline` (done), plus read-only direct AMDXDNA
-      backend probes
+- [x] v0.2 evidence core: `snapshot`, `env-report`, `record`, `mark`, `assert`,
+      `compare`, `baseline`, and `assert --between` windowed activity guard
+- [ ] v0.3 read-only direct AMDXDNA backend probes
 - [ ] v0.4 supervised `workload-check` for endpoint and NPU-context evidence
 - [ ] v0.5 community/reporting work: theme registry (done), HTML reports, and
       more Ryzen AI captures

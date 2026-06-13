@@ -170,7 +170,7 @@ Two small off-hardware additions that round out the recording workflow.
      `{"type":"mark","schema_version":"1.0","ts":...,"label":...}` event to a
      record stream in append mode (creating the file/dirs if absent), or to
      stdout. Shares the record line serializer (`_dump`).
-   - Lets scripts annotate trials (`trial-1-start`, `compaction-start`) inline
+   - Lets scripts annotate trials (`trial-1-start`, `phase-2-start`) inline
      with `record` telemetry.
 2. **`env-report` from a record stream (`src/xdna_top/env_report.py`)**:
    - `env_report_main` now auto-detects the artifact via the shared

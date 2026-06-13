@@ -472,11 +472,11 @@ NPU, because unrelated concurrent workloads can move counters.
 Generate a single HTML report from eval artifacts that shows:
 
 - raw transcript
-- compacted or summarized output
+- transformed or post-processed output
 - facts ledger
 - which tracked facts survived
 - which tracked facts dropped
-- the compaction or transformation step where each fact changed
+- the transformation step where each fact changed
 
 This is a companion to diagnose-before-patching workflows. When an eval fails,
 the goal is to turn artifact inspection from manual JSON spelunking into a
@@ -502,7 +502,7 @@ Each eval should have both:
 
 A trial that satisfies pass criteria without exercising the target mechanism
 should be invalid, not passing. This pattern applies broadly to telemetry,
-memory, compaction, routing, and tool-use evals.
+routing, tool-use, and other evals.
 
 ### Wiki doctor
 
@@ -613,14 +613,14 @@ Example:
 ```bash
 xdna-top record --out bench/trial.jsonl &
 xdna-top mark --out bench/trial.jsonl "trial-1-start"
-xdna-top mark --out bench/trial.jsonl "compaction-start"
+xdna-top mark --out bench/trial.jsonl "phase-start"
 xdna-top mark --out bench/trial.jsonl "trial-1-end"
 ```
 
 Marker lines should use the same JSONL stream:
 
 ```json
-{"type":"mark","schema_version":"1.0","ts":124.0,"label":"compaction-start"}
+{"type":"mark","schema_version":"1.0","ts":124.0,"label":"phase-start"}
 ```
 
 ### PID-aware watch
