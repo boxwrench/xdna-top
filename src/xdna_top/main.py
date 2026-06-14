@@ -21,7 +21,13 @@ from xdna_top.assertions import CHECKS, assert_main
 from xdna_top.baseline import baseline_main
 from xdna_top.compare import compare_main
 from xdna_top.env_report import env_report_main
-from xdna_top.gauge import HardwareGauge, GpuState, run_xrt_smi, parse_xrt_smi
+from xdna_top.gauge import (
+    HardwareGauge,
+    GpuState,
+    run_xrt_smi,
+    parse_xrt_smi,
+    sort_contexts_by_activity,
+)
 from xdna_top.record import mark_main, record_main
 from xdna_top.snapshot import snapshot_main
 
@@ -335,6 +341,7 @@ def create_npu_panel(
     # Contexts Table
     table = Table(title=theme.table_title, expand=True, title_style=theme.table_title_style)
     table.add_column("PID", style="cyan")
+    table.add_column("Process", style="cyan")
     table.add_column("Ctx ID", style="magenta")
     table.add_column("Submissions", style="green")
     table.add_column("Completions", style="green")
@@ -343,6 +350,7 @@ def create_npu_panel(
     for ctx in contexts:
         table.add_row(
             str(ctx["pid"]),
+            ctx.get("process_name") or "?",
             str(ctx["ctx_id"]),
             str(ctx["submissions"]),
             str(ctx["completions"]),
@@ -350,7 +358,7 @@ def create_npu_panel(
         )
 
     if not contexts:
-        table.add_row("N/A", "N/A", "0", "0", "No active contexts")
+        table.add_row("N/A", "N/A", "N/A", "0", "0", "No active contexts")
 
     return Panel(Group(text, Align.left(table)), title=theme.npu_title, border_style=theme.npu_border)
 
@@ -585,6 +593,10 @@ def run_monitor(args: argparse.Namespace, theme: TuiTheme = DEFAULT_THEME) -> in
     power_history = []
     max_history_len = 60
 
+    # Previous per-context submission counts, keyed by (pid, ctx_id), so the
+    # context table can be ordered most-active-first by submission delta.
+    prev_submissions: dict = {}
+
     key_listener = KeyListener()
     key_listener.set_raw()
 
@@ -605,6 +617,10 @@ def run_monitor(args: argparse.Namespace, theme: TuiTheme = DEFAULT_THEME) -> in
                 npu_out = run_xrt_smi(device=args.npu_device)
                 if npu_out:
                     contexts = parse_xrt_smi(npu_out)
+                    contexts = sort_contexts_by_activity(contexts, prev_submissions)
+                    prev_submissions = {
+                        (c["pid"], c["ctx_id"]): c["submissions"] for c in contexts
+                    }
                 else:
                     if reading.npu_degraded or not Path(args.bench_dir, "gauge_latest.json").exists():
                         xrt_error = True

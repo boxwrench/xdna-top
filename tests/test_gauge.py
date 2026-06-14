@@ -9,6 +9,8 @@ from xdna_top.gauge import (
     classify_state,
     get_stable_state,
     parse_xrt_smi,
+    resolve_process_name,
+    sort_contexts_by_activity,
     HardwareGauge,
     discover_npu_device,
     run_xrt_smi,
@@ -70,6 +72,65 @@ AIE Partitions
     assert res[0]["submissions"] == 15399
     assert res[0]["completions"] == 15399
     assert res[0]["status"] == "Active"
+    # Every context carries a process_name field (best-effort, may be None when
+    # the owning PID can't be resolved from /proc, e.g. off-hardware).
+    assert "process_name" in res[0]
+
+
+def test_parse_xrt_smi_resolves_process_name():
+    """parse_xrt_smi enriches contexts with the /proc-resolved process name."""
+    canned = """
+      |PID                 |Ctx ID     |Submissions |Migrations  |Err  |Priority |
+      |Process Name        |Status     |Completions |Suspensions |     |GOPS     |
+      |====================|===========|============|============|=====|=========|
+      |4242                |1          |10          |0           |0    |N/A      |
+      |N/A                 |Active     |9           |0           |     |N/A      |
+"""
+    with patch(
+        "xdna_top.gauge.resolve_process_name", return_value="llama-server"
+    ) as mock_resolve:
+        res = parse_xrt_smi(canned)
+    assert res[0]["process_name"] == "llama-server"
+    mock_resolve.assert_called_once_with(4242)
+
+
+def test_resolve_process_name_reads_comm(tmp_path, monkeypatch):
+    """resolve_process_name prefers /proc/<pid>/comm and trims whitespace."""
+    proc = tmp_path / "proc" / "777"
+    proc.mkdir(parents=True)
+    (proc / "comm").write_text("model-server\n", encoding="utf-8")
+    monkeypatch.setattr(
+        "xdna_top.gauge.Path",
+        lambda p: tmp_path / p.lstrip("/"),
+    )
+    assert resolve_process_name(777) == "model-server"
+
+
+def test_resolve_process_name_missing_returns_none(monkeypatch):
+    """An unresolvable PID degrades to None rather than guessing."""
+    # PID 0 / nonexistent: on any platform the /proc read fails -> None.
+    assert resolve_process_name(2**31) is None
+
+
+def test_sort_contexts_by_activity_orders_by_delta():
+    contexts = [
+        {"pid": 1, "ctx_id": 1, "submissions": 100},  # delta 0
+        {"pid": 2, "ctx_id": 1, "submissions": 50},   # delta 30 (active now)
+        {"pid": 3, "ctx_id": 1, "submissions": 200},  # delta 5
+    ]
+    prev = {(1, 1): 100, (2, 1): 20, (3, 1): 195}
+    ordered = sort_contexts_by_activity(contexts, prev)
+    assert [c["pid"] for c in ordered] == [2, 3, 1]
+
+
+def test_sort_contexts_by_activity_first_sight_uses_submissions():
+    contexts = [
+        {"pid": 1, "ctx_id": 1, "submissions": 10},
+        {"pid": 2, "ctx_id": 1, "submissions": 30},
+    ]
+    # No prior samples: deltas are 0, so the higher cumulative count leads.
+    ordered = sort_contexts_by_activity(contexts, {})
+    assert [c["pid"] for c in ordered] == [2, 1]
 
 
 @patch("xdna_top.gauge.run_xrt_smi")

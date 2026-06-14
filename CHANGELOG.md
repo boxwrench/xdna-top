@@ -5,6 +5,26 @@ All notable changes to `xdna-top` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Per-context process names** — the NPU context table (and `snapshot` /
+  `record` artifacts) now show a best-effort `process_name` for each owning PID,
+  resolved read-only and unprivileged from `/proc/<pid>/comm` (falling back to
+  the `cmdline` basename). This strengthens per-context attribution — "PID 1234
+  (`llama-server`) context 1 …" — without a new dependency or any privilege. The
+  name is `null` when the process can't be read (exited, another user, or
+  non-Linux); it is `/proc`-derived, not from `xrt-smi`, and is never a measured
+  value.
+- **Most-active-first context ordering** — the live TUI now sorts the NPU
+  context table by submission delta (cumulative submissions as a tiebreak), so a
+  context doing work *right now* floats to the top. Display-only; never affects
+  measured values or artifact contents.
+- **Process names in `env-report`** — the record telemetry report's observed
+  contexts now render as `PID/ctx (name)` when a process name was captured,
+  falling back to `PID/ctx` otherwise.
+
 ## [0.2.0] - 2026-06-13
 
 This release promotes the evidence core to a tagged version and adds a windowed

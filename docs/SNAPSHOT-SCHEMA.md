@@ -179,6 +179,13 @@ The NPU section should preserve per-context PID and counter data because PID
 attribution is the strongest available guard against overclaiming. Sensor values
 and context counters should carry source/provenance when practical.
 
+`process_name` is a best-effort enrichment of the owning PID, resolved read-only
+and unprivileged from `/proc/<pid>/comm` (falling back to the `cmdline` basename)
+— not from `xrt-smi`. It is `null` when the process cannot be read (it has
+exited, belongs to another user, or `/proc` is unavailable). The context
+`source` tag refers to the counter data; the name is derived locally and is a
+convenience for attribution, never a measured value.
+
 ### `telemetry`
 
 One fused telemetry reading using the same semantics as `xdna-top --json`.

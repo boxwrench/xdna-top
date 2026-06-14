@@ -160,7 +160,7 @@ def render_record_markdown(events: list[Any]) -> str:
     )
     observed_contexts = sorted(
         {
-            f"{ctx.get('pid')}/{ctx.get('ctx_id')}"
+            _format_context_id(ctx)
             for e in telemetry
             for ctx in (e.get("contexts") or [])
             if isinstance(ctx, dict)
@@ -290,6 +290,17 @@ def _get(obj: dict[str, Any], *keys: str) -> Any:
             return None
         current = current.get(key)
     return current
+
+
+def _format_context_id(ctx: dict[str, Any]) -> str:
+    """Render a context as ``PID/ctx`` plus the process name when resolved.
+
+    The process name is best-effort (``/proc``-derived attribution, not a
+    measured value); contexts captured before name resolution simply omit it.
+    """
+    base = f"{ctx.get('pid')}/{ctx.get('ctx_id')}"
+    name = ctx.get("process_name")
+    return f"{base} ({name})" if name else base
 
 
 def _value(value: Any) -> str:

@@ -87,19 +87,37 @@ def test_create_npu_panel_degraded():
 
 def test_create_npu_panel_active():
     contexts = [
-        {"pid": 93941, "ctx_id": 1, "submissions": 100, "completions": 99, "status": "Active"}
+        {"pid": 93941, "ctx_id": 1, "submissions": 100, "completions": 99,
+         "status": "Active", "process_name": "llama-server"}
     ]
     panel = create_npu_panel(npu_active=True, contexts=contexts, xrt_error=False)
     assert isinstance(panel, Panel)
-    
-    console = Console()
+
+    # Wide console so the Process column isn't truncated by table layout.
+    console = Console(width=200)
     with console.capture() as capture:
         console.print(panel)
     output = capture.get()
-    
+
     assert "ACTIVE" in output
     assert "93941" in output
     assert "Active" in output
+    assert "llama-server" in output
+
+
+def test_create_npu_panel_missing_process_name():
+    """A context without a resolvable process name renders a placeholder."""
+    contexts = [
+        {"pid": 93941, "ctx_id": 1, "submissions": 100, "completions": 99,
+         "status": "Active", "process_name": None}
+    ]
+    panel = create_npu_panel(npu_active=True, contexts=contexts, xrt_error=False)
+    console = Console(width=200)
+    with console.capture() as capture:
+        console.print(panel)
+    output = capture.get()
+    assert "93941" in output
+    assert "?" in output
 
 
 def test_lemonade_theme_panels():

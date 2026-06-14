@@ -111,7 +111,8 @@ degraded instead of crashing.
 
 - Unified live view: both engines, one screen, 5 Hz
 - Rolling ASCII sparklines for iGPU busy and power
-- Per-context NPU table: PID, submissions, completions, derived activity
+- Per-context NPU table: PID, process name, submissions, completions, derived
+  activity — ordered most-active-first by submission delta
 - `--json` mode for scripts, logging, and dashboards
 - `snapshot` mode for schema-versioned platform and telemetry evidence
 - `env-report` mode for Markdown summaries from captured snapshots or recordings

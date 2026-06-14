@@ -212,10 +212,41 @@ def run_xrt_smi(device: str | None = None) -> str | None:
     return None
 
 
+def resolve_process_name(pid: int) -> str | None:
+    """Best-effort resolve an owning PID to a process name via ``/proc``.
+
+    Read-only and unprivileged: prefers ``/proc/<pid>/comm`` (the canonical short
+    name the kernel tracks) and falls back to the basename of ``cmdline``'s first
+    argv token. Returns ``None`` when ``/proc`` is unavailable (e.g. non-Linux),
+    the process has exited, or the entry is unreadable — a missing name is a
+    result, not a reason to guess. The name is derived from ``/proc``, not from
+    ``xrt-smi``; callers that record provenance should reflect that.
+    """
+    try:
+        comm = Path(f"/proc/{pid}/comm").read_text(encoding="utf-8").strip()
+        if comm:
+            return comm
+    except (OSError, ValueError):
+        pass
+    try:
+        raw = Path(f"/proc/{pid}/cmdline").read_bytes()
+        argv0 = raw.split(b"\x00", 1)[0].decode("utf-8", "replace").strip()
+        if argv0:
+            return argv0.rsplit("/", 1)[-1] or argv0
+    except (OSError, ValueError):
+        pass
+    return None
+
+
 def parse_xrt_smi(output: str) -> list[dict]:
-    """Parses contexts, submissions, completions from xrt-smi partitions report."""
+    """Parses contexts, submissions, completions from xrt-smi partitions report.
+
+    Each context is enriched with a best-effort ``process_name`` resolved from
+    ``/proc`` (see :func:`resolve_process_name`), strengthening per-context PID
+    attribution. The field is ``None`` when the owning process cannot be read.
+    """
     lines = [line.strip() for line in output.splitlines() if "|" in line]
-    
+
     contexts = []
     for i in range(len(lines) - 1):
         parts0 = [p.strip() for p in lines[i].split("|")]
@@ -224,7 +255,7 @@ def parse_xrt_smi(output: str) -> list[dict]:
                 pid = int(parts0[1])
                 ctx_id = int(parts0[2])
                 submissions = int(parts0[3])
-                
+
                 parts1 = [p.strip() for p in lines[i+1].split("|")]
                 if len(parts1) >= 4:
                     status = parts1[2]
@@ -236,11 +267,35 @@ def parse_xrt_smi(output: str) -> list[dict]:
                             "submissions": submissions,
                             "status": status,
                             "completions": completions,
+                            "process_name": resolve_process_name(pid),
                         }
                     )
             except (ValueError, IndexError):
                 pass
     return contexts
+
+
+def sort_contexts_by_activity(
+    contexts: list[dict], prev_submissions: dict | None = None
+) -> list[dict]:
+    """Return contexts ordered most-active first for readable display.
+
+    Ranks by submission delta against ``prev_submissions`` (keyed by
+    ``(pid, ctx_id)``) so a context doing work *right now* floats to the top,
+    with cumulative submissions as a stable tiebreak. On the first sight of a
+    context (no prior sample) its delta is treated as 0, so the initial frame
+    orders by raw submissions. Pure and side-effect free; callers own the prev
+    map. Display-only — never affects measured values.
+    """
+    prev = prev_submissions or {}
+
+    def rank(ctx: dict) -> tuple[int, int]:
+        key = (ctx["pid"], ctx["ctx_id"])
+        prior = prev.get(key)
+        delta = 0 if prior is None else ctx["submissions"] - prior
+        return (delta, ctx["submissions"])
+
+    return sorted(contexts, key=rank, reverse=True)
 
 
 class HardwareGauge:

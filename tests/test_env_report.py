@@ -170,7 +170,8 @@ def sample_record() -> list[dict]:
                 "npu_degraded": False,
             },
             "contexts": [
-                {"pid": 1234, "ctx_id": 1, "submissions": submissions, "source": "xrt_smi"}
+                {"pid": 1234, "ctx_id": 1, "submissions": submissions,
+                 "process_name": "llama-server", "source": "xrt_smi"}
             ],
         }
 
@@ -207,7 +208,7 @@ def test_render_record_markdown_summarizes_stream():
     assert "- NPU active samples: 1/2" in report
     assert "- Max context submission delta: 42" in report
     assert "- Context sources: xrt_smi" in report
-    assert "- Observed contexts (PID/ctx): 1234/1" in report
+    assert "- Observed contexts (PID/ctx): 1234/1 (llama-server)" in report
     assert "- Observed window: 0.5 s" in report
     # First/last readings and the mark are rendered.
     assert "## First Reading" in report
