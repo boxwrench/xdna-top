@@ -36,6 +36,7 @@ Usage::
 
 from __future__ import annotations
 
+import datetime
 import argparse
 import sys
 import yaml
@@ -80,9 +81,18 @@ def parse_front_matter(text: str) -> dict[str, object] | None:
 
     yaml_text = "\n".join(lines[1:end])
     try:
-        return yaml.safe_load(yaml_text)
+        meta = yaml.safe_load(yaml_text)
     except Exception:
         return None
+    if isinstance(meta, dict):
+        # YAML auto-parses unquoted dates (e.g. ``date: 2026-06-13``) into
+        # datetime.date objects; the rest of the pipeline (and the schema) treats
+        # front-matter scalars as strings. Coerce dates back to ISO strings so the
+        # contract holds without requiring every doc to quote its date.
+        for key, value in meta.items():
+            if isinstance(value, (datetime.date, datetime.datetime)):
+                meta[key] = value.isoformat()
+    return meta
 
 
 def load_experiment(path: Path) -> Experiment | None:
