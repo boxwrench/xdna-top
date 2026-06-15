@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import yaml
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -58,18 +59,14 @@ class Experiment:
     xrt_version: str
     headline: str
     artifacts: list[str] = field(default_factory=list)
+    viz: dict | None = None
 
 
 # --- front-matter parsing ----------------------------------------------------
 
 
 def parse_front_matter(text: str) -> dict[str, object] | None:
-    """Parse a leading ``---`` YAML front-matter block (scalars + simple lists).
-
-    Returns a dict of fields, or ``None`` if the document has no front-matter.
-    Intentionally supports only the small YAML subset this convention uses:
-    ``key: value`` scalars and ``key:`` followed by ``  - item`` list entries.
-    """
+    """Parse a leading ``---`` YAML front-matter block."""
     lines = text.splitlines()
     if not lines or lines[0].strip() != "---":
         return None
@@ -81,31 +78,11 @@ def parse_front_matter(text: str) -> dict[str, object] | None:
     if end is None:
         return None
 
-    meta: dict[str, object] = {}
-    current_list_key: str | None = None
-    for raw in lines[1:end]:
-        if not raw.strip():
-            continue
-        stripped = raw.strip()
-        if stripped.startswith("- ") and current_list_key is not None:
-            value = stripped[2:].strip().strip("'\"")
-            meta.setdefault(current_list_key, [])
-            assert isinstance(meta[current_list_key], list)
-            meta[current_list_key].append(value)  # type: ignore[union-attr]
-            continue
-        if ":" not in raw:
-            continue
-        key, _, value = raw.partition(":")
-        key = key.strip()
-        value = value.strip()
-        if value == "":
-            # Either a list header or an empty scalar; assume list until proven.
-            current_list_key = key
-            meta.setdefault(key, [])
-        else:
-            current_list_key = None
-            meta[key] = value.strip("'\"")
-    return meta
+    yaml_text = "\n".join(lines[1:end])
+    try:
+        return yaml.safe_load(yaml_text)
+    except Exception:
+        return None
 
 
 def load_experiment(path: Path) -> Experiment | None:
@@ -116,7 +93,7 @@ def load_experiment(path: Path) -> Experiment | None:
 
     def scalar(key: str) -> str:
         value = meta.get(key, "")
-        return value if isinstance(value, str) else ""
+        return str(value) if value else ""
 
     artifacts = meta.get("artifacts", [])
     if not isinstance(artifacts, list):
@@ -130,6 +107,7 @@ def load_experiment(path: Path) -> Experiment | None:
         xrt_version=scalar("xrt_version"),
         headline=scalar("headline"),
         artifacts=[str(a) for a in artifacts],
+        viz=meta.get("viz"),
     )
 
 
@@ -194,14 +172,108 @@ def render_html_section(experiments: list[Experiment]) -> str:
     for e in experiments:
         platform = f"{e.hardware} · kernel {e.kernel} · XRT {e.xrt_version}"
         headline = _html_escape(e.headline)
-        rows.append(
-            "        <li class=\"evidence-entry\">\n"
-            f"          <a href=\"experiments/{e.slug}.md\"><strong>{_html_escape(e.title)}</strong></a>"
-            f" <span class=\"evidence-date\">{_html_escape(e.date)}</span><br>\n"
-            f"          <span class=\"evidence-headline\">{headline}</span><br>\n"
-            f"          <span class=\"evidence-platform\">{_html_escape(platform)}</span>\n"
-            "        </li>"
-        )
+        
+        if getattr(e, "viz", None) and e.viz.get("type") in ("comparison", "matrix"):
+            viz = e.viz
+            reproduce_cmd = viz.get("reproduce", "")
+            raw_links = [f'<a href="{_html_escape(a)}" style="color: var(--secondary); text-decoration: none; margin-right: 1rem;">📊 Raw artifacts</a>' for a in e.artifacts]
+            raw_link_html = raw_links[0] if raw_links else ""
+            
+            viz_html = ""
+            if viz["type"] == "comparison":
+                groups_html = []
+                for group in viz.get("unit_groups", []):
+                    series = group.get("series", {})
+                    max_val = max(series.values()) if series else 1
+                    bars = ""
+                    for key, val in series.items():
+                        pct = (val / max_val * 100) if max_val > 0 else 0
+                        bg_color = "var(--secondary)" if key == "NPU" else "var(--text-light)"
+                        text_color = "inherit" if key == "NPU" else "var(--text-light)"
+                        fw = "500" if key == "NPU" else "400"
+                        bars += f'''
+                        <div style="display: flex; align-items: center; margin-bottom: 0.35rem;">
+                          <div style="width: 50px; font-size: 0.85rem; font-weight: {fw}; color: {text_color};">{_html_escape(key)}</div>
+                          <div style="flex: 1; background: var(--bg-main); height: 8px; border-radius: 4px; overflow: hidden; margin-right: 0.5rem;">
+                            <div style="width: {pct}%; background: {bg_color}; height: 100%;"></div>
+                          </div>
+                          <div style="width: 50px; text-align: right; font-size: 0.85rem; font-weight: {fw}; color: {text_color};">{val}</div>
+                        </div>'''
+                    
+                    groups_html.append(f'''
+                    <div style="flex: 1; min-width: 250px;">
+                      <div style="font-weight: 600; color: var(--primary); margin-bottom: 0.25rem;">{_html_escape(group.get("label", ""))} <span style="color: var(--success); margin-left: 0.5rem;">{_html_escape(group.get("highlight", ""))}</span></div>
+                      <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">{_html_escape(group.get("unit", ""))}</div>
+                      {bars}
+                    </div>''')
+                viz_html = f'<div style="display: flex; gap: 2rem; flex-wrap: wrap;">{"".join(groups_html)}</div>'
+                
+            elif viz["type"] == "matrix":
+                cols = viz.get("cols", [])
+                rows_labels = viz.get("rows", [])
+                data = viz.get("data", [])
+                
+                ths = "".join(f'<th style="padding: 0.5rem; font-weight: 500; color: var(--text-muted); writing-mode: vertical-rl; transform: rotate(180deg);">{_html_escape(str(c))}</th>' for c in cols)
+                
+                trs = ""
+                for i, r_label in enumerate(rows_labels):
+                    tds = ""
+                    for val in data[i]:
+                        val_float = float(val)
+                        t_color = "white" if val_float > 0.5 else "var(--text-main)"
+                        tds += f'''
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="{val_float}">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: {val_float};"></div>
+                            <div style="position: relative; z-index: 1; color: {t_color}; font-weight: 500;">{val_float:.2f}</div>
+                          </div>
+                        </td>'''
+                    trs += f'<tr><td style="padding: 0.5rem; text-align: left; font-weight: 600; color: var(--primary); border-top: 1px solid var(--border-color); white-space: nowrap;">{_html_escape(str(r_label))}</td>{tds}</tr>'
+                
+                viz_html = f'''
+                <div style="overflow-x: auto;">
+                  <table style="border-collapse: collapse; text-align: center; font-size: 0.85rem;">
+                    <tr>
+                      <th style="padding: 0.5rem; text-align: left; color: var(--text-muted); font-weight: 500;">Model \\ Config</th>
+                      {ths}
+                    </tr>
+                    {trs}
+                  </table>
+                </div>'''
+
+            rows.append(f'''
+        <li style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.5rem; margin-bottom: 1.5rem; list-style: none; box-shadow: var(--shadow-sm);">
+          <h3 style="margin-top: 0; margin-bottom: 0.5rem; font-size: 1.25rem;"><a href="experiments/{e.slug}.md" style="color: var(--primary); text-decoration: none;">{_html_escape(e.title)}</a></h3>
+          <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <span style="background: var(--accent-light); color: var(--secondary); padding: 0.1rem 0.5rem; border-radius: 4px; border: 1px solid var(--accent-light-border); font-weight: 600;">{_html_escape(e.hardware)}</span>
+            <span>Kernel {e.kernel}</span>
+            <span>·</span>
+            <span>XRT {e.xrt_version}</span>
+          </div>
+          <div style="margin-bottom: 1.5rem; color: var(--text-main); line-height: 1.5;">
+            {_html_escape(e.headline)}
+          </div>
+          <div style="margin-bottom: 1.5rem;">
+            {viz_html}
+          </div>
+          <div style="background: #0f172a; color: #f8fafc; padding: 0.75rem; border-radius: var(--radius-sm); font-family: monospace; font-size: 0.85rem; margin-bottom: 1.5rem; overflow-x: auto;">
+            $ {_html_escape(reproduce_cmd)}
+          </div>
+          <div style="font-size: 0.9rem; font-weight: 500;">
+            <a href="experiments/{e.slug}.md" style="color: var(--secondary); text-decoration: none; margin-right: 1.5rem;">📄 Report</a>
+            {raw_link_html}
+            <a href="#" style="color: var(--text-muted); text-decoration: none; cursor: default;">⟳ Reproduce</a>
+          </div>
+        </li>''')
+        else:
+            rows.append(
+                "        <li class=\"evidence-entry\">\n"
+                f"          <a href=\"experiments/{e.slug}.md\"><strong>{_html_escape(e.title)}</strong></a>"
+                f" <span class=\"evidence-date\">{_html_escape(e.date)}</span><br>\n"
+                f"          <span class=\"evidence-headline\">{headline}</span><br>\n"
+                f"          <span class=\"evidence-platform\">{_html_escape(platform)}</span>\n"
+                "        </li>"
+            )
     body = "\n".join(rows) if rows else "        <li>No experiments yet.</li>"
     return (
         f"{HTML_START}\n"

@@ -15,6 +15,18 @@ artifacts:
   - artifacts/evidence/baseline.snapshot.json
   - artifacts/evidence/npu.snapshot.json
   - artifacts/evidence/cpu.snapshot.json
+viz:
+  type: comparison
+  unit_groups:
+    - label: background-job throughput
+      unit: tok/s
+      highlight: "2.96×"
+      series: { NPU: 12.15, CPU: 4.11 }
+    - label: total-board perf/watt
+      unit: tok/s/W
+      highlight: "2.95×"
+      series: { NPU: 0.143, CPU: 0.049 }
+  reproduce: "xdna-top snapshot && ./bench/run_contention.sh"
 ---
 
 # NPU vs CPU Background-Job Contention on Strix Halo

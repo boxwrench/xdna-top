@@ -2277,10 +2277,316 @@
       <h2>Evidence Library</h2>
       <p>Self-contained benchmark reports, each grounded in xdna-top snapshot/record evidence artifacts. Generated from <code>docs/experiments/</code>.</p>
       <ul class="evidence-list">
-        <li class="evidence-entry">
-          <a href="experiments/npu-igpu-contention.md"><strong>NPU vs CPU Background-Job Contention on Strix Halo</strong></a> <span class="evidence-date">2026-06-13</span><br>
-          <span class="evidence-headline">For a latency-tolerant background generation job next to an interactive iGPU model, the NPU does ~3x the throughput at ~3x better total-board perf/watt and contends slightly LESS with the main lane (~3.8% vs ~4.8% decode loss) than spare CPU cores.</span><br>
-          <span class="evidence-platform">AMD RYZEN AI MAX+ 395 (Strix Halo, gfx1151) · kernel 6.17.0-35-generic · XRT 2.21.75</span>
+
+        <li style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.5rem; margin-bottom: 1.5rem; list-style: none; box-shadow: var(--shadow-sm);">
+          <h3 style="margin-top: 0; margin-bottom: 0.5rem; font-size: 1.25rem;"><a href="experiments/structured-output-sampling-sweep.md" style="color: var(--primary); text-decoration: none;">Structured-Output Reliability Across Sampling Configs (NPU LLM stack)</a></h3>
+          <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <span style="background: var(--accent-light); color: var(--secondary); padding: 0.1rem 0.5rem; border-radius: 4px; border: 1px solid var(--accent-light-border); font-weight: 600;">AMD RYZEN AI MAX+ 395 (Strix Halo, gfx1151)</span>
+            <span>Kernel 6.17.0-35-generic</span>
+            <span>·</span>
+            <span>XRT 2.21.75</span>
+          </div>
+          <div style="margin-bottom: 1.5rem; color: var(--text-main); line-height: 1.5;">
+            Greedy decoding is the most reliable for structured (JSON) output across small models; aggressive repetition penalties (rep≈1.3) collapse valid output to near zero. Failures are structural, not creative.
+          </div>
+          <div style="margin-bottom: 1.5rem;">
+            
+                <div style="overflow-x: auto;">
+                  <table style="border-collapse: collapse; text-align: center; font-size: 0.85rem;">
+                    <tr>
+                      <th style="padding: 0.5rem; text-align: left; color: var(--text-muted); font-weight: 500;">Model \ Config</th>
+                      <th style="padding: 0.5rem; font-weight: 500; color: var(--text-muted); writing-mode: vertical-rl; transform: rotate(180deg);">greedy</th><th style="padding: 0.5rem; font-weight: 500; color: var(--text-muted); writing-mode: vertical-rl; transform: rotate(180deg);">temp0.3</th><th style="padding: 0.5rem; font-weight: 500; color: var(--text-muted); writing-mode: vertical-rl; transform: rotate(180deg);">temp0.7</th><th style="padding: 0.5rem; font-weight: 500; color: var(--text-muted); writing-mode: vertical-rl; transform: rotate(180deg);">freq0.3</th><th style="padding: 0.5rem; font-weight: 500; color: var(--text-muted); writing-mode: vertical-rl; transform: rotate(180deg);">freq0.5</th><th style="padding: 0.5rem; font-weight: 500; color: var(--text-muted); writing-mode: vertical-rl; transform: rotate(180deg);">freq0.8</th><th style="padding: 0.5rem; font-weight: 500; color: var(--text-muted); writing-mode: vertical-rl; transform: rotate(180deg);">rep1.1</th><th style="padding: 0.5rem; font-weight: 500; color: var(--text-muted); writing-mode: vertical-rl; transform: rotate(180deg);">rep1.3</th><th style="padding: 0.5rem; font-weight: 500; color: var(--text-muted); writing-mode: vertical-rl; transform: rotate(180deg);">temp0.3+freq0.4</th>
+                    </tr>
+                    <tr><td style="padding: 0.5rem; text-align: left; font-weight: 600; color: var(--primary); border-top: 1px solid var(--border-color); white-space: nowrap;">llama3.2:1b</td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="1.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 1.0;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">1.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="1.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 1.0;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">1.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="0.83">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 0.83;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">0.83</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="1.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 1.0;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">1.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="1.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 1.0;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">1.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="1.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 1.0;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">1.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="0.92">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 0.92;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">0.92</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="0.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 0.0;"></div>
+                            <div style="position: relative; z-index: 1; color: var(--text-main); font-weight: 500;">0.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="0.08">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 0.08;"></div>
+                            <div style="position: relative; z-index: 1; color: var(--text-main); font-weight: 500;">0.08</div>
+                          </div>
+                        </td></tr><tr><td style="padding: 0.5rem; text-align: left; font-weight: 600; color: var(--primary); border-top: 1px solid var(--border-color); white-space: nowrap;">llama3.2:3b</td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="1.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 1.0;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">1.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="1.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 1.0;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">1.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="1.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 1.0;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">1.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="1.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 1.0;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">1.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="1.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 1.0;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">1.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="1.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 1.0;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">1.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="1.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 1.0;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">1.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="0.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 0.0;"></div>
+                            <div style="position: relative; z-index: 1; color: var(--text-main); font-weight: 500;">0.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="0.42">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 0.42;"></div>
+                            <div style="position: relative; z-index: 1; color: var(--text-main); font-weight: 500;">0.42</div>
+                          </div>
+                        </td></tr><tr><td style="padding: 0.5rem; text-align: left; font-weight: 600; color: var(--primary); border-top: 1px solid var(--border-color); white-space: nowrap;">qwen2.5-it:3b</td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="0.25">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 0.25;"></div>
+                            <div style="position: relative; z-index: 1; color: var(--text-main); font-weight: 500;">0.25</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="0.33">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 0.33;"></div>
+                            <div style="position: relative; z-index: 1; color: var(--text-main); font-weight: 500;">0.33</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="0.5">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 0.5;"></div>
+                            <div style="position: relative; z-index: 1; color: var(--text-main); font-weight: 500;">0.50</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="1.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 1.0;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">1.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="1.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 1.0;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">1.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="0.75">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 0.75;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">0.75</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="0.75">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 0.75;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">0.75</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="0.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 0.0;"></div>
+                            <div style="position: relative; z-index: 1; color: var(--text-main); font-weight: 500;">0.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="0.25">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 0.25;"></div>
+                            <div style="position: relative; z-index: 1; color: var(--text-main); font-weight: 500;">0.25</div>
+                          </div>
+                        </td></tr><tr><td style="padding: 0.5rem; text-align: left; font-weight: 600; color: var(--primary); border-top: 1px solid var(--border-color); white-space: nowrap;">qwen3-it:4b</td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="1.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 1.0;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">1.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="1.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 1.0;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">1.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="1.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 1.0;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">1.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="1.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 1.0;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">1.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="1.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 1.0;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">1.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="1.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 1.0;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">1.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="1.0">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 1.0;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">1.00</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="0.42">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 0.42;"></div>
+                            <div style="position: relative; z-index: 1; color: var(--text-main); font-weight: 500;">0.42</div>
+                          </div>
+                        </td>
+                        <td style="padding: 0.15rem; border-top: 1px solid var(--border-color);">
+                          <div style="position: relative; width: 2.5rem; height: 2.5rem; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; border: 1px solid var(--border-color);" title="0.58">
+                            <div style="position: absolute; inset: 0; background: var(--success); opacity: 0.58;"></div>
+                            <div style="position: relative; z-index: 1; color: white; font-weight: 500;">0.58</div>
+                          </div>
+                        </td></tr>
+                  </table>
+                </div>
+          </div>
+          <div style="background: #0f172a; color: #f8fafc; padding: 0.75rem; border-radius: var(--radius-sm); font-family: monospace; font-size: 0.85rem; margin-bottom: 1.5rem; overflow-x: auto;">
+            $ python tools/sampling_sweep.py --all
+          </div>
+          <div style="font-size: 0.9rem; font-weight: 500;">
+            <a href="experiments/structured-output-sampling-sweep.md" style="color: var(--secondary); text-decoration: none; margin-right: 1.5rem;">📄 Report</a>
+            
+            <a href="#" style="color: var(--text-muted); text-decoration: none; cursor: default;">⟳ Reproduce</a>
+          </div>
+        </li>
+
+        <li style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.5rem; margin-bottom: 1.5rem; list-style: none; box-shadow: var(--shadow-sm);">
+          <h3 style="margin-top: 0; margin-bottom: 0.5rem; font-size: 1.25rem;"><a href="experiments/npu-igpu-contention.md" style="color: var(--primary); text-decoration: none;">NPU vs CPU Background-Job Contention on Strix Halo</a></h3>
+          <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <span style="background: var(--accent-light); color: var(--secondary); padding: 0.1rem 0.5rem; border-radius: 4px; border: 1px solid var(--accent-light-border); font-weight: 600;">AMD RYZEN AI MAX+ 395 (Strix Halo, gfx1151)</span>
+            <span>Kernel 6.17.0-35-generic</span>
+            <span>·</span>
+            <span>XRT 2.21.75</span>
+          </div>
+          <div style="margin-bottom: 1.5rem; color: var(--text-main); line-height: 1.5;">
+            For a latency-tolerant background generation job next to an interactive iGPU model, the NPU does ~3x the throughput at ~3x better total-board perf/watt and contends slightly LESS with the main lane (~3.8% vs ~4.8% decode loss) than spare CPU cores.
+          </div>
+          <div style="margin-bottom: 1.5rem;">
+            <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 250px;">
+                      <div style="font-weight: 600; color: var(--primary); margin-bottom: 0.25rem;">background-job throughput <span style="color: var(--success); margin-left: 0.5rem;">2.96×</span></div>
+                      <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">tok/s</div>
+                      
+                        <div style="display: flex; align-items: center; margin-bottom: 0.35rem;">
+                          <div style="width: 50px; font-size: 0.85rem; font-weight: 500; color: inherit;">NPU</div>
+                          <div style="flex: 1; background: var(--bg-main); height: 8px; border-radius: 4px; overflow: hidden; margin-right: 0.5rem;">
+                            <div style="width: 100.0%; background: var(--secondary); height: 100%;"></div>
+                          </div>
+                          <div style="width: 50px; text-align: right; font-size: 0.85rem; font-weight: 500; color: inherit;">12.15</div>
+                        </div>
+                        <div style="display: flex; align-items: center; margin-bottom: 0.35rem;">
+                          <div style="width: 50px; font-size: 0.85rem; font-weight: 400; color: var(--text-light);">CPU</div>
+                          <div style="flex: 1; background: var(--bg-main); height: 8px; border-radius: 4px; overflow: hidden; margin-right: 0.5rem;">
+                            <div style="width: 33.827160493827165%; background: var(--text-light); height: 100%;"></div>
+                          </div>
+                          <div style="width: 50px; text-align: right; font-size: 0.85rem; font-weight: 400; color: var(--text-light);">4.11</div>
+                        </div>
+                    </div>
+                    <div style="flex: 1; min-width: 250px;">
+                      <div style="font-weight: 600; color: var(--primary); margin-bottom: 0.25rem;">total-board perf/watt <span style="color: var(--success); margin-left: 0.5rem;">2.95×</span></div>
+                      <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">tok/s/W</div>
+                      
+                        <div style="display: flex; align-items: center; margin-bottom: 0.35rem;">
+                          <div style="width: 50px; font-size: 0.85rem; font-weight: 500; color: inherit;">NPU</div>
+                          <div style="flex: 1; background: var(--bg-main); height: 8px; border-radius: 4px; overflow: hidden; margin-right: 0.5rem;">
+                            <div style="width: 100.0%; background: var(--secondary); height: 100%;"></div>
+                          </div>
+                          <div style="width: 50px; text-align: right; font-size: 0.85rem; font-weight: 500; color: inherit;">0.143</div>
+                        </div>
+                        <div style="display: flex; align-items: center; margin-bottom: 0.35rem;">
+                          <div style="width: 50px; font-size: 0.85rem; font-weight: 400; color: var(--text-light);">CPU</div>
+                          <div style="flex: 1; background: var(--bg-main); height: 8px; border-radius: 4px; overflow: hidden; margin-right: 0.5rem;">
+                            <div style="width: 34.265734265734274%; background: var(--text-light); height: 100%;"></div>
+                          </div>
+                          <div style="width: 50px; text-align: right; font-size: 0.85rem; font-weight: 400; color: var(--text-light);">0.049</div>
+                        </div>
+                    </div></div>
+          </div>
+          <div style="background: #0f172a; color: #f8fafc; padding: 0.75rem; border-radius: var(--radius-sm); font-family: monospace; font-size: 0.85rem; margin-bottom: 1.5rem; overflow-x: auto;">
+            $ xdna-top snapshot &amp;&amp; ./bench/run_contention.sh
+          </div>
+          <div style="font-size: 0.9rem; font-weight: 500;">
+            <a href="experiments/npu-igpu-contention.md" style="color: var(--secondary); text-decoration: none; margin-right: 1.5rem;">📄 Report</a>
+            <a href="artifacts/measurements/run1.m1_contention.json" style="color: var(--secondary); text-decoration: none; margin-right: 1rem;">📊 Raw artifacts</a>
+            <a href="#" style="color: var(--text-muted); text-decoration: none; cursor: default;">⟳ Reproduce</a>
+          </div>
         </li>
       </ul>
     </section>

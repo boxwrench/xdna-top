@@ -6,6 +6,7 @@ Auto-generated index of xdna-top experiment reports. Each entry is a self-contai
 
 | Experiment | Date | Platform | Headline |
 | --- | --- | --- | --- |
+| [Structured-Output Reliability Across Sampling Configs (NPU LLM stack)](structured-output-sampling-sweep.md) | 2026-06-14 | AMD RYZEN AI MAX+ 395 (Strix Halo, gfx1151), kernel 6.17.0-35-generic, XRT 2.21.75 | Greedy decoding is the most reliable for structured (JSON) output across small models; aggressive repetition penalties (rep≈1.3) collapse valid output to near zero. Failures are structural, not creative. |
 | [NPU vs CPU Background-Job Contention on Strix Halo](npu-igpu-contention.md) | 2026-06-13 | AMD RYZEN AI MAX+ 395 (Strix Halo, gfx1151), kernel 6.17.0-35-generic, XRT 2.21.75 | For a latency-tolerant background generation job next to an interactive iGPU model, the NPU does ~3x the throughput at ~3x better total-board perf/watt and contends slightly LESS with the main lane (~3.8% vs ~4.8% decode loss) than spare CPU cores. |
 
 ## Raw artifacts
