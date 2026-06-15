@@ -26,7 +26,7 @@ viz:
       unit: tok/s/W
       highlight: "2.95×"
       series: { NPU: 0.143, CPU: 0.049 }
-  reproduce: "xdna-top snapshot && ./bench/run_contention.sh"
+  reproduce: "python bench/contention_benchmark.py --trials 20 --output-dir bench/out"
 ---
 
 # NPU vs CPU Background-Job Contention on Strix Halo

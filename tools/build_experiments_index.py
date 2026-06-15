@@ -241,6 +241,17 @@ def render_html_section(experiments: list[Experiment]) -> str:
                   </table>
                 </div>'''
 
+            reproduce_html = (
+                f'''<div style="background: var(--primary); color: var(--bg-card); padding: 0.75rem; border-radius: var(--radius-sm); font-family: monospace; font-size: 0.85rem; margin-bottom: 1.5rem; overflow-x: auto;">
+            $ {_html_escape(reproduce_cmd)}
+          </div>'''
+                if reproduce_cmd else ""
+            )
+            reproduce_link = (
+                '<a href="#" style="color: var(--text-muted); text-decoration: none; cursor: default;">⟳ Reproduce</a>'
+                if reproduce_cmd else ""
+            )
+
             rows.append(f'''
         <li style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.5rem; margin-bottom: 1.5rem; list-style: none; box-shadow: var(--shadow-sm);">
           <h3 style="margin-top: 0; margin-bottom: 0.5rem; font-size: 1.25rem;"><a href="experiments/{e.slug}.md" style="color: var(--primary); text-decoration: none;">{_html_escape(e.title)}</a></h3>
@@ -256,13 +267,11 @@ def render_html_section(experiments: list[Experiment]) -> str:
           <div style="margin-bottom: 1.5rem;">
             {viz_html}
           </div>
-          <div style="background: #0f172a; color: #f8fafc; padding: 0.75rem; border-radius: var(--radius-sm); font-family: monospace; font-size: 0.85rem; margin-bottom: 1.5rem; overflow-x: auto;">
-            $ {_html_escape(reproduce_cmd)}
-          </div>
+          {reproduce_html}
           <div style="font-size: 0.9rem; font-weight: 500;">
             <a href="experiments/{e.slug}.md" style="color: var(--secondary); text-decoration: none; margin-right: 1.5rem;">📄 Report</a>
             {raw_link_html}
-            <a href="#" style="color: var(--text-muted); text-decoration: none; cursor: default;">⟳ Reproduce</a>
+            {reproduce_link}
           </div>
         </li>''')
         else:

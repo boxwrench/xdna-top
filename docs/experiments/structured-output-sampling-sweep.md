@@ -15,7 +15,6 @@ viz:
     - [1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 0.00, 0.42]
     - [0.25, 0.33, 0.50, 1.00, 1.00, 0.75, 0.75, 0.00, 0.25]
     - [1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 0.42, 0.58]
-  reproduce: "python tools/sampling_sweep.py --all"
 ---
 
 # Structured-Output Reliability Across Sampling Configs (NPU LLM stack)

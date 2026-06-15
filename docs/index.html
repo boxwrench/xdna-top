@@ -2517,13 +2517,11 @@
                   </table>
                 </div>
           </div>
-          <div style="background: #0f172a; color: #f8fafc; padding: 0.75rem; border-radius: var(--radius-sm); font-family: monospace; font-size: 0.85rem; margin-bottom: 1.5rem; overflow-x: auto;">
-            $ python tools/sampling_sweep.py --all
-          </div>
+          
           <div style="font-size: 0.9rem; font-weight: 500;">
             <a href="experiments/structured-output-sampling-sweep.md" style="color: var(--secondary); text-decoration: none; margin-right: 1.5rem;">📄 Report</a>
             
-            <a href="#" style="color: var(--text-muted); text-decoration: none; cursor: default;">⟳ Reproduce</a>
+            
           </div>
         </li>
 
@@ -2579,8 +2577,8 @@
                         </div>
                     </div></div>
           </div>
-          <div style="background: #0f172a; color: #f8fafc; padding: 0.75rem; border-radius: var(--radius-sm); font-family: monospace; font-size: 0.85rem; margin-bottom: 1.5rem; overflow-x: auto;">
-            $ xdna-top snapshot &amp;&amp; ./bench/run_contention.sh
+          <div style="background: var(--primary); color: var(--bg-card); padding: 0.75rem; border-radius: var(--radius-sm); font-family: monospace; font-size: 0.85rem; margin-bottom: 1.5rem; overflow-x: auto;">
+            $ python bench/contention_benchmark.py --trials 20 --output-dir bench/out
           </div>
           <div style="font-size: 0.9rem; font-weight: 500;">
             <a href="experiments/npu-igpu-contention.md" style="color: var(--secondary); text-decoration: none; margin-right: 1.5rem;">📄 Report</a>
