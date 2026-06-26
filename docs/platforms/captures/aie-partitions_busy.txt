@@ -1,0 +1,19 @@
+
+------------------------------
+[0000:06:00.1] : RyzenAI-npu1
+------------------------------
+AIE Partitions
+  Total Memory Usage: N/A
+  Partition Index   : 0
+    Columns: [1, 2, 3, 4]
+    HW Contexts:
+      |PID           |Ctx ID    |Submissions  |Migrations   |Frame Evts  |Err  |Priority  |
+      |Process Name  |Status    |Completions  |Suspensions  |Layer Evts  |     |GOPS      |
+      |Memory Usage  |Instr BO  |             |             |            |     |FPS       |
+      |              |          |             |             |            |     |Latency   |
+      |--------------|----------|-------------|-------------|------------|-----|----------|
+      |3429337       |1         |1753         |0            |0           |0    |N/A       |
+      |N/A           |Active    |1752         |0            |0           |     |N/A       |
+      |N/A           |32 KB     |             |             |            |     |N/A       |
+      |              |          |             |             |            |     |N/A       |
+      |--------------|----------|-------------|-------------|------------|-----|----------|

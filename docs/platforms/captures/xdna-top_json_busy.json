@@ -1,0 +1,9 @@
+{
+  "gpu_busy_pct": 1,
+  "gpu_power_w": 12.069,
+  "npu_active": true,
+  "state": "IDLE",
+  "igpu_degraded": false,
+  "npu_degraded": false,
+  "ts": 1782477765.2164898
+}
