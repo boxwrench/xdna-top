@@ -97,7 +97,8 @@ Telemetry backend provenance.
     "signals": {
       "device": "amdxdna_ioctl",
       "sensors": "amdxdna_ioctl",
-      "contexts": "xrt_smi"
+      "contexts": "xrt_smi",
+      "power_state": "debugfs"
     }
   },
   "igpu": {
@@ -113,6 +114,17 @@ Telemetry backend provenance.
 The preferred NPU backend is direct AMDXDNA DRM IOCTL probing through
 `/dev/accel/*`. `xrt-smi` remains useful for compatibility and for per-context
 PID/submission/completion data until equivalent direct attribution is available.
+
+`power_state` is the first direct-AMDXDNA signal: the NPU's active DPM
+(Dynamic Power Management) clock/voltage, read from
+`/sys/kernel/debug/accel/<bdf>/{dpm_level,powerstate}`. It is an **additive,
+optional** field (no `schema_version` bump): present only with a driver that
+exports those debugfs nodes (the staging `amdxdna.ko`; the mainline/DKMS driver
+does not — see amd/xdna-driver#1447) and only when readable (debugfs is usually
+root-only). When unavailable, `devices.npu.power_state.available` is `false`
+with a `reason`, and `backends.npu.signals.power_state` is `null`. The value is
+the active **clock/voltage power state**, never a utilization percentage.
+Consumers should treat unknown keys as forward-compatible and ignore them.
 
 ### `devices`
 
@@ -147,6 +159,17 @@ Detected device state.
       "column_utilization_pct": {
         "value": 17.5,
         "source": "amdxdna_ioctl"
+      }
+    },
+    "power_state": {
+      "available": true,
+      "source": "debugfs",
+      "reason": null,
+      "powerstate": "SMU power ON",
+      "dpm": {
+        "active": { "index": 7, "freq_mhz": 847, "volt_mv": 1600 },
+        "max": { "index": 7, "freq_mhz": 847, "volt_mv": 1600 },
+        "levels": 8
       }
     },
     "contexts": [

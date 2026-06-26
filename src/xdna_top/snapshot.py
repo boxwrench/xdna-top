@@ -70,6 +70,10 @@ def build_snapshot(
     ]
     npu_detected = xrt["device"]["bdf"] is not None or bool(contexts)
     xrt_contexts_available = xrt["aie_partitions_returncode"] == 0
+    # Read unconditionally and independently of xrt-smi: the debugfs power state
+    # is a separate subsystem, so it can still confirm the NPU is alive when
+    # `examine` fails (e.g. the RLIMIT_MEMLOCK false-negative). The read is fully
+    # guarded — root-only/absent debugfs yields available:false, never raises.
     npu_power = read_npu_power(xrt["device"]["bdf"])
     igpu_busy_exists = bool(busy_path and os.path.exists(busy_path))
     igpu_power_exists = bool(power_path and os.path.exists(power_path))
@@ -236,9 +240,9 @@ def _backend_provenance(
     xrt_available: bool,
     xrt_device_available: bool,
     xrt_contexts_available: bool,
-    npu_power_available: bool,
     igpu_busy_available: bool,
     igpu_power_available: bool,
+    npu_power_available: bool = False,
 ) -> dict[str, Any]:
     npu_signals = {
         "device": "xrt_smi" if xrt_available and xrt_device_available else None,
