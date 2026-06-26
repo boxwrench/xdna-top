@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from xdna_top.diagnostics import diagnose_memlock
 from xdna_top.gauge import HardwareGauge, load_sysfs_paths, parse_xrt_smi
 
 SCHEMA_VERSION = "1.0"
@@ -78,6 +79,14 @@ def build_snapshot(
         npu_reasons.append("xrt_smi_examine_failed")
     if xrt["available"] and not xrt_contexts_available:
         npu_reasons.append("aie_partitions_report_failed")
+
+    # A low RLIMIT_MEMLOCK makes xrt-smi's MAP_LOCKED firmware mmap fail with
+    # EAGAIN, which otherwise reads as "NPU absent". Surface the real cause so a
+    # detected-but-degraded NPU is not mistaken for missing hardware.
+    memlock_hint = diagnose_memlock(errors)
+    if memlock_hint is not None:
+        npu_reasons.append("rlimit_memlock_too_low")
+        errors.append({"probe": "rlimit_memlock", "message": memlock_hint})
 
     igpu_reasons: list[str] = []
     if not igpu_busy_exists:
