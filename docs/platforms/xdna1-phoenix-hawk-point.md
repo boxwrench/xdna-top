@@ -38,22 +38,38 @@ context open. While busy, `xdna-top snapshot` captured it (see
 ```
 
 `report_shape.has_hw_contexts: true`, `context_count: 1`, and `--json` reported
-`npu_active: true` (the submissions counter incrementing and leading completions
-by one in-flight job). Activity is reported as submission-counter deltas /
-active hardware contexts, never as a utilization percentage.
+`npu_active: true`. Activity is reported as submission-counter deltas / active
+hardware contexts, never as a utilization percentage.
 
-**The XDNA1 `aie-partitions` HW-context table uses the same column schema the
+The **XDNA1 `aie-partitions` HW-context table uses the same column schema the
 parser already expects** (PID / Ctx ID / Submissions row, then Process Name /
-Status / Completions row). So submission-delta logic and `assert --between`
-carry over to gen-1 with no parser change. Idle vs busy raw reports:
-[`captures/aie-partitions_idle.txt`](captures/aie-partitions_idle.txt),
+Status / Completions row), so it parses without change and the submissions vs
+completions in-flight check that drives `npu_active` works on gen-1 (verified:
+`submissions 1865 > completions 1864` → `npu_active: true`). Idle vs busy raw
+reports: [`captures/aie-partitions_idle.txt`](captures/aie-partitions_idle.txt),
 [`captures/aie-partitions_busy.txt`](captures/aie-partitions_busy.txt).
 
-### iGPU telemetry generalizes off Strix Halo
-`discover_sysfs` found the Phoenix 780M endpoints with no hint:
+Two caveats so this isn't over-claimed:
+
+- **`process_name` is resolved from `/proc`, not the table.** On fw 1.5.5.391
+  the `Process Name` column is `N/A` (see the busy raw capture); the `python3`
+  value comes from xdna-top's own `/proc/<pid>` lookup. That path works on
+  gen-1 too, but the name's provenance is `/proc`, not `xrt-smi`.
+- **`assert --between` was not exercised here.** This bundle has independent
+  idle and busy snapshots, not a recorded stream with marks. The *inputs*
+  `--between` consumes (the two-row context table, submission/completion
+  counters) are present and parse on gen-1; the windowed-activity command
+  itself was not run end-to-end, so treat that as "inputs verified," not
+  "command verified."
+
+### iGPU telemetry on this Phoenix system
+On this box `discover_sysfs` found the 780M (gfx1103) endpoints with no hint:
 `busy = /sys/class/drm/card2/device/gpu_busy_percent`,
-`power = /sys/class/hwmon/hwmon9/power1_input`. These are the driver's own
-sysfs counters (no estimation). Idle reading: 2% busy, 12.1 W.
+`power = /sys/class/hwmon/hwmon9/power1_input`. These are the driver's own sysfs
+counters (no estimation). Idle reading: 2% busy, 12.1 W. This is a single data
+point on a Phoenix iGPU-only laptop — discovery robustness across discrete-GPU
+topologies, multiple hwmon entries, or post-suspend re-enumeration is not
+covered by this capture.
 
 ## Gen-1 specifics / honest gaps
 
@@ -64,8 +80,13 @@ sysfs counters (no estimation). Idle reading: 2% busy, 12.1 W.
   a gen-1 regression, a shared gap.
 - **N/A columns on firmware 1.5.5.391:** the HW-context table emits `GOPS`,
   `FPS`, `Latency`, and `Total Memory Usage` as `N/A`. If those are surfaced for
-  Strix Halo later, gen-1 will need an `N/A`-tolerant path. `Memory Usage` and
-  `Instr BO` (`32 KB` observed) are present in the report but not parsed today.
+  Strix Halo later, gen-1 will need an `N/A`-tolerant path (numeric conversion /
+  column-by-name lookup would otherwise hit `N/A` on gen-1 only). `Memory Usage`
+  and `Instr BO` (`32 KB` observed) are present in the report but not parsed
+  today.
+- **`aie2` vs `aie2p`:** gen-1 reports architecture `aie2` (Strix is `aie2p`).
+  Today that string is display-only in xdna-top; any future capability/topology
+  branch that keys on it would take a gen-1-specific path.
 
 ## One environment gotcha worth a graceful-degradation hint
 
