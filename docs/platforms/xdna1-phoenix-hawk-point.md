@@ -6,6 +6,8 @@ unmodified.** NPU detection, per-context attribution against a live hardware
 context, and iGPU sysfs auto-discovery all succeed, and `degraded.overall` is
 `false`.
 
+All claims below are scoped to what was measured on this one XDNA1 box; where a
+statement touches XDNA2/Strix Halo it is labelled as such (not measured here).
 Raw artifacts for this profile live in [`captures/`](captures/).
 
 ## Test platform
@@ -41,11 +43,12 @@ context open. While busy, `xdna-top snapshot` captured it (see
 `npu_active: true`. Activity is reported as submission-counter deltas / active
 hardware contexts, never as a utilization percentage.
 
-The **XDNA1 `aie-partitions` HW-context table uses the same column schema the
-parser already expects** (PID / Ctx ID / Submissions row, then Process Name /
-Status / Completions row), so it parses without change and the submissions vs
-completions in-flight check that drives `npu_active` works on gen-1 (verified:
-`submissions 1865 > completions 1864` → `npu_active: true`). Idle vs busy raw
+On this firmware the XDNA1 `aie-partitions` HW-context table emits the rows
+**the existing parser expects** (PID / Ctx ID / Submissions row, then
+Process Name / Status / Completions row), alongside extra and `N/A` fields, so
+it parses with no change. On this single in-flight sample the
+`submissions > completions` heuristic that drives `npu_active` worked correctly
+(`1865 > 1864` → `npu_active: true`, table `Status: Active`). Idle vs busy raw
 reports: [`captures/aie-partitions_idle.txt`](captures/aie-partitions_idle.txt),
 [`captures/aie-partitions_busy.txt`](captures/aie-partitions_busy.txt).
 
@@ -74,10 +77,11 @@ covered by this capture.
 ## Gen-1 specifics / honest gaps
 
 - **NPU sensors absent:** `driver.supports_sensors: false`; `power_w` and
-  `column_utilization_pct` are `null`. This matches the Strix Halo situation and
-  is gated on the direct AMDXDNA telemetry IOCTLs
-  ([amd/xdna-driver#1447](https://github.com/amd/xdna-driver/issues/1447)) — not
-  a gen-1 regression, a shared gap.
+  `column_utilization_pct` are `null`. This is gated on the direct AMDXDNA
+  telemetry IOCTLs ([amd/xdna-driver#1447](https://github.com/amd/xdna-driver/issues/1447)).
+  The maintainer reports the same null-sensor gap on Strix Halo, so it reads as
+  a shared gap rather than a gen-1 regression — though XDNA2 behavior is from
+  that report and #1447, not measured on this box.
 - **N/A columns on firmware 1.5.5.391:** the HW-context table emits `GOPS`,
   `FPS`, `Latency`, and `Total Memory Usage` as `N/A`. If those are surfaced for
   Strix Halo later, gen-1 will need an `N/A`-tolerant path (numeric conversion /
@@ -98,10 +102,10 @@ xrt-smi ERROR: mmap(... len=67108864 ... flags=0x2011) failed (err=-11): Resourc
 ```
 
 The NPU firmware region is mmap'd with `MAP_LOCKED` (flags
-`0x2011 = MAP_SHARED|MAP_FIXED|MAP_LOCKED`), checked against `RLIMIT_MEMLOCK`.
-The default soft **and hard** memlock here is 8 MB (`ulimit -l` = 8192), below
-the 64 MB requested, so `mmap` returns `EAGAIN`. The user cannot self-raise
-(hard cap = 8 MB).
+`0x2011 = MAP_SHARED|MAP_FIXED|MAP_LOCKED`, i.e. `0x1|0x10|0x2000`), checked
+against `RLIMIT_MEMLOCK`. The default soft **and hard** memlock here is 8 MB
+(`ulimit -l` = 8192), below the 64 MB requested, so `mmap` returns `EAGAIN`.
+The user cannot self-raise (hard cap = 8 MB).
 
 Isolation test (confirms it is memlock, not root): running as the same UID but
 with `prlimit --memlock=unlimited`, `xrt-smi examine` succeeds and reports
