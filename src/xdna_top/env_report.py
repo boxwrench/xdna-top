@@ -333,7 +333,7 @@ def _metric(value: Any, unit: str) -> str:
 
 
 def _npu_power_state(power_state: Any) -> str:
-    """Render the debugfs NPU power state: active DPM clock/voltage, never a busy %."""
+    """Render the debugfs NPU power state: active DPM clock state (npuclk/hclk MHz), never a busy %."""
     if not isinstance(power_state, dict) or not power_state.get("available"):
         reason = power_state.get("reason") if isinstance(power_state, dict) else None
         return f"unavailable ({reason})" if reason else "unavailable"
@@ -345,7 +345,8 @@ def _npu_power_state(power_state: Any) -> str:
     active = dpm.get("active") if isinstance(dpm, dict) else None
     if isinstance(active, dict):
         parts.append(
-            f"active DPM {active.get('freq_mhz')} MHz / {active.get('volt_mv')} mV"
+            f"active DPM L{active.get('index')} "
+            f"(npuclk {active.get('npuclk_mhz')} MHz / hclk {active.get('hclk_mhz')} MHz)"
         )
     return ", ".join(parts) if parts else "available"
 

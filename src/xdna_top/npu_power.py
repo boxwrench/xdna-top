@@ -1,7 +1,7 @@
 """Read the NPU's active power/clock state from the amdxdna debugfs nodes.
 
 This is the first *direct AMDXDNA* signal in xdna-top (roadmap v0.3): the NPU's
-active DPM (Dynamic Power Management) state — operating clock and voltage — read
+active DPM (Dynamic Power Management) state — operating clocks (npuclk + hclk) — read
 straight from ``/sys/kernel/debug/accel/<bdf>/``, with no XRT and no ioctl
 version coupling.
 
@@ -14,7 +14,7 @@ Availability is narrow and honestly reported:
   "unavailable" with a reason, never an exception.
 
 Claims precision (the house rule): ``dpm_level`` is the NPU's active
-clock/voltage **power state**, NOT a utilization percentage. Callers must label
+clock-frequency **power state**, NOT a utilization percentage. Callers must label
 it as a clock/power-state, and ``read_npu_power`` never synthesises a busy %.
 """
 
@@ -27,8 +27,10 @@ from typing import Any
 DEBUGFS_ACCEL = Path("/sys/kernel/debug/accel")
 
 # A dpm_level line looks like:  " [400,800]  600,1024  ...  847,1600 "
-# Each token is "freq_MHz,volt_mV"; the [bracketed] token is the ACTIVE state.
-_DPM_TOKEN = re.compile(r"(?P<lb>\[?)\s*(?P<freq>\d+)\s*,\s*(?P<volt>\d+)\s*(?P<rb>\]?)")
+# Each token is "npuclk_MHz,hclk_MHz" (the driver prints `[%d,%d]` of
+# dpm_clk_freq.npuclk, .hclk -- both clock frequencies, NOT a voltage); the
+# [bracketed] token is the ACTIVE DPM level.
+_DPM_TOKEN = re.compile(r"(?P<lb>\[?)\s*(?P<npuclk>\d+)\s*,\s*(?P<hclk>\d+)\s*(?P<rb>\]?)")
 
 
 def _debugfs_dir(bdf: str | None) -> Path | None:
@@ -61,9 +63,9 @@ def _read(path: Path) -> str | None:
 
 
 def parse_dpm_level(text: str) -> dict[str, Any] | None:
-    """Parse a ``dpm_level`` line into active / max clock+voltage.
+    """Parse a ``dpm_level`` line into active / max DPM clocks.
 
-    Returns ``None`` if no ``freq,volt`` token is found. ``active`` is ``None``
+    Returns ``None`` if no ``npuclk,hclk`` token is found. ``active`` is ``None``
     when no state is bracketed (the node read but no current state was marked),
     so the caller can distinguish "read it, no active marker" from "couldn't
     read".
@@ -71,9 +73,9 @@ def parse_dpm_level(text: str) -> dict[str, Any] | None:
     levels: list[dict[str, int]] = []
     active: dict[str, int] | None = None
     for m in _DPM_TOKEN.finditer(text):
-        freq = int(m.group("freq"))
-        volt = int(m.group("volt"))
-        state = {"index": len(levels), "freq_mhz": freq, "volt_mv": volt}
+        npuclk = int(m.group("npuclk"))
+        hclk = int(m.group("hclk"))
+        state = {"index": len(levels), "npuclk_mhz": npuclk, "hclk_mhz": hclk}
         if m.group("lb") == "[" or m.group("rb") == "]":
             active = state
         levels.append(state)
@@ -81,7 +83,7 @@ def parse_dpm_level(text: str) -> dict[str, Any] | None:
         return None
     return {
         "active": active,
-        "max": max(levels, key=lambda s: s["freq_mhz"]),
+        "max": max(levels, key=lambda s: s["npuclk_mhz"]),
         "levels": len(levels),
     }
 
@@ -92,7 +94,7 @@ def read_npu_power(bdf: str | None = None) -> dict[str, Any]:
     Always returns a dict with ``available`` and ``source``; ``reason`` explains
     an unavailable read (driver does not export the nodes, debugfs not mounted,
     or — most often when unprivileged — the nodes are root-only). The values are
-    the NPU's DPM clock/voltage power state and the SMU power state string, never
+    the NPU active DPM clock state (npuclk, hclk) and the SMU powerstate string, never
     a utilization metric.
     """
     result: dict[str, Any] = {

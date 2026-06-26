@@ -13,21 +13,21 @@ DPM_NO_ACTIVE = " 400,800  600,1024  847,1600 "
 def test_parse_idle_active_is_lowest():
     dpm = npu_power.parse_dpm_level(DPM_IDLE)
     assert dpm is not None
-    assert dpm["active"] == {"index": 0, "freq_mhz": 400, "volt_mv": 800}
-    assert dpm["max"] == {"index": 7, "freq_mhz": 847, "volt_mv": 1600}
+    assert dpm["active"] == {"index": 0, "npuclk_mhz": 400, "hclk_mhz": 800}
+    assert dpm["max"] == {"index": 7, "npuclk_mhz": 847, "hclk_mhz": 1600}
     assert dpm["levels"] == 8
 
 
 def test_parse_load_active_is_highest():
     dpm = npu_power.parse_dpm_level(DPM_LOAD)
-    assert dpm["active"] == {"index": 7, "freq_mhz": 847, "volt_mv": 1600}
+    assert dpm["active"] == {"index": 7, "npuclk_mhz": 847, "hclk_mhz": 1600}
 
 
 def test_parse_no_active_marker():
     dpm = npu_power.parse_dpm_level(DPM_NO_ACTIVE)
     assert dpm["active"] is None
     assert dpm["levels"] == 3
-    assert dpm["max"]["freq_mhz"] == 847
+    assert dpm["max"]["npuclk_mhz"] == 847
 
 
 def test_parse_garbage_returns_none():
@@ -55,7 +55,7 @@ def test_read_parses_nodes_when_present(monkeypatch, tmp_path):
     assert out["available"] is True
     assert out["source"] == "debugfs"
     assert out["powerstate"] == "SMU power ON"
-    assert out["dpm"]["active"]["freq_mhz"] == 847
+    assert out["dpm"]["active"]["npuclk_mhz"] == 847
 
 
 def test_read_falls_back_to_first_device_dir(monkeypatch, tmp_path):
