@@ -25,7 +25,7 @@ Raw artifacts for this profile live in [`captures/`](captures/).
 ## What works out of the box
 
 ### NPU detected; device row parses
-`xrt-smi examine` reports `RyzenAI-npu1 | aie2 | 6x5`. Snapshot `devices.npu`:
+`xrt-smi examine` reports `NPU Phoenix | aie2 | 6x5` (BDF `0000:06:00.1`); `xrt-smi examine --report aie-partitions` labels the device `RyzenAI-npu1`, which is what snapshot `device.name` carries. Raw `examine` capture: [`captures/xrt-smi-examine.txt`](captures/xrt-smi-examine.txt). Snapshot `devices.npu`:
 `detected: true`, `name: RyzenAI-npu1`, `bdf: 0000:06:00.1`,
 `report_shape.has_aie_partitions: true`.
 
@@ -76,12 +76,13 @@ covered by this capture.
 
 ## Gen-1 specifics / honest gaps
 
-- **NPU sensors absent:** `driver.supports_sensors: false`; `power_w` and
-  `column_utilization_pct` are `null`. This is gated on the direct AMDXDNA
-  telemetry IOCTLs ([amd/xdna-driver#1447](https://github.com/amd/xdna-driver/issues/1447)).
-  The maintainer reports the same null-sensor gap on Strix Halo, so it reads as
-  a shared gap rather than a gen-1 regression — though XDNA2 behavior is from
-  that report and #1447, not measured on this box.
+- **NPU sensors not populated:** `driver.supports_sensors: false`; `power_w`
+  and `column_utilization_pct` are `null`. These fields are hard-coded
+  placeholders in `snapshot.py` and read `null` on every platform today, XDNA2
+  included, so the `null` here is not evidence of a gen-1 limitation — xdna-top
+  simply does not populate NPU sensors yet. The underlying driver-side
+  telemetry IOCTL gap is tracked separately in
+  [amd/xdna-driver#1447](https://github.com/amd/xdna-driver/issues/1447).
 - **N/A columns on firmware 1.5.5.391:** the HW-context table emits `GOPS`,
   `FPS`, `Latency`, and `Total Memory Usage` as `N/A`. If those are surfaced for
   Strix Halo later, gen-1 will need an `N/A`-tolerant path (numeric conversion /
@@ -109,7 +110,7 @@ The user cannot self-raise (hard cap = 8 MB).
 
 Isolation test (confirms it is memlock, not root): running as the same UID but
 with `prlimit --memlock=unlimited`, `xrt-smi examine` succeeds and reports
-`RyzenAI-npu1 aie2 6x5`.
+`NPU Phoenix aie2 6x5`.
 
 When this happens, `examine` fails and the snapshot records
 `npu_reasons: ["xrt_smi_examine_failed"]` — i.e. the NPU looks absent. A small,

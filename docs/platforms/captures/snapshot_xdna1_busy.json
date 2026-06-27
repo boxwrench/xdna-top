@@ -10,7 +10,7 @@
       "available": true,
       "examine_returncode": 0,
       "path": "/opt/xilinx/xrt/bin/xrt-smi",
-      "version_output": "Version : 2.25.0 ... amdxdna Version : 2.25.0_20260623 ... NPU Firmware Version : 1.5.5.391"
+      "version_output": "Version : 2.25.0 Branch : HEAD Hash : 943586a79b5a714463cb13d3ba7e178b8532c817 Hash Date : Tue, 9 Jun 2026 19:31:23 -0700 amdxdna Version : 0.1 virtio-pci Version : 6.17.0-6-generic NPU Firmware Version : 1.5.5.391"
     }
   },
   "degraded": { "igpu": { "degraded": false, "reasons": [] }, "npu": { "degraded": false, "reasons": [] }, "overall": false },

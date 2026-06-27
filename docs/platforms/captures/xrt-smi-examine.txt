@@ -1,0 +1,28 @@
+System Configuration
+  OS Name              : Linux
+  Release              : 6.17.0-6-generic
+  Machine              : x86_64
+  CPU Cores            : 16
+  Memory               : 92036 MB
+  Distribution         : Ubuntu 25.10
+  GLIBC                : 2.42
+  Model                : Victus by HP Gaming Laptop 16-s1xxx
+  BIOS Vendor          : Insyde
+  BIOS Version         : F.05
+  Processor            : AMD Ryzen 7 8845HS w/ Radeon 780M Graphics
+
+XRT
+  Version              : 2.25.0
+  Branch               : HEAD
+  Hash                 : 943586a79b5a714463cb13d3ba7e178b8532c817
+  Hash Date            : Tue, 9 Jun 2026 19:31:23 -0700
+  amdxdna Version      : 0.1
+  virtio-pci Version   : 6.17.0-6-generic
+  NPU Firmware Version : 1.5.5.391
+
+Device(s) Present
+|BDF             |Name         |Architecture  |Topology  |
+|----------------|-------------|--------------|----------|
+|[0000:06:00.1]  |NPU Phoenix  |aie2          |6x5       |
+
+
