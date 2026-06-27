@@ -25,6 +25,11 @@ docs = [
     "pillow",
 ]
 
+# Prometheus exporter (`xdna-top exporter`). Not needed for the TUI/snapshots.
+exporter = [
+    "prometheus_client",
+]
+
 [project.scripts]
 xdna-top = "xdna_top.main:main"
 lemonade-top = "xdna_top.lemonade:main"
