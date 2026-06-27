@@ -16,11 +16,16 @@ To maintain clear provenance and code-hygiene standards:
 
 ## Running Tests
 
-To run the unit tests, install dependencies and invoke `pytest`:
+To run the unit tests, install the dev dependencies and invoke `pytest`:
 
 ```bash
-pip install -e .
+pip install -e '.[dev]'
 pytest tests/
 ```
+
+The `dev` extra pulls in the docs tooling (PyYAML, used by
+`tools/build_experiments_index.py`) and the exporter (`prometheus_client`) so
+that every test module is collectable. A bare `pip install -e .` is enough to
+run `xdna-top` itself, but will skip those test modules.
 
 We look forward to your contributions!

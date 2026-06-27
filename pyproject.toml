@@ -18,16 +18,25 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Dev-only tooling for regenerating docs/themes/gallery.png. Not needed to run
-# xdna-top. See docs/themes/render_gallery.py.
+# Dev-only tooling for regenerating docs (experiments index, themes, gallery.png).
+# Not needed to run xdna-top. See docs/themes/render_gallery.py and
+# tools/build_experiments_index.py (which parses YAML front-matter).
 docs = [
     "cairosvg",
     "pillow",
+    "pyyaml",
 ]
 
 # Prometheus exporter (`xdna-top exporter`). Not needed for the TUI/snapshots.
 exporter = [
     "prometheus_client",
+]
+
+# Everything needed to run the full test suite locally (pulls in the docs +
+# exporter extras so every test module is collectable). See CONTRIBUTING.md.
+dev = [
+    "xdna-top[docs,exporter]",
+    "pytest",
 ]
 
 [project.scripts]
