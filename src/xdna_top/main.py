@@ -514,6 +514,18 @@ def build_parser(
                 help=f"Require {check_name.replace('require-', '').replace('-', ' ')}.",
             )
 
+        exporter_parser = subparsers.add_parser(
+            "exporter",
+            help="Serve Prometheus metrics at /metrics for Prometheus/Grafana.",
+        )
+        exporter_parser.add_argument(
+            "--host", default="127.0.0.1", help="Bind address (default 127.0.0.1)."
+        )
+        exporter_parser.add_argument(
+            "--port", type=int, default=9477, help="Listen port (default 9477)."
+        )
+        _add_hardware_args(exporter_parser)
+
         compare_parser = subparsers.add_parser(
             "compare",
             help="Diff two snapshots and report high-signal platform drift.",
@@ -694,6 +706,9 @@ def main() -> int:
         return compare_main(args)
     if getattr(args, "command", None) == "baseline":
         return baseline_main(args)
+    if getattr(args, "command", None) == "exporter":
+        from xdna_top.exporter import exporter_main
+        return exporter_main(args)
     return _run_monitor_with_theme(args, default_theme_name="default")
 
 

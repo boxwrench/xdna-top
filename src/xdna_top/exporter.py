@@ -7,11 +7,13 @@ the history, so there is no background sampling loop here.
 
 from __future__ import annotations
 
+import time
 from typing import Callable, Iterator
 
+from prometheus_client import CollectorRegistry, start_http_server
 from prometheus_client.core import CounterMetricFamily, GaugeMetricFamily, Metric
 
-from xdna_top.gauge import GaugeReading, GpuState
+from xdna_top.gauge import GaugeReading, GpuState, HardwareGauge, parse_xrt_smi, run_xrt_smi
 
 
 def _build_metrics(
@@ -84,6 +86,45 @@ def _build_metrics(
         if active.get("hclk_mhz") is not None:
             clk.add_metric(["hclk"], float(active["hclk_mhz"]))
         yield clk
+
+
+def _hardware_reader(
+    gauge: HardwareGauge, npu_device: str | None
+) -> Callable[[], tuple[GaugeReading, list[dict], dict | None]]:
+    """Build the scrape-time read function for the production exporter."""
+    def read() -> tuple[GaugeReading, list[dict], dict | None]:
+        reading = gauge.read()
+        out = run_xrt_smi(device=npu_device)
+        contexts = parse_xrt_smi(out) if out else []
+        # power_state stays None until PR #13 (debugfs read_npu_power) lands.
+        return reading, contexts, None
+
+    return read
+
+
+def serve(host: str, port: int, gauge: HardwareGauge, npu_device: str | None) -> None:
+    """Register the collector and serve /metrics until interrupted."""
+    registry = CollectorRegistry()
+    registry.register(XdnaCollector(_hardware_reader(gauge, npu_device)))
+    start_http_server(port, addr=host, registry=registry)
+    while True:
+        time.sleep(3600)
+
+
+def exporter_main(args) -> int:
+    gauge = HardwareGauge(
+        gpu_idle_busy_pct=args.idle_busy_pct,
+        gpu_prefill_power_w=args.prefill_power_w,
+        gauge_hysteresis_samples=args.hysteresis_samples,
+        bench_dir=args.bench_dir,
+        npu_device=args.npu_device,
+    )
+    print(f"xdna-top exporter listening on http://{args.host}:{args.port}/metrics")
+    try:
+        serve(args.host, args.port, gauge, args.npu_device)
+    except KeyboardInterrupt:
+        pass
+    return 0
 
 
 class XdnaCollector:
