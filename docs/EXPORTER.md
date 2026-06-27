@@ -12,13 +12,22 @@ pip install -e '.[exporter]'   # pulls in prometheus_client
 ## Run
 
 ```bash
-xdna-top exporter --host 0.0.0.0 --port 9477
-# -> serving http://0.0.0.0:9477/metrics
+xdna-top exporter --port 9477
+# -> serving http://127.0.0.1:9477/metrics
 ```
 
 The exporter reads the hardware on each scrape (stateless); Prometheus owns the
 history. It accepts the same hardware-source flags as the rest of xdna-top
 (`--npu-device`, `--bench-dir`, …).
+
+`/metrics` is unauthenticated. The default bind host is `127.0.0.1`
+(loopback-only) — keep it there unless you need remote scraping. Use
+`--host 0.0.0.0` to expose it on all interfaces, and only on a trusted network
+(or behind a firewall / reverse proxy):
+
+```bash
+xdna-top exporter --host 0.0.0.0 --port 9477   # all interfaces — trusted networks only
+```
 
 ## Scrape it from Prometheus
 
@@ -44,7 +53,7 @@ scrape_configs:
 | `xdna_npu_completions_total` | counter | cumulative NPU completions |
 | `xdna_igpu_degraded` / `xdna_npu_degraded` | gauge | 1 if that telemetry is degraded |
 | `xdna_state{state="…"}` | gauge | current pipeline state = 1, others 0 |
-| `xdna_npu_clock_mhz{domain="npuclk\|hclk"}` | gauge | NPU active DPM clocks (only when the debugfs power-state node is readable) |
+| `xdna_npu_clock_mhz{domain="npuclk\|hclk"}` | gauge | NPU active DPM clocks (only when the debugfs `power_state` node is readable) |
 
 ## Grafana
 
