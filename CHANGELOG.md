@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Direct-AMDXDNA NPU power state** — `snapshot` now reads the NPU's active DPM
+  clock state (npuclk/hclk MHz) and the SMU `powerstate` directly from
+  `/sys/kernel/debug/accel/<bdf>/{dpm_level,powerstate}` (debugfs), independent
+  of `xrt-smi`, exposing it as `devices.npu.power_state` with
+  `backends.npu.signals.power_state = "debugfs"`; `env-report` renders an "NPU
+  power state" line. This is the first direct-AMDXDNA telemetry signal (roadmap
+  v0.3). It is the active *clock-state power level* in MHz, never a utilization
+  percentage. Reads are unprivileged-safe: when the debugfs nodes are not
+  exported (mainline driver) or not readable (non-root), it reports
+  `available: false` with a reason rather than raising or guessing. Additive and
+  optional — no `schema_version` bump. (#13, thanks @Scottcjn)
+
 ## [0.3.0] - 2026-06-27
 
 This release adds a Prometheus exporter for scraping `xdna-top` telemetry into
