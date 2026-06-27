@@ -69,7 +69,17 @@ top one.
   its per-operator test discipline — an NPU `design.py`, a CPU `reference.py`,
   and a `test.py` asserting NPU ≈ CPU.
 - **The bottom two layers are what `xdna-top` observes.** XRT + the `amdxdna`
-  driver + `/dev/accel/*` are where activity and sensors actually surface.
+  driver + `/dev/accel/*` are where activity and sensors actually surface — and
+  they surface on **both** generations (telemetry is gen-agnostic; see the
+  [XDNA1 capture profile](../platforms/xdna1-phoenix-hawk-point.md)).
+- **Generation reach differs by layer.** The high-level runtimes (FastFlowLM /
+  Lemonade `flm:npu`) currently target **XDNA2** (`aie2p`) only. **XDNA1**
+  (`aie2`, Phoenix / Hawk Point) is reachable today through the custom-kernel
+  path: IRON / MLIR-AIE lowered through **Peano** (which has an explicit
+  `aie2-...-elf` target) and loaded via **XRT** — the demonstrated gen-1 route.
+  Note the pre-built IRON/Triton-XDNA operator libraries are currently
+  `aie2p`-focused, so on gen-1 you are closer to authoring kernels than composing
+  them.
 
 ## One-line takeaway
 

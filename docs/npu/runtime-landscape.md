@@ -1,15 +1,25 @@
 # NPU runtime landscape — four ways to run things on AMD XDNA
 
-If you want to actually *run* something on a Ryzen AI (XDNA / XDNA2) NPU, there
-are four practical routes today. They sit at the top "high-level runtime" layer
-of the [software stack](software-stack.md) — you bring a model, they handle the
+If you want to actually *run* something on a Ryzen AI NPU, there are four
+practical routes today. They sit at the top "high-level runtime" layer of the
+[software stack](software-stack.md) — you bring a model, they handle the
 hardware.
+
+> **Generation requirement.** The NPU paths of the first two runtimes
+> (FastFlowLM, and Lemonade's `flm:npu` backend) currently require **XDNA2**
+> (`aie2p`, Strix / Strix Halo). On **XDNA1** (`aie2`, Phoenix / Hawk Point)
+> they do not yet target the NPU — gen-1 is reachable instead through the
+> custom-kernel path (XRT + IRON/mlir-aie → Peano; see the
+> [software stack](software-stack.md)). `xdna-top`'s telemetry works on both
+> gens regardless — see the [XDNA1 capture
+> profile](../platforms/xdna1-phoenix-hawk-point.md).
 
 ## 1. FastFlowLM (FLM)
 
-A lightweight LLM runtime built specifically for XDNA. Serves generative LLMs
+A lightweight LLM runtime built for the Ryzen AI NPU. Serves generative LLMs
 (and Whisper) on Linux behind an OpenAI-ish API (commonly on port `13306`).
-Closest to "just run a model on the NPU." Note that its bare `/v1/embeddings`
+Closest to "just run a model on the NPU." **Targets XDNA2** (`aie2p`); it does
+not currently run on first-gen XDNA1. Note that its bare `/v1/embeddings`
 endpoint is a non-functional stub on current builds — for embeddings, use
 Lemonade (below).
 
@@ -17,7 +27,8 @@ Lemonade (below).
 
 An OpenAI / Ollama / Anthropic-compatible local server with **multiple
 backends** and automatic hardware detection. Backends include `flm:npu` (NPU
-LLMs), `llamacpp:rocm` (iGPU), `vllm:rocm`, and more. It serves **completions,
+LLMs, **XDNA2-only** — it is FastFlowLM under the hood), `llamacpp:rocm` (iGPU),
+`vllm:rocm`, and more. It serves **completions,
 embeddings, and rerankers** — embeddings/rerankers run through the `llamacpp`
 backend (e.g. Qwen3-Embedding, nomic-embed, bge-reranker), which on this class
 of machine means the **iGPU**, not the NPU. Linux + Windows. This is the
