@@ -125,3 +125,60 @@ def test_write_snapshot_to_file(tmp_path):
     data = json.loads(out.read_text(encoding="utf-8"))
     assert data["schema_version"] == "1.0"
     assert data["kind"] == "xdna-top.snapshot"
+
+
+@patch("xdna_top.snapshot._accel_entries")
+@patch("xdna_top.snapshot.HardwareGauge")
+@patch("xdna_top.snapshot.os.path.exists")
+@patch("xdna_top.snapshot.load_sysfs_paths")
+@patch("xdna_top.snapshot._probe_xrt_smi")
+def test_build_snapshot_surfaces_memlock_reason(
+    mock_probe_xrt,
+    mock_load_sysfs_paths,
+    mock_exists,
+    mock_gauge_class,
+    mock_accel_entries,
+    monkeypatch,
+):
+    """build_snapshot must wire a real memlock diagnosis into npu reasons + errors."""
+    mmap_err = (
+        "xrt-smi ERROR: mmap(addr=0x7e79cc000000, len=67108864, prot=3, flags=8209, "
+        "offset=4294967296) failed (err=-11): Resource temporarily unavailable"
+    )
+
+    def fake_probe(*, npu_device, errors):
+        errors.append({"probe": "xrt_smi.examine", "message": mmap_err})
+        return {
+            "path": "/usr/bin/xrt-smi",
+            "available": True,
+            "version_output": "Version : 2.25.0",
+            "examine_returncode": 1,
+            "aie_partitions_returncode": 1,
+            "device": {"bdf": None, "name": None},
+            "contexts": [],
+        }
+
+    mock_probe_xrt.side_effect = fake_probe
+    mock_load_sysfs_paths.return_value = (None, None)
+    mock_exists.return_value = False
+    mock_accel_entries.return_value = [{"path": "/dev/accel/accel0", "exists": True}]
+
+    reading = MagicMock()
+    reading.to_dict.return_value = {
+        "npu_active": False,
+        "state": "IDLE",
+        "igpu_degraded": True,
+        "npu_degraded": True,
+        "ts": 1.0,
+    }
+    mock_gauge_class.return_value.read_direct.return_value = reading
+
+    # force a low soft limit so the real diagnose_memlock fires end-to-end
+    monkeypatch.setattr("xdna_top.diagnostics.memlock_soft_limit", lambda: 8 * 1024 * 1024)
+
+    snapshot = build_snapshot(bench_dir="/tmp/xdna-top-test")
+
+    assert "rlimit_memlock_too_low" in snapshot["degraded"]["npu"]["reasons"]
+    memlock_errors = [e for e in snapshot["errors"] if e.get("probe") == "rlimit_memlock"]
+    assert len(memlock_errors) == 1
+    assert "memlock" in memlock_errors[0]["message"].lower()
