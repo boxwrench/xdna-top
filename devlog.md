@@ -1,6 +1,58 @@
 # xdna-top Devlog
 
-## 2026-06-10 — Initial standalone extraction
+## 2026-06-14 — On-hardware session: test suite green, but two handoff features are absent
+
+On the target Strix Halo box (kernel `6.17.0-35-generic`, `/dev/accel/accel0`,
+`amdxdna` bound at `0000:c6:00.1`, `xrt-smi` present). NPU probes healthy:
+`xrt-smi` reports `[0000:c6:00.1] : RyzenAI-npu5`; a real `snapshot` has
+`bdf=0000:c6:00.1` with `igpu_degraded=false` and `npu_degraded=false`.
+
+### Step 1 — full test suite (DONE, passing)
+- `pip install -e .` is blocked here by PEP 668 (externally-managed env), but the
+  package is already importable via the existing `src/xdna_top.egg-info` editable
+  install; `import xdna_top, tty, termios` succeeds.
+- `python3 -m pytest -q` → **131 passed**.
+- The two modules that could not even be collected on Windows now collect and pass
+  on Linux: `tests/test_xdna_top.py` + `tests/test_themes.py` → **34 passed**
+  (`tty`/`termios` import fine). This closes the first HANDOFF checklist item.
+
+### Step 2 — BLOCKED: the two features to validate are not in this repository
+The handoff described per-context process names (`resolve_process_name()`,
+`parse_xrt_smi()` setting `ctx["process_name"]`, a TUI "Process" column, field
+flowing into snapshot/record JSON) and most-active-first ordering
+(`sort_contexts_by_activity()`). **None of this code is present** on `main`, on any
+other local/remote branch (`claude/bold-planck-64mrjz` is behind main and also
+lacks it), or in stash. Measured, not inferred:
+- No `resolve_process_name` / `sort_contexts_by_activity` anywhere under `src/`.
+- `gauge.py:parse_xrt_smi()` (lines 215–243) builds each context with only
+  `pid, ctx_id, submissions, status, completions` — it never sets `process_name`.
+- `snapshot.py:66` does `ctx.get("process_name")`, which is **always `None`**
+  because the key is never created. The only trace of the feature is this
+  passthrough plus a `process_name: None` placeholder in a test fixture.
+- No "Process" column in `main.py`.
+Conclusion: the off-hardware work was apparently never pushed/transferred from the
+Windows session to this box. There is nothing on silicon to validate yet.
+
+A second, independent blocker: the NPU is currently **idle**. `xrt-smi` reports
+"No hardware contexts running on device" and a real snapshot has
+`/devices/npu/contexts = []`. So even with the feature code present, validating the
+Process column / ordering / non-null `process_name` would require a live NPU
+workload running concurrently.
+
+### Step 3 — partial (existing v0.2/v0.3 surface on real silicon)
+Genuine on-hardware results for features that DO exist:
+- `snapshot` captured a real NPU BDF (`0000:c6:00.1`), accel device present, both
+  degraded flags false — but `contexts: []` and `degraded.overall=false` only
+  because the box is idle (no workload was running during this capture).
+Remaining HANDOFF on-hardware items (TUI sparklines, `--json` live values, record
+during a workload, assert/compare/baseline, themes in a real terminal) still
+pending — they want a live LLM workload and are next.
+
+Claims precision: I confirmed the test suite and that the NPU stack is live and
+non-degraded. I did **not** validate process-name attribution or activity ordering
+because that code does not exist in the tree, and I did not capture live context
+activity because no workload was running.
+
 Extracted `xdna-top` from the private development tree as a standalone project.
 
 ### 1. Scrub Checks
