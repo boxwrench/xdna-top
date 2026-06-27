@@ -3,7 +3,7 @@ from __future__ import annotations
 from prometheus_client import CollectorRegistry, generate_latest
 from prometheus_client.core import GaugeMetricFamily
 
-from xdna_top.exporter import _build_metrics
+from xdna_top.exporter import XdnaCollector, _build_metrics
 from xdna_top.gauge import GaugeReading, GpuState
 
 
@@ -75,3 +75,26 @@ def test_power_state_absent_emits_no_clock():
     )
     out = _render(*_build_metrics(reading, [], {"available": False}))
     assert "xdna_npu_clock_mhz" not in out
+
+
+def test_collector_renders_from_read_fn():
+    reading = GaugeReading(
+        gpu_busy_pct=7, gpu_power_w=13.0, npu_active=False, state=GpuState.IDLE
+    )
+    reg = CollectorRegistry()
+    reg.register(XdnaCollector(lambda: (reading, [], None)))
+    out = generate_latest(reg).decode()
+    assert "xdna_up 1.0" in out
+    assert "xdna_igpu_busy_percent 7.0" in out
+
+
+def test_collector_reports_down_on_read_failure():
+    def boom():
+        raise RuntimeError("xrt exploded")
+
+    reg = CollectorRegistry()
+    reg.register(XdnaCollector(boom))
+    out = generate_latest(reg).decode()
+    assert "xdna_up 0.0" in out
+    # No other families when the read failed.
+    assert "xdna_igpu_busy_percent" not in out

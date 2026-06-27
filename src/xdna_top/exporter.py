@@ -7,7 +7,7 @@ the history, so there is no background sampling loop here.
 
 from __future__ import annotations
 
-from typing import Iterator
+from typing import Callable, Iterator
 
 from prometheus_client.core import CounterMetricFamily, GaugeMetricFamily, Metric
 
@@ -84,3 +84,29 @@ def _build_metrics(
         if active.get("hclk_mhz") is not None:
             clk.add_metric(["hclk"], float(active["hclk_mhz"]))
         yield clk
+
+
+class XdnaCollector:
+    """A prometheus_client collector that reads hardware at scrape time.
+
+    ``read_fn`` returns ``(GaugeReading, contexts, power_state)`` or raises. The
+    collector never propagates an exception: a failed read yields ``xdna_up 0``
+    and nothing else, so a broken probe is observable rather than a 500.
+    """
+
+    def __init__(
+        self,
+        read_fn: Callable[[], tuple[GaugeReading, list[dict], dict | None]],
+    ) -> None:
+        self._read_fn = read_fn
+
+    def collect(self) -> Iterator[Metric]:
+        try:
+            reading, contexts, power_state = self._read_fn()
+        except Exception:
+            yield GaugeMetricFamily(
+                "xdna_up", "1 if the last hardware scrape succeeded, else 0",
+                value=0.0,
+            )
+            return
+        yield from _build_metrics(reading, contexts, power_state)
