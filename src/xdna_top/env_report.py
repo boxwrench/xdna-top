@@ -84,6 +84,7 @@ def render_markdown(snapshot: dict[str, Any]) -> str:
         f"- NPU name: {_value(npu.get('name'))}",
         f"- NPU context count: {_value(_get(npu, 'report_shape', 'context_count'))}",
         f"- NPU sensor support: {_bool(_get(npu, 'driver', 'supports_sensors'))}",
+        f"- NPU power state: {_npu_power_state(npu.get('power_state'))}",
         f"- iGPU busy path: {_path_status(igpu.get('busy_path'), igpu.get('busy_path_exists'))}",
         f"- iGPU power path: {_path_status(igpu.get('power_path'), igpu.get('power_path_exists'))}",
         "",
@@ -329,6 +330,25 @@ def _metric(value: Any, unit: str) -> str:
     if value is None:
         return "unavailable"
     return f"{value} {unit}"
+
+
+def _npu_power_state(power_state: Any) -> str:
+    """Render the debugfs NPU power state: active DPM clock state (npuclk/hclk MHz), never a busy %."""
+    if not isinstance(power_state, dict) or not power_state.get("available"):
+        reason = power_state.get("reason") if isinstance(power_state, dict) else None
+        return f"unavailable ({reason})" if reason else "unavailable"
+    parts = []
+    ps = power_state.get("powerstate")
+    if ps:
+        parts.append(str(ps))
+    dpm = power_state.get("dpm")
+    active = dpm.get("active") if isinstance(dpm, dict) else None
+    if isinstance(active, dict):
+        parts.append(
+            f"active DPM L{active.get('index')} "
+            f"(npuclk {active.get('npuclk_mhz')} MHz / hclk {active.get('hclk_mhz')} MHz)"
+        )
+    return ", ".join(parts) if parts else "available"
 
 
 def _path_status(path: Any, exists: Any) -> str:
