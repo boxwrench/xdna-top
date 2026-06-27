@@ -8,6 +8,7 @@ did not actually detect. When either signal is absent the functions return
 
 from __future__ import annotations
 
+import re
 from typing import Any, Iterable
 
 try:
@@ -21,9 +22,14 @@ except ImportError:  # pragma: no cover - non-Unix; xrt-smi is Linux-only anyway
 # so an unrelated mmap failure does not get mislabelled as a memlock problem.
 _MMAP_SIGNATURES = ("resource temporarily unavailable", "err=-11", "errno=11")
 
-# The NPU firmware region was observed mmap'd at 64 MiB; a soft limit below that
-# cannot satisfy a MAP_LOCKED request. Default desktop RLIMIT_MEMLOCK is 8 MiB.
-_MEMLOCK_FLOOR_BYTES = 64 * 1024 * 1024
+# Fallback only: used when the failing mmap message carries no parseable
+# ``len=``. The NPU firmware region was observed mmap'd at 64 MiB and the
+# default desktop RLIMIT_MEMLOCK is 8 MiB, but we prefer the exact size the
+# kernel/xrt-smi actually reported.
+_MEMLOCK_FALLBACK_BYTES = 64 * 1024 * 1024
+
+# xrt-smi's mmap error carries the requested length, e.g. ``len=67108864``.
+_MMAP_LEN_RE = re.compile(r"\blen=(\d+)")
 
 
 def _looks_like_memlock_mmap(message: str) -> bool:
@@ -32,6 +38,18 @@ def _looks_like_memlock_mmap(message: str) -> bool:
     if "mmap" not in text:
         return False
     return any(sig in text for sig in _MMAP_SIGNATURES)
+
+
+def _mmap_len_bytes(message: str) -> int | None:
+    """Requested mmap length in bytes parsed from ``len=...``, or ``None``."""
+    match = _MMAP_LEN_RE.search(message)
+    if not match:
+        return None
+    try:
+        value = int(match.group(1))
+    except ValueError:
+        return None
+    return value if value > 0 else None
 
 
 def memlock_soft_limit() -> int | None:
@@ -55,11 +73,12 @@ def diagnose_memlock(errors: Iterable[dict[str, Any]]) -> str | None:
     "NPU absent". An unlimited or sufficiently large limit yields ``None`` even
     when the signature matches (the failure was something else).
     """
-    has_signature = any(
-        isinstance(e, dict) and _looks_like_memlock_mmap(str(e.get("message") or ""))
+    matched = [
+        str(e.get("message") or "")
         for e in errors
-    )
-    if not has_signature:
+        if isinstance(e, dict) and _looks_like_memlock_mmap(str(e.get("message") or ""))
+    ]
+    if not matched:
         return None
 
     soft = memlock_soft_limit()
@@ -67,14 +86,24 @@ def diagnose_memlock(errors: Iterable[dict[str, Any]]) -> str | None:
         return None
     if resource is not None and soft == resource.RLIM_INFINITY:
         return None
-    if soft >= _MEMLOCK_FLOOR_BYTES:
+
+    # Compare against the LARGEST size any failing mmap requested, not a fixed
+    # assumption and not just the first match; fall back to the observed 64 MiB
+    # only when no matching error carries a parseable ``len=``.
+    parsed = [n for n in (_mmap_len_bytes(m) for m in matched) if n is not None]
+    required = max(parsed) if parsed else _MEMLOCK_FALLBACK_BYTES
+    if soft >= required:
         return None
 
     soft_mib = soft / (1024 * 1024)
+    required_mib = required / (1024 * 1024)
+    required_kib = (required + 1023) // 1024
     return (
         f"xrt-smi mmap failed and RLIMIT_MEMLOCK is low ({soft_mib:.0f} MiB soft "
-        f"limit); the NPU firmware region is mapped MAP_LOCKED and needs a larger "
-        f"locked-memory allowance. The NPU may be present despite this failure. "
-        f"Raise the limit (e.g. /etc/security/limits.d: '@render - memlock "
-        f"unlimited') or run with elevated privileges, then re-probe."
+        f"limit vs {required_mib:.0f} MiB requested); the NPU firmware region is "
+        f"mapped MAP_LOCKED and needs at least that much locked memory. The NPU "
+        f"may be present despite this failure. Raise your user's limit to at "
+        f"least {required_kib} KB (e.g. /etc/security/limits.d/xdna.conf: "
+        f"'<your-user> - memlock {required_kib}'), or run with elevated "
+        f"privileges, then re-probe."
     )
