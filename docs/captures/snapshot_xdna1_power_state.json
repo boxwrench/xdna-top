@@ -1,0 +1,132 @@
+{
+  "backends": {
+    "igpu": {
+      "primary": "sysfs",
+      "signals": {
+        "busy_pct": "sysfs",
+        "power_w": "sysfs"
+      }
+    },
+    "npu": {
+      "fallbacks_used": [],
+      "primary": "xrt_smi",
+      "signals": {
+        "contexts": "xrt_smi",
+        "device": "xrt_smi",
+        "power_state": "debugfs",
+        "sensors": null
+      }
+    }
+  },
+  "captured_at": "2026-06-27T12:47:13.501578Z",
+  "commands": {
+    "xrt_smi": {
+      "aie_partitions_returncode": 0,
+      "available": true,
+      "examine_returncode": 0,
+      "path": "/opt/xilinx/xrt/bin/xrt-smi",
+      "version_output": "Version : 2.25.0 Branch : HEAD Hash : 943586a79b5a714463cb13d3ba7e178b8532c817 Hash Date : Tue, 9 Jun 2026 19:31:23 -0700 amdxdna Version : 0.1 virtio-pci Version : 6.17.0-6-generic NPU Firmware Version : 1.5.5.391"
+    }
+  },
+  "degraded": {
+    "igpu": {
+      "degraded": false,
+      "reasons": []
+    },
+    "npu": {
+      "degraded": false,
+      "reasons": []
+    },
+    "overall": false
+  },
+  "devices": {
+    "accel": {
+      "entries": [
+        {
+          "exists": true,
+          "path": "/dev/accel/accel0"
+        }
+      ]
+    },
+    "igpu": {
+      "busy_path": "/sys/class/drm/card2/device/gpu_busy_percent",
+      "busy_path_exists": true,
+      "power_path": "/sys/class/hwmon/hwmon9/power1_input",
+      "power_path_exists": true
+    },
+    "npu": {
+      "bdf": "0000:06:00.1",
+      "contexts": [],
+      "detected": true,
+      "driver": {
+        "drm_version": null,
+        "supports_sensors": false
+      },
+      "name": "NPU Phoenix",
+      "power_state": {
+        "available": true,
+        "dpm": {
+          "active": {
+            "hclk_mhz": 1600,
+            "index": 7,
+            "npuclk_mhz": 847
+          },
+          "levels": 8,
+          "max": {
+            "hclk_mhz": 1600,
+            "index": 7,
+            "npuclk_mhz": 847
+          }
+        },
+        "powerstate": "SMU power ON",
+        "reason": null,
+        "source": "debugfs"
+      },
+      "report_shape": {
+        "context_count": 0,
+        "has_aie_partitions": true,
+        "has_hw_contexts": false
+      },
+      "sensors": {
+        "column_utilization_pct": {
+          "source": null,
+          "value": null
+        },
+        "power_w": {
+          "source": null,
+          "value": null
+        }
+      }
+    }
+  },
+  "errors": [],
+  "host": {
+    "hostname": "scott-Victus-by-HP-Gaming-Laptop-15-fb2xxx",
+    "kernel": {
+      "release": "6.17.0-6-generic",
+      "version": "#6-Ubuntu SMP PREEMPT_DYNAMIC Tue Oct  7 13:34:17 UTC 2025"
+    },
+    "os": {
+      "id": "ubuntu",
+      "pretty_name": "Ubuntu 25.10",
+      "version_id": "25.10"
+    },
+    "python": {
+      "version": "3.13.7"
+    },
+    "xdna_top": {
+      "version": "0.2.0"
+    }
+  },
+  "kind": "xdna-top.snapshot",
+  "schema_version": "1.0",
+  "telemetry": {
+    "gpu_busy_pct": 0,
+    "gpu_power_w": 11.09,
+    "igpu_degraded": false,
+    "npu_active": false,
+    "npu_degraded": false,
+    "state": "IDLE",
+    "ts": 1782564433.501271
+  }
+}

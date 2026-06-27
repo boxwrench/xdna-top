@@ -115,17 +115,23 @@ The preferred NPU backend is direct AMDXDNA DRM IOCTL probing through
 `/dev/accel/*`. `xrt-smi` remains useful for compatibility and for per-context
 PID/submission/completion data until equivalent direct attribution is available.
 
-`power_state` is the first direct-AMDXDNA signal: the NPU's active DPM
+`power_state` is an optional, additive signal — XRT submission-counter deltas remain xdna-top's primary NPU activity signal — exposing the NPU's active DPM
 (Dynamic Power Management) clock state — `npuclk_mhz` and `hclk_mhz`, both clock
 frequencies (the driver prints `dpm_clk_freq.npuclk, .hclk`; neither is a
 voltage) — read from `/sys/kernel/debug/accel/<bdf>/{dpm_level,powerstate}`. It is an **additive,
 optional** field (no `schema_version` bump): present only with a driver that
 exports those debugfs nodes (the staging `amdxdna.ko`; the mainline/DKMS driver
 does not — see amd/xdna-driver#1447) and only when readable (debugfs is usually
-root-only). When unavailable, `devices.npu.power_state.available` is `false`
-with a `reason`, and `backends.npu.signals.power_state` is `null`. The value is
+root-only). When unavailable, `devices.npu.power_state.available` is `false` with a
+`reason` (`debugfs_accel_absent`, `debugfs_nodes_unreadable`, or
+`debugfs_nodes_unparsable`), and `backends.npu.signals.power_state` is `null`. The value is
 the active **clock-frequency power state**, never a utilization percentage.
 Consumers should treat unknown keys as forward-compatible and ignore them.
+
+A real capture from XDNA1 (`RyzenAI-npu1`, staging `amdxdna.ko`) is committed at
+[`captures/snapshot_xdna1_power_state.json`](captures/snapshot_xdna1_power_state.json):
+`power_state.available: true`, active DPM `npuclk 847 / hclk 1600 MHz`,
+`powerstate: SMU power ON`, with `backends.npu.signals.power_state: debugfs`.
 
 ### `devices`
 

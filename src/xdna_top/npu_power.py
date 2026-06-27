@@ -1,9 +1,12 @@
 """Read the NPU's active power/clock state from the amdxdna debugfs nodes.
 
-This is the first *direct AMDXDNA* signal in xdna-top (roadmap v0.3): the NPU's
-active DPM (Dynamic Power Management) state — operating clocks (npuclk + hclk) — read
-straight from ``/sys/kernel/debug/accel/<bdf>/``, with no XRT and no ioctl
-version coupling.
+This is an *optional, additive* signal, not a replacement backend. XRT
+submission-counter deltas remain xdna-top's primary NPU activity signal; the
+debugfs power state is a separate, best-effort read of the NPU's active DPM
+(Dynamic Power Management) clocks (npuclk + hclk) from
+``/sys/kernel/debug/accel/<bdf>/``. It can corroborate a live NPU, and still
+confirm one when ``xrt-smi examine`` fails (e.g. the RLIMIT_MEMLOCK
+false-negative), but it never supersedes the submission-counter signal.
 
 Availability is narrow and honestly reported:
 
@@ -34,7 +37,8 @@ _DPM_TOKEN = re.compile(r"(?P<lb>\[?)\s*(?P<npuclk>\d+)\s*,\s*(?P<hclk>\d+)\s*(?
 
 
 def _debugfs_dir(bdf: str | None) -> Path | None:
-    """Resolve the per-device debugfs dir for ``bdf`` (or the first accel device).
+    """Resolve the per-device debugfs dir for ``bdf`` (or the first accel device
+    when ``bdf`` is ``None``).
 
     Fully defensive: every filesystem touch is guarded, so a root-only debugfs
     (the usual unprivileged case — ``/sys/kernel/debug`` is mode 700, and
@@ -44,10 +48,11 @@ def _debugfs_dir(bdf: str | None) -> Path | None:
     """
     try:
         if bdf:
+            # A specific device was requested: only its own dir is valid. Never
+            # fall back to a different accel device, which would report another
+            # NPU's power state under the requested BDF.
             d = DEBUGFS_ACCEL / bdf
-            if d.is_dir():
-                return d
-            # fall through: bdf may be formatted differently than the dir name
+            return d if d.is_dir() else None
         subdirs = sorted(p for p in DEBUGFS_ACCEL.iterdir() if p.is_dir())
         return subdirs[0] if subdirs else None
     except OSError:
@@ -118,9 +123,15 @@ def read_npu_power(bdf: str | None = None) -> dict[str, Any]:
         result["reason"] = "debugfs_nodes_unreadable"
         return result
 
+    dpm = parse_dpm_level(dpm_raw) if dpm_raw is not None else None
+    # A present-but-unparsable node is not usable data: require at least one of a
+    # parsed DPM state or a non-empty powerstate before reporting available.
+    if dpm is None and not powerstate:
+        result["reason"] = "debugfs_nodes_unparsable"
+        return result
+
     result["available"] = True
     result["source"] = "debugfs"
     result["powerstate"] = powerstate
-    if dpm_raw is not None:
-        result["dpm"] = parse_dpm_level(dpm_raw)
+    result["dpm"] = dpm
     return result

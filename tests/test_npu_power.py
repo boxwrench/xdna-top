@@ -58,7 +58,7 @@ def test_read_parses_nodes_when_present(monkeypatch, tmp_path):
     assert out["dpm"]["active"]["npuclk_mhz"] == 847
 
 
-def test_read_falls_back_to_first_device_dir(monkeypatch, tmp_path):
+def test_read_uses_first_device_when_bdf_none(monkeypatch, tmp_path):
     accel = tmp_path / "accel"
     dev = accel / "0000:06:00.1"
     dev.mkdir(parents=True)
@@ -80,3 +80,48 @@ def test_read_unreadable_nodes_reports_reason(monkeypatch, tmp_path):
     out = npu_power.read_npu_power("0000:06:00.1")
     assert out["available"] is False
     assert out["reason"] == "debugfs_nodes_unreadable"
+
+
+def test_read_does_not_cross_to_other_device(monkeypatch, tmp_path):
+    # debugfs has device 06:00.1, but a different BDF is requested: must report
+    # unavailable rather than read and mislabel the other device's power state.
+    accel = tmp_path / "accel"
+    dev = accel / "0000:06:00.1"
+    dev.mkdir(parents=True)
+    (dev / "powerstate").write_text("SMU power ON", encoding="utf-8")
+    monkeypatch.setattr(npu_power, "DEBUGFS_ACCEL", accel)
+
+    out = npu_power.read_npu_power("0000:99:00.0")
+    assert out["available"] is False
+    assert out["reason"] == "debugfs_accel_absent"
+    assert out["powerstate"] is None
+
+
+def test_read_unparsable_dpm_is_unavailable(monkeypatch, tmp_path):
+    # node present but unparsable and no powerstate -> no usable data -> unavailable
+    accel = tmp_path / "accel"
+    dev = accel / "0000:06:00.1"
+    dev.mkdir(parents=True)
+    (dev / "dpm_level").write_text("garbage with no clock tokens", encoding="utf-8")
+    monkeypatch.setattr(npu_power, "DEBUGFS_ACCEL", accel)
+
+    out = npu_power.read_npu_power("0000:06:00.1")
+    assert out["available"] is False
+    assert out["reason"] == "debugfs_nodes_unparsable"
+
+
+
+def test_read_available_with_powerstate_when_dpm_unparsable(monkeypatch, tmp_path):
+    # dpm_level present but unparsable, powerstate valid -> still available
+    # (partial data), with dpm reported as None rather than a bogus parse.
+    accel = tmp_path / "accel"
+    dev = accel / "0000:06:00.1"
+    dev.mkdir(parents=True)
+    (dev / "dpm_level").write_text("garbage with no tokens", encoding="utf-8")
+    (dev / "powerstate").write_text("SMU power ON", encoding="utf-8")
+    monkeypatch.setattr(npu_power, "DEBUGFS_ACCEL", accel)
+
+    out = npu_power.read_npu_power("0000:06:00.1")
+    assert out["available"] is True
+    assert out["dpm"] is None
+    assert out["powerstate"] == "SMU power ON"
