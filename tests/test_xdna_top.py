@@ -6,6 +6,7 @@ from unittest.mock import patch, MagicMock
 from rich.panel import Panel
 from rich.console import Console
 from xdna_top.main import (
+    DEFAULT_THEME,
     LEMONADE_THEME,
     create_header_panel,
     make_bar,
@@ -157,6 +158,33 @@ def test_lemonade_header_has_pixel_lemon():
 
     assert "lemonade-top" in output
     assert "██████████" in output
+
+
+def _render(panel):
+    console = Console()
+    with console.capture() as capture:
+        console.print(panel)
+    return capture.get()
+
+
+def test_header_shows_detected_device_label():
+    """A detected device name is appended to the header as a [label] suffix."""
+    output = _render(create_header_panel(DEFAULT_THEME, "RyzenAI-npu5"))
+    assert "RyzenAI-npu5" in output
+
+
+def test_header_omits_platform_label_when_undetected():
+    """With no detected device, the header asserts no platform at all."""
+    output = _render(create_header_panel(DEFAULT_THEME, None))
+    assert "Strix Halo" not in output
+    assert "RyzenAI" not in output
+
+
+def test_header_never_hardcodes_strix_halo():
+    """Even with a device present, the platform label is derived, not hardcoded."""
+    output = _render(create_header_panel(DEFAULT_THEME, "RyzenAI-npu1"))
+    assert "Strix Halo" not in output
+    assert "RyzenAI-npu1" in output
 
 
 @patch("xdna_top.main.HardwareGauge")

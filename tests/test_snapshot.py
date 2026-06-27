@@ -3,7 +3,39 @@
 import json
 from unittest.mock import MagicMock, patch
 
-from xdna_top.snapshot import build_snapshot, write_snapshot
+from xdna_top.snapshot import build_snapshot, detect_npu_device, write_snapshot
+
+
+@patch("xdna_top.snapshot.shutil.which", return_value=None)
+def test_detect_npu_device_absent_xrt_smi(mock_which):
+    """No xrt-smi -> no device, no exception."""
+    assert detect_npu_device() == {"bdf": None, "name": None}
+
+
+@patch("xdna_top.snapshot.shutil.which", return_value=None)
+def test_detect_npu_device_absent_xrt_keeps_bdf_override(mock_which):
+    """A --npu-device override is preserved even when xrt-smi is absent."""
+    assert detect_npu_device("0000:c6:00.1") == {"bdf": "0000:c6:00.1", "name": None}
+
+
+@patch("xdna_top.snapshot._run_command")
+@patch("xdna_top.snapshot.shutil.which", return_value="/usr/bin/xrt-smi")
+def test_detect_npu_device_parses_name(mock_which, mock_run):
+    """A successful examine yields the detected BDF and device name."""
+    mock_run.return_value = {
+        "returncode": 0,
+        "stdout": "| [0000:c6:00.1] | RyzenAI-npu5 |",
+        "stderr": "",
+    }
+    assert detect_npu_device() == {"bdf": "0000:c6:00.1", "name": "RyzenAI-npu5"}
+
+
+@patch("xdna_top.snapshot._run_command")
+@patch("xdna_top.snapshot.shutil.which", return_value="/usr/bin/xrt-smi")
+def test_detect_npu_device_examine_failure(mock_which, mock_run):
+    """A failed examine reports no device rather than raising."""
+    mock_run.return_value = {"returncode": 1, "stdout": "", "stderr": "boom"}
+    assert detect_npu_device() == {"bdf": None, "name": None}
 
 
 @patch("xdna_top.snapshot._accel_entries")
