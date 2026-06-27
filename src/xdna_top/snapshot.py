@@ -357,6 +357,28 @@ def _parse_xrt_device(output: str) -> dict[str, str | None]:
     return {"bdf": None, "name": None}
 
 
+def detect_npu_device(npu_device: str | None = None) -> dict[str, str | None]:
+    """One-shot read of NPU device identity (BDF + name) from ``xrt-smi examine``.
+
+    For callers that only need the device label (for example the live TUI header)
+    rather than a full snapshot. Returns ``{"bdf": ..., "name": ...}`` with
+    ``None`` values when ``xrt-smi`` is absent, the probe fails, or no device is
+    reported. Never raises. ``name`` is whatever ``xrt-smi`` reports (e.g.
+    ``RyzenAI-npu5``) — a detected fact, not a marketing platform label.
+    """
+    device: dict[str, str | None] = {"bdf": None, "name": None}
+    if shutil.which("xrt-smi") is None:
+        if npu_device:
+            device["bdf"] = npu_device
+        return device
+    examine = _run_command(["xrt-smi", "examine"], "xrt_smi.examine", [])
+    if examine["returncode"] == 0:
+        device = _parse_xrt_device(examine["stdout"])
+    if npu_device and device["bdf"] is None:
+        device["bdf"] = npu_device
+    return device
+
+
 def _compact_output(output: str | None) -> str | None:
     if not output:
         return None

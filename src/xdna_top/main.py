@@ -16,6 +16,7 @@ from rich.live import Live
 from rich.table import Table
 from rich.text import Text
 from rich.align import Align
+from rich.markup import escape
 
 from xdna_top.assertions import CHECKS, assert_main
 from xdna_top.baseline import baseline_main
@@ -29,7 +30,7 @@ from xdna_top.gauge import (
     sort_contexts_by_activity,
 )
 from xdna_top.record import mark_main, record_main
-from xdna_top.snapshot import snapshot_main
+from xdna_top.snapshot import detect_npu_device, snapshot_main
 
 
 @dataclass(frozen=True)
@@ -57,7 +58,7 @@ class TuiTheme:
 
 DEFAULT_THEME = TuiTheme(
     app_name="xdna-top",
-    header="[bold white]xdna-top[/bold white] - Unified NPU+iGPU Monitor [Strix Halo]",
+    header="[bold white]xdna-top[/bold white] - Unified NPU+iGPU Monitor",
     footer="Press [bold red]q[/bold red] or [bold red]Ctrl-C[/bold red] to quit. Telemetry refresh rate: 5 Hz.",
     stopped_message="[green]xdna-top stopped cleanly.[/green]",
     header_border="white",
@@ -78,7 +79,7 @@ DEFAULT_THEME = TuiTheme(
 
 LEMONADE_THEME = TuiTheme(
     app_name="lemonade-top",
-    header="[bold yellow]lemonade-top[/bold yellow] - Fresh NPU+iGPU Stand [Strix Halo]",
+    header="[bold yellow]lemonade-top[/bold yellow] - Fresh NPU+iGPU Stand",
     footer="Press [bold green]q[/bold green] or [bold green]Ctrl-C[/bold green] to close the stand. Fresh squeeze: 5 Hz.",
     stopped_message="[yellow]lemonade-top stand closed cleanly.[/yellow]",
     header_border="yellow",
@@ -109,7 +110,7 @@ LEMONADE_THEME = TuiTheme(
 # units, or values, so a screenshot in any theme stays claims-accurate.
 PAPER_THEME = replace(
     DEFAULT_THEME,
-    header="[bold]xdna-top[/bold] - Unified NPU+iGPU Monitor [Strix Halo]",
+    header="[bold]xdna-top[/bold] - Unified NPU+iGPU Monitor",
     footer="Press [bold]q[/bold] or [bold]Ctrl-C[/bold] to quit. Telemetry refresh rate: 5 Hz.",
     stopped_message="[bold]xdna-top stopped cleanly.[/bold]",
     header_border="blue",
@@ -129,7 +130,7 @@ PAPER_THEME = replace(
 
 PHOSPHOR_THEME = replace(
     DEFAULT_THEME,
-    header="[bold green]xdna-top[/bold green] - Unified NPU+iGPU Monitor [Strix Halo]",
+    header="[bold green]xdna-top[/bold green] - Unified NPU+iGPU Monitor",
     footer="Press [bold green]q[/bold green] or [bold green]Ctrl-C[/bold green] to quit. Telemetry refresh rate: 5 Hz.",
     stopped_message="[green]xdna-top stopped cleanly.[/green]",
     header_border="green",
@@ -149,7 +150,7 @@ PHOSPHOR_THEME = replace(
 
 AMBER_THEME = replace(
     DEFAULT_THEME,
-    header="[bold orange3]xdna-top[/bold orange3] - Unified NPU+iGPU Monitor [Strix Halo]",
+    header="[bold orange3]xdna-top[/bold orange3] - Unified NPU+iGPU Monitor",
     footer="Press [bold orange3]q[/bold orange3] or [bold orange3]Ctrl-C[/bold orange3] to quit. Telemetry refresh rate: 5 Hz.",
     stopped_message="[orange3]xdna-top stopped cleanly.[/orange3]",
     header_border="orange3",
@@ -169,7 +170,7 @@ AMBER_THEME = replace(
 
 HALO_THEME = replace(
     DEFAULT_THEME,
-    header="[bold grey78]xdna-top[/bold grey78] - Unified NPU+iGPU Monitor [Strix Halo]",
+    header="[bold grey78]xdna-top[/bold grey78] - Unified NPU+iGPU Monitor",
     footer="Press [bold steel_blue1]q[/bold steel_blue1] or [bold steel_blue1]Ctrl-C[/bold steel_blue1] to quit. Telemetry refresh rate: 5 Hz.",
     stopped_message="[grey78]xdna-top stopped cleanly.[/grey78]",
     header_border="deep_sky_blue4",
@@ -363,14 +364,26 @@ def create_npu_panel(
     return Panel(Group(text, Align.left(table)), title=theme.npu_title, border_style=theme.npu_border)
 
 
-def create_header_panel(theme: TuiTheme = DEFAULT_THEME) -> Panel:
-    """Constructs the themed header Panel."""
+def create_header_panel(
+    theme: TuiTheme = DEFAULT_THEME, device_label: str | None = None
+) -> Panel:
+    """Constructs the themed header Panel.
+
+    ``device_label`` is the detected NPU device (e.g. ``RyzenAI-npu5``). When
+    provided it is appended as a ``[label]`` suffix; when ``None`` — no NPU
+    detected, or running off the target hardware — no platform label is shown, so
+    the header never asserts a platform it did not detect. The label is escaped
+    so its brackets always render literally regardless of the device name.
+    """
+    header = theme.header
+    if device_label:
+        header = f"{header} [{escape(device_label)}]"
     if not theme.header_art:
-        body = Align.center(theme.header, vertical="middle")
+        body = Align.center(header, vertical="middle")
     else:
         body = Group(
             *(Align.center(line) for line in theme.header_art),
-            Align.center(theme.header),
+            Align.center(header),
         )
     return Panel(body, border_style=theme.header_border)
 
@@ -591,8 +604,12 @@ def run_monitor(args: argparse.Namespace, theme: TuiTheme = DEFAULT_THEME) -> in
     console = Console()
     layout = build_layout(theme)
     
-    # Header
-    layout["header"].update(create_header_panel(theme))
+    # Header — label it with the NPU device actually detected (e.g.
+    # "RyzenAI-npu5"), or no platform label at all when none is found, rather
+    # than asserting a fixed platform on every machine. Detected once; device
+    # identity is stable for the session.
+    device_label = detect_npu_device(args.npu_device).get("name")
+    layout["header"].update(create_header_panel(theme, device_label))
     
     # Footer
     layout["footer"].update(Panel(
