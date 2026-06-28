@@ -1,0 +1,247 @@
+{
+  "backends": {
+    "igpu": {
+      "primary": "sysfs",
+      "signals": {
+        "busy_pct": "sysfs",
+        "power_w": "sysfs"
+      }
+    },
+    "npu": {
+      "fallbacks_used": [],
+      "primary": "xrt_smi",
+      "signals": {
+        "contexts": "xrt_smi",
+        "device": "xrt_smi",
+        "driver": "amdxdna_ioctl",
+        "power_state": null,
+        "sensors": null
+      }
+    }
+  },
+  "captured_at": "2026-06-28T14:32:06.616113Z",
+  "commands": {
+    "xrt_smi": {
+      "aie_partitions_returncode": 0,
+      "available": true,
+      "examine_returncode": 0,
+      "path": "/usr/bin/xrt-smi",
+      "version_output": "Version : 2.21.75 virtio-pci Version : 6.17.0-35-generic amdxdna Version : 6.17.0-35-generic NPU Firmware Version : 1.1.2.65"
+    }
+  },
+  "degraded": {
+    "igpu": {
+      "degraded": false,
+      "reasons": []
+    },
+    "npu": {
+      "degraded": false,
+      "reasons": []
+    },
+    "overall": false
+  },
+  "devices": {
+    "accel": {
+      "entries": [
+        {
+          "exists": true,
+          "path": "/dev/accel/accel0"
+        }
+      ]
+    },
+    "igpu": {
+      "busy_path": "/sys/class/drm/card0/device/gpu_busy_percent",
+      "busy_path_exists": true,
+      "power_path": "/sys/class/hwmon/hwmon5/power1_input",
+      "power_path_exists": true
+    },
+    "npu": {
+      "bdf": "0000:c6:00.1",
+      "contexts": [
+        {
+          "completions": 0,
+          "ctx_id": 15,
+          "pid": 1528559,
+          "process_name": "flm",
+          "source": "xrt_smi",
+          "status": "Active",
+          "submissions": 0
+        },
+        {
+          "completions": 1111718,
+          "ctx_id": 16,
+          "pid": 1528559,
+          "process_name": "flm",
+          "source": "xrt_smi",
+          "status": "Active",
+          "submissions": 1111718
+        },
+        {
+          "completions": 0,
+          "ctx_id": 17,
+          "pid": 1528559,
+          "process_name": "flm",
+          "source": "xrt_smi",
+          "status": "Active",
+          "submissions": 0
+        },
+        {
+          "completions": 0,
+          "ctx_id": 18,
+          "pid": 1528559,
+          "process_name": "flm",
+          "source": "xrt_smi",
+          "status": "Active",
+          "submissions": 0
+        },
+        {
+          "completions": 2486832,
+          "ctx_id": 19,
+          "pid": 1528559,
+          "process_name": "flm",
+          "source": "xrt_smi",
+          "status": "Active",
+          "submissions": 2486832
+        },
+        {
+          "completions": 1259074,
+          "ctx_id": 20,
+          "pid": 1528559,
+          "process_name": "flm",
+          "source": "xrt_smi",
+          "status": "Active",
+          "submissions": 1259074
+        },
+        {
+          "completions": 3209890,
+          "ctx_id": 21,
+          "pid": 1528559,
+          "process_name": "flm",
+          "source": "xrt_smi",
+          "status": "Active",
+          "submissions": 3209890
+        },
+        {
+          "completions": 2740150,
+          "ctx_id": 22,
+          "pid": 1528559,
+          "process_name": "flm",
+          "source": "xrt_smi",
+          "status": "Active",
+          "submissions": 2740150
+        },
+        {
+          "completions": 109606,
+          "ctx_id": 23,
+          "pid": 1528559,
+          "process_name": "flm",
+          "source": "xrt_smi",
+          "status": "Active",
+          "submissions": 109606
+        },
+        {
+          "completions": 438424,
+          "ctx_id": 24,
+          "pid": 1528559,
+          "process_name": "flm",
+          "source": "xrt_smi",
+          "status": "Active",
+          "submissions": 438424
+        }
+      ],
+      "detected": true,
+      "driver": {
+        "drm_version": {
+          "major": 0,
+          "minor": 6,
+          "patchlevel": 0
+        },
+        "supports_sensors": false
+      },
+      "ioctl": {
+        "aie": {
+          "col_size": 504,
+          "cols": 8,
+          "rows": 6
+        },
+        "aie_version": "1.1",
+        "available": true,
+        "clocks": {
+          "h_mhz": 1800,
+          "mp_npu_mhz": 1267
+        },
+        "driver": {
+          "description": "AMD XDNA DRM implementation",
+          "major": 0,
+          "minor": 6,
+          "name": "amdxdna_accel_driver",
+          "patchlevel": 0,
+          "version": "0.6.0"
+        },
+        "firmware_version": "1.1.2.65",
+        "node": "/dev/accel/accel0",
+        "reason": null,
+        "sensors": {
+          "available": false,
+          "items": [],
+          "reason": "ioctl_errno_95"
+        },
+        "source": "amdxdna_ioctl",
+        "supports_sensors": false
+      },
+      "name": "RyzenAI-npu5",
+      "power_state": {
+        "available": false,
+        "dpm": null,
+        "powerstate": null,
+        "reason": "debugfs_accel_absent",
+        "source": null
+      },
+      "report_shape": {
+        "context_count": 10,
+        "has_aie_partitions": true,
+        "has_hw_contexts": true
+      },
+      "sensors": {
+        "column_utilization_pct": {
+          "source": null,
+          "value": null
+        },
+        "power_w": {
+          "source": null,
+          "value": null
+        }
+      }
+    }
+  },
+  "errors": [],
+  "host": {
+    "hostname": "ryzen-ai-host",
+    "kernel": {
+      "release": "6.17.0-35-generic",
+      "version": "#35~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Tue May 26 19:30:42 UTC 2"
+    },
+    "os": {
+      "id": "linuxmint",
+      "pretty_name": "Linux Mint 22.3",
+      "version_id": "22.3"
+    },
+    "python": {
+      "version": "3.11.15"
+    },
+    "xdna_top": {
+      "version": "0.3.0"
+    }
+  },
+  "kind": "xdna-top.snapshot",
+  "schema_version": "1.0",
+  "telemetry": {
+    "gpu_busy_pct": 100,
+    "gpu_power_w": 42.099,
+    "igpu_degraded": false,
+    "npu_active": false,
+    "npu_degraded": false,
+    "state": "PREFILL_BURST",
+    "ts": 1782657126.6154919
+  }
+}

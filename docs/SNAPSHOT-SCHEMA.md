@@ -149,7 +149,10 @@ unreadable node, a non-amdxdna device, or an unsupported `GET_INFO` query yields
 `backends.npu.signals.driver` is `"amdxdna_ioctl"` (and `signals.sensors` when
 sensor data is present). Validated read-only on real silicon (amdxdna `0.6.0`,
 AIE `1.1`, MP-NPU `1267` / H `1800` MHz, firmware `1.1.2.65`); `xrt-smi` remains
-the per-context PID/submission attribution path.
+the per-context PID/submission attribution path. A real capture is committed at
+[`captures/snapshot_npu5_ioctl.json`](captures/snapshot_npu5_ioctl.json) —
+`RyzenAI-npu5` with the full `ioctl` block populated and ten live FastFlowLM
+hardware contexts attributed by PID.
 
 ### `devices`
 
