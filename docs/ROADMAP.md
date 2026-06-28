@@ -156,6 +156,10 @@ For session-to-session pickup, use [HANDOFF.md](HANDOFF.md).
 This should be the public roadmap. It is concrete enough to guide development,
 but it still leaves implementation details open until each feature is designed.
 
+**Current status (2026-06-28): `v0.4.0` released.** v0.1.x–v0.4 are delivered;
+**v0.5 (Community and Reports) is the active milestone.** Per-release notes live
+in [../CHANGELOG.md](../CHANGELOG.md).
+
 ### v0.1.x: Positioning and Schema
 
 No major behavior change. This line is for getting the project framed correctly
@@ -194,9 +198,13 @@ Release when:
 - `assert` names each check and prints observed values
 - missing NPU/iGPU/XRT/sysfs signals degrade gracefully
 
-### v0.3: Direct Backend and Upgrade Canary
+### v0.3: Direct Backend and Upgrade Canary — ✅ delivered
 
-Build comparison workflows on top of the snapshot schema:
+The compare/baseline upgrade-canary workflow shipped in `v0.2.0`; the first
+read-only direct AMDXDNA backend (debugfs power state + DRM-IOCTL identity/AIE/
+clocks/firmware) landed in `v0.4.0`. All release criteria below are met.
+
+Comparison workflows on top of the snapshot schema:
 
 - read-only `amdxdna_ioctl` backend for device probing and supported sensors
   - **landed**: the NPU's active DPM clock state (npuclk/hclk MHz) + SMU
@@ -220,9 +228,13 @@ Release when:
   noise
 - direct AMDXDNA probes are optional and never break zero-root operation
 
-### v0.4: Supervised Workload Checks
+### v0.4: Supervised Workload Checks — ✅ delivered (v0.4.0)
 
-Build workload supervision after the lower-level evidence commands are stable:
+`xdna-top workload-check` shipped in `v0.4.0`, validated on real silicon with
+both a negative (iGPU/CPU endpoint, no NPU movement) and a positive (NPU-backed
+FastFlowLM endpoint, per-context deltas) capture. Release criteria met.
+
+Workload supervision over the lower-level evidence commands:
 
 - `xdna-top workload-check` — **landed**: probes an OpenAI-compatible endpoint
   (models GET + chat POST via stdlib `urllib`, no new dependency), brackets the
@@ -246,10 +258,11 @@ Release when:
 - concurrent workload ambiguity is documented in the output and docs
 - the JSON output is useful for automated evidence review
 
-### v0.5: Community and Reports
+### v0.5: Community and Reports — ◀ active
 
-This is the right place for lower-risk community features once the evidence core
-exists.
+This is the right place for lower-risk community features now the evidence core
+exists. The theme registry and Prometheus `exporter` already shipped; the
+remaining work is richer HTML reports and more Ryzen AI captures.
 
 - theme registry behind `--theme <name>`
 - optional `XDNA_TOP_THEME`

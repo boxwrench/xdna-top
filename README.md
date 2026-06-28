@@ -198,8 +198,8 @@ no application specifics. Start at [docs/npu/](docs/npu/index.md).
 - [x] v0.2 evidence core: `snapshot`, `env-report`, `record`, `mark`, `assert`,
       `compare`, `baseline`, and `assert --between` windowed activity guard
 - [x] Prometheus `exporter` for scraping NPU+iGPU telemetry into Prometheus/Grafana
-- [ ] v0.3 read-only direct AMDXDNA backend probes — first signal landed: NPU
-      power/clock state (active DPM npuclk/hclk) read from `amdxdna` debugfs
+- [x] v0.3 read-only direct AMDXDNA backend: debugfs power/clock state + DRM-IOCTL
+      driver/AIE/clocks/firmware identity (validated on real silicon)
 - [x] v0.4 supervised `workload-check`: endpoint probe + per-context NPU
       submission/completion deltas across the request window
 - [ ] v0.5 community/reporting work: theme registry (done), HTML reports, and
