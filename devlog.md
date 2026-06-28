@@ -20,8 +20,26 @@ claim the counters can't support).
 Tests cover the three required cases — endpoint failure, success with no NPU
 activity, success with observed counter deltas — plus the pure delta logic, the
 models-probe path, and file output (HTTP and context reads mocked). Suite on this
-branch: **183 passed**. Not yet exercised against a live local LLM server; that
-on-hardware run is the natural follow-up.
+branch: **183 passed**.
+
+### Live on-hardware run (real NPU box)
+
+Exercised end-to-end against a running ollama endpoint (OpenAI-compatible, on
+`:11434`) on a box with a live `xrt-smi` / amdxdna NPU. Measured result:
+
+- `endpoint.models.ok = true` (4 models), `endpoint.chat`: HTTP 200,
+  `id=chatcmpl-554`, `usage.total_tokens=21`, `finish_reason=length`.
+- `npu.contexts_present_before/after = 10/10` — the NPU was **not** idle; a
+  concurrent FastFlowLM (`flm`) runtime was holding 10 hardware contexts.
+- `npu.active_contexts = []`, `max_submission_delta = 0` → measured line:
+  "No NPU context counter movement observed during the request window."
+
+This is exactly the behaviour the design is for: ollama serves the request from
+the iGPU/CPU, not the NPU, so even with 10 live NPU contexts present and a
+concurrent `flm` runtime, `workload-check` reported **no** NPU counter movement
+attributable to the window — it never claimed the request touched the NPU.
+Claims precision held on real silicon. (A positive-delta capture — pointing the
+check at an NPU-backed endpoint mid-generation — is the remaining nice-to-have.)
 
 ## 2026-06-14 — On-hardware session: test suite green, but two handoff features are absent
 
