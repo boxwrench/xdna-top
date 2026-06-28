@@ -40,9 +40,10 @@ general AMDGPU monitor.
 
 Substantially validated on real silicon on **2026-06-28** (Strix Halo
 `RyzenAI-npu5`, kernel 6.17.0-35, amdxdna driver, with a live FastFlowLM (`flm`)
-workload holding 10 NPU contexts) — see the devlog entry of that date. The only
-remaining gaps are interactive-TUI rendering and a *positive* activity capture
-(the workload was idle during the recorded window).
+workload holding 10 NPU contexts) — see the devlog entry of that date. Both the
+idle and **active** paths were exercised by driving the FastFlowLM NPU endpoint
+(`flm serve … --port 13306`). The only remaining gap is interactive-TUI
+rendering.
 
 - [x] `python3 -m pytest -q` passes on the target box.
 - [ ] `xdna-top` TUI live sparklines + populated context table — not rendered
@@ -54,14 +55,15 @@ remaining gaps are interactive-TUI rendering and a *positive* activity capture
       device present, and 10 contexts with PID/submission/completion data;
       `degraded.overall=false`.
 - [x] `xdna-top env-report <snapshot.json> --markdown` renders those real facts.
-- [~] `xdna-top record` captures the 10 live contexts over the window; **rising**
-      counters + `mark` interleave still uncaught (the `flm` workload was idle
-      during the recorded window — bursts are intermittent).
-- [~] `xdna-top env-report <record>` renders the contexts/window; observed
-      activity was zero for the same reason.
-- [x] `xdna-top assert` — idle record → non-zero (honest fail, `submission_delta=0`)
-      and `assert snapshot --require-npu --require-context-source` → `0`. The
-      positive `--require-npu-activity` pass during a burst is still to be caught.
+- [x] `xdna-top record` captures the live contexts and **rising** counters while
+      the NPU endpoint generates — 20/21 NPU-active samples, max submission_delta
+      326 over an 8 s window. (`mark` interleave still not separately exercised.)
+- [x] `xdna-top env-report <record>` renders the contexts/window and the non-zero
+      activity (active samples + max submission delta).
+- [x] `xdna-top assert --require-npu-activity` — **both** paths: idle record →
+      non-zero (honest fail, `submission_delta=0`); during a live generation →
+      **pass, exit 0** (`submission_delta=326, npu_active_samples=20/21`). On a
+      snapshot, `--require-npu --require-context-source` → `0`.
 - [x] `xdna-top compare` runs and reports correctly (no-change path validated,
       exit 0); real drift across an update not yet induced.
 - [x] `xdna-top baseline save known-good` then `baseline check known-good` behave

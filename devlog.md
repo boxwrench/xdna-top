@@ -28,10 +28,17 @@ This closes most of the HANDOFF on-hardware checklist. Measured, not inferred:
 - `baseline save` + `baseline check`: both exit 0, no drift.
 - `--list-themes`: all six themes present.
 
-Still uncaught: a *positive* `--require-npu-activity` pass — `flm` bursts
-intermittently (its max submission counter jumped from ~0.87M to ~3.2M between
-checks) but was idle during the recorded window. Recording while `flm` is
-mid-generation is the one remaining opportunistic item.
+**Positive activity capture (caught).** `flm` is `flm serve gemma4-it:e2b --port
+13306` — a FastFlowLM OpenAI-compatible server running the model *on the NPU*.
+Driving one generation against it (256-token request) while recording
+concurrently produced real movement: `record` over 8 s → **20/21 NPU-active
+samples**, **max context submission_delta=326**, and
+`assert --require-npu-activity` **PASSED (exit 0)**:
+`PASS require-npu-activity: observed submission_delta=326, npu_active_samples=20/21`.
+With the idle-window run above (honest exit 1) this exercises **both** sides of
+the activity guard on real silicon. (The complementary positive for
+`workload-check` against the same NPU endpoint is recorded on the
+`feature/workload-check` branch / #18.)
 
 ## 2026-06-14 — On-hardware session: test suite green, but two handoff features are absent
 
