@@ -176,6 +176,18 @@ view lives at **[boxwrench.github.io/xdna-top](https://boxwrench.github.io/xdna-
   `amdgpu_top`'s driver-facing approach while keeping `xdna-top` scoped to
   workload evidence and NPU+iGPU concurrency.
 
+## NPU Field Guide
+
+Companion reference for the silicon `xdna-top` watches — generic NPU knowledge,
+no application specifics. Start at [docs/npu/](docs/npu/index.md).
+
+| Doc | What it covers |
+|---|---|
+| [Why the NPU?](docs/npu/why-the-npu.md) | XDNA2 as a dataflow/DSP fabric; DRAM bandwidth as the contention surface; GEMM TOPS ceilings. |
+| [Software stack](docs/npu/software-stack.md) | Runtime → kernel-authoring → compiler → driver layers. |
+| [Runtime landscape](docs/npu/runtime-landscape.md) | FastFlowLM, Lemonade Server, Ryzen AI Vitis AI EP, GAIA. |
+| [Workload patterns](docs/npu/workload-patterns.md) | What a laptop NPU is good/bad at, plus design heuristics. |
+
 ## Roadmap
 
 - [x] v0.2 evidence core: `snapshot`, `env-report`, `record`, `mark`, `assert`,
