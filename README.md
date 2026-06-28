@@ -63,6 +63,12 @@ Honesty matters in a measurement tool, so here is exactly what each pane is:
   state derived from counter deltas** (a context whose submissions are
   incrementing is doing work; an in-flight gap between submissions and
   completions means work is queued *right now*).
+- **NPU power state (when available):** on driver stacks that export the
+  `amdxdna` debugfs nodes, `snapshot` and `env-report` also report the NPU's
+  active DPM clock state (npuclk / hclk in MHz) and SMU powerstate, read
+  directly from debugfs and independent of `xrt-smi`. This is a clock-state
+  power *level*, **not** a utilization percentage, and it reads `unavailable`
+  (with a reason) when the nodes aren't exported or aren't readable.
 - What it does **not** show: a made-up generic NPU "utilization %." Newer
   AMDXDNA stacks may expose direct sensor values such as column utilization,
   and `xdna-top` should label those precisely when available. For request
@@ -87,6 +93,7 @@ xdna-top assert telemetry.jsonl --require-npu-activity \
 xdna-top compare before.json after.json   # flag high-signal platform drift
 xdna-top baseline save known-good          # store a named known-good snapshot
 xdna-top baseline check known-good         # re-check the platform after updates
+xdna-top exporter --port 9477              # serve Prometheus metrics at /metrics
 xdna-top --theme phosphor   # pick a TUI theme (see --list-themes)
 lemonade-top                # same monitor, lemonade-stand theme
 ```
@@ -123,6 +130,12 @@ degraded instead of crashing.
   including `--between` to require activity within a marked request window
 - `compare` mode for spotting high-signal platform drift between two snapshots
 - `baseline` mode for saving a known-good snapshot and re-checking it after updates
+- `exporter` mode serving Prometheus metrics at `/metrics` for scraping into
+  Prometheus + Grafana — optional `[exporter]` extra; see
+  [docs/EXPORTER.md](docs/EXPORTER.md)
+- Direct-AMDXDNA **NPU power state** when the `amdxdna` debugfs nodes are
+  readable: active DPM clock state (npuclk/hclk MHz) + SMU powerstate — a clock
+  level, never a utilization %
 - Themes via `--theme`/`XDNA_TOP_THEME` (colors only — never the measured values)
 - Pessimistic fallbacks everywhere — built for imperfect driver stacks
 - Zero daemon, zero root*, zero ROCm dependency
@@ -167,7 +180,9 @@ view lives at **[boxwrench.github.io/xdna-top](https://boxwrench.github.io/xdna-
 
 - [x] v0.2 evidence core: `snapshot`, `env-report`, `record`, `mark`, `assert`,
       `compare`, `baseline`, and `assert --between` windowed activity guard
-- [ ] v0.3 read-only direct AMDXDNA backend probes
+- [x] Prometheus `exporter` for scraping NPU+iGPU telemetry into Prometheus/Grafana
+- [ ] v0.3 read-only direct AMDXDNA backend probes — first signal landed: NPU
+      power/clock state (active DPM npuclk/hclk) read from `amdxdna` debugfs
 - [ ] v0.4 supervised `workload-check` for endpoint and NPU-context evidence
 - [ ] v0.5 community/reporting work: theme registry (done), HTML reports, and
       more Ryzen AI captures

@@ -5,13 +5,27 @@ chat history. Keep it public, generic, and free of private project names.
 
 ## Current Milestone
 
-`v0.2`: evidence core — implemented.
+`v0.3.0`: released (2026-06-27).
 
-All four evidence-core commands have landed: `xdna-top snapshot`,
-`xdna-top env-report`, `xdna-top record`, and `xdna-top assert`. `v0.3` is now in
-progress: `xdna-top compare` and `xdna-top baseline` are implemented; the only
-remaining v0.3 work is the read-only direct AMDXDNA backend, which needs the
-hardware and belongs on its own branch.
+The evidence core (`snapshot`, `env-report`, `record`, `mark`, `assert`,
+`compare`, `baseline`, and `assert --between`) shipped in `v0.2.0`. Landed since,
+and reflected in `v0.3.0` / `[Unreleased]`:
+
+- **Prometheus exporter** — `xdna-top exporter` serves the fused reading at
+  `/metrics` (optional `[exporter]` extra). See [EXPORTER.md](EXPORTER.md).
+- **Per-context process names** + **most-active-first context ordering** in the
+  TUI and artifacts.
+- **First direct-AMDXDNA signal** — `devices.npu.power_state`: active DPM
+  npuclk/hclk MHz + SMU powerstate read from `amdxdna` debugfs, independent of
+  `xrt-smi` (additive, no `schema_version` bump). Full read-only IOCTL
+  device/sensor probing is still the open v0.3 backend item (its own branch).
+- **Device-aware TUI header** — the header reflects the detected NPU device
+  instead of a hardcoded `[Strix Halo]`.
+- **Repo hygiene** — `[dev]` extra (`pip install -e '.[dev]'`) and GitHub Actions
+  CI running `pytest` on push/PR across Python 3.11–3.13.
+
+Next: the v0.4 supervised `workload-check` design, and the remaining read-only
+direct AMDXDNA IOCTL backend.
 
 Continue preserving the current runtime behavior of:
 

@@ -199,6 +199,10 @@ Release when:
 Build comparison workflows on top of the snapshot schema:
 
 - read-only `amdxdna_ioctl` backend for device probing and supported sensors
+  - first direct-AMDXDNA signal has **landed**: the NPU's active DPM clock state
+    (npuclk/hclk MHz) and SMU powerstate, read from `amdxdna` debugfs and
+    surfaced as `devices.npu.power_state` (additive, no `schema_version` bump).
+    Full IOCTL device/sensor probing is still pending.
 - `xdna-top compare`
 - `xdna-top baseline`
 - sharper degraded reasons for driver, device, sensor, and XRT shape changes
@@ -243,6 +247,8 @@ exists.
 - keep `lemonade-top` as a compatibility alias
 - `THEMES.md` with screenshots and contribution rules
 - richer HTML reports for captured telemetry
+- Prometheus `exporter` (**shipped**) — serves the fused reading at `/metrics`
+  for scraping into Prometheus/Grafana; optional `[exporter]` extra
 - more captures from additional Ryzen AI machines
 
 Release when theme and report changes are data/config additions, not duplicated

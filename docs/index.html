@@ -1521,6 +1521,7 @@
               <p>On AMD Strix Halo running Linux, standard CLI monitoring utilities like <code>amd-smi</code> often fail or return <code>N/A</code>. <code>xdna-top</code> treats the kernel as the source of truth and uses the lowest-level unprivileged source that exposes each signal:</p>
               <p><strong>iGPU Telemetry:</strong> Read from the kernel's DRM sysfs class path: <code>/sys/class/drm/card1/device/gpu_busy_percent</code> for load percent, and <code>/sys/class/drm/card1/device/hwmon/hwmon*/power1_input</code> for instantaneous power in microwatts.</p>
               <p><strong>NPU Telemetry:</strong> Prefer direct AMDXDNA DRM IOCTL probes through <code>/dev/accel/*</code> for device, driver, power, and column-utilization sensors where the kernel supports them. Use <code>xrt-smi examine --report aie-partitions</code> as a compatibility and context-attribution source for PID, context ID, submissions, and completions.</p>
+              <p>The first direct signal is already live: on driver stacks that export them, <code>xdna-top</code> reads the NPU's active DPM clock state (<code>npuclk</code>/<code>hclk</code> MHz) and SMU powerstate from the <code>amdxdna</code> debugfs nodes — independent of <code>xrt-smi</code>, and reported as a clock <em>level</em>, never a utilization %.</p>
             </div>
             
             <div class="playground-box">
@@ -1957,6 +1958,38 @@
           </div>
           <div class="glossary-details">
             <strong>Why it matters:</strong> A monitoring tool's first duty is to not lie about whether it is monitoring. Degraded data stays visible and machine-readable so reviewers and assertions can treat a missing signal as a result, not an excuse to invent one.
+          </div>
+        </div>
+
+        <!-- NPU Power State (DPM) -->
+        <div class="glossary-card" data-category="telemetry" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">NPU Power State (DPM)</h3>
+            <span class="glossary-tag tag-telemetry">Telemetry</span>
+          </div>
+          <p class="glossary-def">The NPU's active Dynamic Power Management clock state — npuclk and hclk in MHz — plus the SMU powerstate, read straight from the <code>amdxdna</code> debugfs nodes, independent of <code>xrt-smi</code>.</p>
+          <div class="glossary-card-footer">
+            <span>active DPM npuclk/hclk MHz</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> It is the first <em>direct</em> AMDXDNA telemetry signal — it climbs under load and drops at idle, real evidence beyond submission-counter deltas. It is a clock-state power <em>level</em>, never a utilization %, and reads <code>unavailable</code> (with a reason) when the debugfs nodes aren't exported or aren't readable.
+          </div>
+        </div>
+
+        <!-- Prometheus Exporter -->
+        <div class="glossary-card" data-category="evidence" onclick="toggleCard(this)">
+          <div class="glossary-card-header">
+            <h3 class="glossary-term">Prometheus Exporter</h3>
+            <span class="glossary-tag tag-evidence">Evidence</span>
+          </div>
+          <p class="glossary-def">The <code>xdna-top exporter</code> subcommand serves the same fused NPU+iGPU reading as Prometheus metrics at <code>/metrics</code>, read fresh on each scrape so Prometheus owns the history.</p>
+          <div class="glossary-card-footer">
+            <span>xdna-top exporter --port 9477</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="glossary-details">
+            <strong>Why it matters:</strong> It turns point-in-time telemetry into a time series you can graph in Grafana and alert on. A failed hardware read is reported as <code>up=0</code> rather than a vanished target, and it binds to loopback by default since <code>/metrics</code> is unauthenticated.
           </div>
         </div>
       </div>

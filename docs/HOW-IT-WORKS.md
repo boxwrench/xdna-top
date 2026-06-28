@@ -145,7 +145,11 @@ the same degraded flags as the live view.
 
 - **`xdna-top snapshot`** writes one JSON object: host, devices, backends, one
   fused reading, and degraded reasons. It is the point-in-time record everything
-  else compares against.
+  else compares against. On stacks that export the `amdxdna` debugfs nodes it
+  also records the NPU's active DPM clock state (npuclk/hclk MHz) and SMU
+  powerstate, read directly from debugfs and independent of `xrt-smi` — a
+  clock-state power *level*, never a utilization %, and `unavailable` (with a
+  reason) when the nodes can't be read.
 - **`xdna-top env-report <file>`** renders a paste-ready Markdown summary from a
   captured snapshot *or* a recording. It never re-probes the machine, so the
   report stays reproducible.
@@ -163,6 +167,12 @@ the same degraded flags as the live view.
   NPU BDF, sysfs paths, degraded regressions). **`xdna-top baseline save/check`**
   wraps that into a named known-good canary you can re-check after a kernel, BIOS,
   distro, or XRT update.
+- **`xdna-top exporter`** serves the same fused reading as Prometheus metrics at
+  `/metrics`, read fresh on each scrape, so a workload's NPU+iGPU telemetry can
+  be graphed over time in Prometheus/Grafana. A failed read is reported as
+  `up=0` rather than a vanished target, and it binds to loopback by default (the
+  `/metrics` endpoint is unauthenticated). Needs the optional `[exporter]`
+  extra; see [EXPORTER.md](EXPORTER.md).
 
 The discipline throughout is *measured language*. A recording lets you say
 "observed PID 1234 context 1 submission_delta=42 during the request window" - which
