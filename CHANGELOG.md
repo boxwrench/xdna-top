@@ -20,6 +20,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   exported (mainline driver) or not readable (non-root), it reports
   `available: false` with a reason rather than raising or guessing. Additive and
   optional — no `schema_version` bump. (#13, thanks @Scottcjn)
+- **`workload-check` command** — supervised endpoint check that probes an
+  OpenAI-compatible API (models GET + chat/completions POST, via stdlib `urllib`
+  — no new dependency), brackets the request with before/after NPU context reads,
+  and reports per-context submission/completion deltas with PID attribution in
+  measured language ("Observed PID 1234 context 1 submission_delta=42 during
+  request window"). JSON output separates endpoint availability, the model
+  response summary, context presence, and the deltas. Honors claims precision: it
+  reports counter movement, never causality (the concurrent-workload caveat ships
+  in the output), and the exit code reflects only whether the endpoint responded.
+  (#8)
 
 ## [0.3.0] - 2026-06-27
 

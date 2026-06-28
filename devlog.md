@@ -40,6 +40,63 @@ the activity guard on real silicon. (The complementary positive for
 `workload-check` against the same NPU endpoint is recorded on the
 `feature/workload-check` branch / #18.)
 
+## 2026-06-28 — Supervised workload-check (#8)
+
+Implemented `xdna-top workload-check` (`src/xdna_top/workload_check.py`) + the
+`workload-check` subcommand. It probes an OpenAI-compatible endpoint (optional
+models GET, then a short chat/completions POST) using only the standard-library
+`urllib` — no new runtime dependency — and brackets the request with before/after
+NPU context reads (`run_xrt_smi` + `parse_xrt_smi`) to compute per-context
+submission/completion deltas with `/proc`-derived PID names.
+
+Design held to claims precision: the JSON separates endpoint availability, the
+model-response summary (id/usage/finish_reason, no verbatim body), context
+presence, and the deltas; the human output is measured-language only ("Observed
+PID 1234 context 1 submission_delta=42 during request window"); a
+concurrent-workload caveat ships in every result; and the exit code reflects only
+whether the endpoint responded, never NPU activity (which would be a causality
+claim the counters can't support).
+
+Tests cover the three required cases — endpoint failure, success with no NPU
+activity, success with observed counter deltas — plus the pure delta logic, the
+models-probe path, and file output (HTTP and context reads mocked). Suite on this
+branch: **183 passed**.
+
+### Live on-hardware run (real NPU box)
+
+Exercised end-to-end against a running ollama endpoint (OpenAI-compatible, on
+`:11434`) on a box with a live `xrt-smi` / amdxdna NPU. Measured result:
+
+- `endpoint.models.ok = true` (4 models), `endpoint.chat`: HTTP 200,
+  `id=chatcmpl-554`, `usage.total_tokens=21`, `finish_reason=length`.
+- `npu.contexts_present_before/after = 10/10` — the NPU was **not** idle; a
+  concurrent FastFlowLM (`flm`) runtime was holding 10 hardware contexts.
+- `npu.active_contexts = []`, `max_submission_delta = 0` → measured line:
+  "No NPU context counter movement observed during the request window."
+
+This is exactly the behaviour the design is for: ollama serves the request from
+the iGPU/CPU, not the NPU, so even with 10 live NPU contexts present and a
+concurrent `flm` runtime, `workload-check` reported **no** NPU counter movement
+attributable to the window — it never claimed the request touched the NPU.
+Claims precision held on real silicon.
+
+### Positive run against an NPU-backed endpoint
+
+`flm` is `flm serve gemma4-it:e2b --port 13306` — a FastFlowLM OpenAI-compatible
+server running the model **on the NPU**. Pointing `workload-check` at it:
+
+- `endpoint.chat`: HTTP 200, `finish_reason=stop`, and FastFlowLM even returns
+  prefill/decoding token-rates in `usage` (`prefill_speed_tps≈16.8`,
+  `decoding_speed_tps≈22.6`).
+- `npu.active_contexts`: **7** contexts moved, `max_submission_delta=205`, e.g.
+  "Observed PID 1528559 (flm) context 21 submission_delta=205 during request
+  window".
+
+So the same command, pointed at an NPU-backed endpoint, surfaces real per-context
+deltas — and still ships the concurrent-workload caveat rather than asserting the
+request *caused* them. Negative (ollama, iGPU/CPU) and positive (flm, NPU) paths
+are both now validated on hardware.
+
 ## 2026-06-14 — On-hardware session: test suite green, but two handoff features are absent
 
 On the target Strix Halo box (kernel `6.17.0-35-generic`, `/dev/accel/accel0`,

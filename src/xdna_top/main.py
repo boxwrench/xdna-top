@@ -539,6 +539,35 @@ def build_parser(
         )
         _add_hardware_args(exporter_parser)
 
+        workload_parser = subparsers.add_parser(
+            "workload-check",
+            help="Probe an OpenAI-compatible endpoint and measure NPU context "
+            "counter deltas across the request window.",
+        )
+        workload_parser.add_argument(
+            "--chat-url",
+            required=True,
+            help="OpenAI-compatible chat/completions URL to POST a short request to.",
+        )
+        workload_parser.add_argument(
+            "--model", required=True, help="Model name to request."
+        )
+        workload_parser.add_argument(
+            "--models-url",
+            default=None,
+            help="Optional models URL to GET for endpoint/availability evidence.",
+        )
+        workload_parser.add_argument(
+            "--prompt", default=None, help="Prompt to send (default: a tiny fixed prompt)."
+        )
+        workload_parser.add_argument(
+            "--timeout", type=float, default=30.0, help="Per-request timeout (s)."
+        )
+        workload_parser.add_argument(
+            "--out", default=None, help="Output JSON path. Defaults to stdout."
+        )
+        _add_hardware_args(workload_parser, suppress_defaults=True)
+
         compare_parser = subparsers.add_parser(
             "compare",
             help="Diff two snapshots and report high-signal platform drift.",
@@ -723,6 +752,9 @@ def main() -> int:
         return compare_main(args)
     if getattr(args, "command", None) == "baseline":
         return baseline_main(args)
+    if getattr(args, "command", None) == "workload-check":
+        from xdna_top.workload_check import workload_check_main
+        return workload_check_main(args)
     if getattr(args, "command", None) == "exporter":
         from xdna_top.exporter import exporter_main
         return exporter_main(args)
