@@ -173,6 +173,16 @@ the same degraded flags as the live view.
   `up=0` rather than a vanished target, and it binds to loopback by default (the
   `/metrics` endpoint is unauthenticated). Needs the optional `[exporter]`
   extra; see [EXPORTER.md](EXPORTER.md).
+- **`xdna-top workload-check --chat-url <url> --model <name>`** is the supervised
+  evidence command: it reads the NPU contexts, sends one short request to an
+  OpenAI-compatible endpoint, reads the contexts again, and reports the
+  per-context submission/completion deltas across that window — e.g. "observed
+  PID 1234 context 1 submission_delta=42 during request window". It deliberately
+  stops at the measurement: a concurrent workload can move the same counters, so
+  the output ships that caveat and never claims the request *caused* the NPU
+  work. Endpoint availability, the model response summary, and the deltas are all
+  distinct fields, and the exit code reflects only whether the endpoint
+  responded — not whether the NPU was active.
 
 The discipline throughout is *measured language*. A recording lets you say
 "observed PID 1234 context 1 submission_delta=42 during the request window" - which

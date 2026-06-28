@@ -220,7 +220,12 @@ Release when:
 
 Build workload supervision after the lower-level evidence commands are stable:
 
-- `xdna-top workload-check`
+- `xdna-top workload-check` — **landed**: probes an OpenAI-compatible endpoint
+  (models GET + chat POST via stdlib `urllib`, no new dependency), brackets the
+  request with before/after context reads, and reports per-context
+  submission/completion deltas with PID attribution. Output carries the
+  concurrent-workload caveat; the exit code reflects only endpoint success, never
+  a causality claim.
 - optional OpenAI-compatible endpoint probing where useful
 - request-window telemetry capture
 - PID/context attribution in the output

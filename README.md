@@ -94,6 +94,8 @@ xdna-top compare before.json after.json   # flag high-signal platform drift
 xdna-top baseline save known-good          # store a named known-good snapshot
 xdna-top baseline check known-good         # re-check the platform after updates
 xdna-top exporter --port 9477              # serve Prometheus metrics at /metrics
+xdna-top workload-check --chat-url http://localhost:8000/v1/chat/completions \
+  --model my-model            # supervised endpoint probe + NPU context evidence
 xdna-top --theme phosphor   # pick a TUI theme (see --list-themes)
 lemonade-top                # same monitor, lemonade-stand theme
 ```
@@ -136,6 +138,9 @@ degraded instead of crashing.
 - Direct-AMDXDNA **NPU power state** when the `amdxdna` debugfs nodes are
   readable: active DPM clock state (npuclk/hclk MHz) + SMU powerstate — a clock
   level, never a utilization %
+- `workload-check` mode: probe an OpenAI-compatible endpoint and report
+  per-context NPU submission/completion deltas across the request window —
+  measured evidence, never a causality claim
 - Themes via `--theme`/`XDNA_TOP_THEME` (colors only — never the measured values)
 - Pessimistic fallbacks everywhere — built for imperfect driver stacks
 - Zero daemon, zero root*, zero ROCm dependency
@@ -195,7 +200,8 @@ no application specifics. Start at [docs/npu/](docs/npu/index.md).
 - [x] Prometheus `exporter` for scraping NPU+iGPU telemetry into Prometheus/Grafana
 - [ ] v0.3 read-only direct AMDXDNA backend probes — first signal landed: NPU
       power/clock state (active DPM npuclk/hclk) read from `amdxdna` debugfs
-- [ ] v0.4 supervised `workload-check` for endpoint and NPU-context evidence
+- [x] v0.4 supervised `workload-check`: endpoint probe + per-context NPU
+      submission/completion deltas across the request window
 - [ ] v0.5 community/reporting work: theme registry (done), HTML reports, and
       more Ryzen AI captures
 - [ ] Ongoing: configurable poll rate, per-context history, and more APUs

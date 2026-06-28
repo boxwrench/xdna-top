@@ -1,5 +1,28 @@
 # xdna-top Devlog
 
+## 2026-06-28 — Supervised workload-check (#8)
+
+Implemented `xdna-top workload-check` (`src/xdna_top/workload_check.py`) + the
+`workload-check` subcommand. It probes an OpenAI-compatible endpoint (optional
+models GET, then a short chat/completions POST) using only the standard-library
+`urllib` — no new runtime dependency — and brackets the request with before/after
+NPU context reads (`run_xrt_smi` + `parse_xrt_smi`) to compute per-context
+submission/completion deltas with `/proc`-derived PID names.
+
+Design held to claims precision: the JSON separates endpoint availability, the
+model-response summary (id/usage/finish_reason, no verbatim body), context
+presence, and the deltas; the human output is measured-language only ("Observed
+PID 1234 context 1 submission_delta=42 during request window"); a
+concurrent-workload caveat ships in every result; and the exit code reflects only
+whether the endpoint responded, never NPU activity (which would be a causality
+claim the counters can't support).
+
+Tests cover the three required cases — endpoint failure, success with no NPU
+activity, success with observed counter deltas — plus the pure delta logic, the
+models-probe path, and file output (HTTP and context reads mocked). Suite on this
+branch: **183 passed**. Not yet exercised against a live local LLM server; that
+on-hardware run is the natural follow-up.
+
 ## 2026-06-14 — On-hardware session: test suite green, but two handoff features are absent
 
 On the target Strix Halo box (kernel `6.17.0-35-generic`, `/dev/accel/accel0`,
