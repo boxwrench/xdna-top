@@ -36,39 +36,38 @@ Continue preserving the current runtime behavior of:
 The goal is to keep building evidence commands without turning `xdna-top` into a
 general AMDGPU monitor.
 
-## On-Hardware Validation (pending)
+## On-Hardware Validation
 
-Important: every command added in the `v0.2`/`v0.3` evidence work and the theme
-registry was developed and tested **off the target hardware**. Coverage so far is
-unit tests with mocked `xrt-smi`/sysfs plus degraded-path smoke tests on a machine
-with no NPU. None of it has yet been exercised against a real Strix Halo NPU +
-iGPU, so the non-degraded paths are unproven on real silicon.
+Substantially validated on real silicon on **2026-06-28** (Strix Halo
+`RyzenAI-npu5`, kernel 6.17.0-35, amdxdna driver, with a live FastFlowLM (`flm`)
+workload holding 10 NPU contexts) — see the devlog entry of that date. The only
+remaining gaps are interactive-TUI rendering and a *positive* activity capture
+(the workload was idle during the recorded window).
 
-When back on the target machine, validate the full surface end to end and record
-results in the devlog:
-
-- [ ] `python3 -m pytest -q` passes on the target box.
-- [ ] `xdna-top` TUI shows live iGPU busy/power sparklines and a populated NPU
-      context table (not the degraded banners).
-- [ ] `xdna-top --json` reports real values with `igpu_degraded`/`npu_degraded`
+- [x] `python3 -m pytest -q` passes on the target box.
+- [ ] `xdna-top` TUI live sparklines + populated context table — not rendered
+      this session (interactive); the underlying data was confirmed via `--json`
+      and `snapshot`.
+- [x] `xdna-top --json` reports real values with `igpu_degraded`/`npu_degraded`
       both false.
-- [ ] `xdna-top snapshot` captures a real NPU BDF/name, accel device present,
-      and per-context PID/submission/completion data; `degraded.overall` is false.
-- [ ] `xdna-top env-report <snapshot.json> --markdown` renders those real facts.
-- [ ] `xdna-top record --duration 10 --interval 0.2 --out trial.jsonl` during a
-      local LLM workload captures rising submission counters; interleave
-      `xdna-top mark` calls and confirm marks land in the stream.
-- [ ] `xdna-top env-report trial.jsonl` shows non-zero activity and the marks.
-- [ ] `xdna-top assert trial.jsonl --require-npu-activity` exits `0` during a
-      workload and non-zero on an idle capture; `assert snapshot.json
-      --require-npu --require-context-source` passes on healthy hardware.
-- [ ] `xdna-top compare` flags real drift between two snapshots (for example
-      before/after an `xrt`/kernel update).
-- [ ] `xdna-top baseline save known-good` then `baseline check known-good` after
-      an update behaves as expected.
-- [ ] `lemonade-top` and `xdna-top --theme <name>` (each of `default`, `lemonade`,
-      `paper`, `phosphor`, `amber`, `halo`) render correctly in a real terminal;
-      confirm themes change only colors/chrome, never metrics, units, or values.
+- [x] `xdna-top snapshot` captures a real NPU BDF/name (`RyzenAI-npu5`), accel
+      device present, and 10 contexts with PID/submission/completion data;
+      `degraded.overall=false`.
+- [x] `xdna-top env-report <snapshot.json> --markdown` renders those real facts.
+- [~] `xdna-top record` captures the 10 live contexts over the window; **rising**
+      counters + `mark` interleave still uncaught (the `flm` workload was idle
+      during the recorded window — bursts are intermittent).
+- [~] `xdna-top env-report <record>` renders the contexts/window; observed
+      activity was zero for the same reason.
+- [x] `xdna-top assert` — idle record → non-zero (honest fail, `submission_delta=0`)
+      and `assert snapshot --require-npu --require-context-source` → `0`. The
+      positive `--require-npu-activity` pass during a burst is still to be caught.
+- [x] `xdna-top compare` runs and reports correctly (no-change path validated,
+      exit 0); real drift across an update not yet induced.
+- [x] `xdna-top baseline save known-good` then `baseline check known-good` behave
+      as expected (exit 0, no drift).
+- [~] `xdna-top --list-themes` and theme resolution validated (all six present);
+      interactive in-terminal render of each theme not done this session.
 
 Until this checklist is done, treat non-degraded behavior as unverified and keep
 claims about live capture appropriately hedged.

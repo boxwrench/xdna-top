@@ -1,5 +1,38 @@
 # xdna-top Devlog
 
+## 2026-06-28 — On-hardware validation of the evidence surface (live NPU contexts)
+
+Ran the full v0.2/v0.3 surface on the real Strix Halo box (`RyzenAI-npu5`, kernel
+6.17.0-35, amdxdna driver) with a live FastFlowLM (`flm`) workload holding **10
+hardware contexts** — the concurrent NPU workload the 2026-06-14 session lacked.
+This closes most of the HANDOFF on-hardware checklist. Measured, not inferred:
+
+- `snapshot`: `npu.detected=true`, 10 contexts, `degraded.overall=false`.
+  Per-context PID/process-name attribution works on silicon — every context
+  resolved to `PID 1528559 (flm)` with real submission counters (e.g. 1,111,718).
+  This finally validates the process-name + most-active-first ordering features
+  that could not be checked while the box was idle. `power_state` reported
+  `unavailable (debugfs_accel_absent)` — debugfs is root-only for us, reported
+  honestly.
+- `env-report` (snapshot + record): renders the real facts — name `RyzenAI-npu5`,
+  context count 10, and the ten `flm` contexts (PID/ctx) in the record report.
+- `--json`: live fused reading (e.g. `gpu_busy_pct=100`, `46.1 W`,
+  `state=PREFILL_BURST`, `npu_active=false`).
+- `record --duration 10`: 21 telemetry samples over a 9.977 s window, all 10
+  contexts observed and attributed to `flm`.
+- `assert`: `--require-npu-activity` on the record **failed honestly** (exit 1,
+  `submission_delta=0`) because `flm` was idle during the window — the
+  claims-precision design refusing to assert activity it did not measure. On a
+  snapshot, `--require-npu --require-context-source` **passed** (exit 0).
+- `compare` (two back-to-back snapshots): no high-signal changes (exit 0).
+- `baseline save` + `baseline check`: both exit 0, no drift.
+- `--list-themes`: all six themes present.
+
+Still uncaught: a *positive* `--require-npu-activity` pass — `flm` bursts
+intermittently (its max submission counter jumped from ~0.87M to ~3.2M between
+checks) but was idle during the recorded window. Recording while `flm` is
+mid-generation is the one remaining opportunistic item.
+
 ## 2026-06-14 — On-hardware session: test suite green, but two handoff features are absent
 
 On the target Strix Halo box (kernel `6.17.0-35-generic`, `/dev/accel/accel0`,
