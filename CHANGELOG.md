@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Read-only AMDXDNA IOCTL backend** — a new direct backend
+  (`xdna_top.amdxdna_ioctl`) probes the NPU over DRM ioctls on
+  `/dev/accel/accelN` (`DRM_IOCTL_VERSION` + `DRM_IOCTL_AMDXDNA_GET_INFO`),
+  independent of `xrt-smi`. `snapshot` now records `devices.npu.ioctl` (DRM
+  driver name/version, AIE version + metadata `cols`/`rows`/`col_size`, MP-NPU/H
+  clock frequencies in MHz, firmware version, and a sensors block) and fills
+  `devices.npu.driver.drm_version` / `supports_sensors`; `env-report` renders a
+  "NPU direct backend" line; `backends.npu.signals.driver` becomes
+  `"amdxdna_ioctl"` when available. Unprivileged-safe and fully guarded: a
+  missing `/dev/accel`, an unreadable node, a non-amdxdna device, or an
+  unsupported `GET_INFO` query reports `available: false` with a reason, never an
+  exception. Clock values are frequencies (MHz), never a utilization %. Additive
+  and optional — no `schema_version` bump; XRT remains the per-context PID/
+  submission attribution path. Validated read-only on real silicon (amdxdna
+  0.6.0, AIE 1.1, MP-NPU 1267 / H 1800 MHz, firmware 1.1.2.65; `QUERY_SENSORS`
+  returns `EOPNOTSUPP` on that kernel and is reported as such). (#5)
 - **Direct-AMDXDNA NPU power state** — `snapshot` now reads the NPU's active DPM
   clock state (npuclk/hclk MHz) and the SMU `powerstate` directly from
   `/sys/kernel/debug/accel/<bdf>/{dpm_level,powerstate}` (debugfs), independent

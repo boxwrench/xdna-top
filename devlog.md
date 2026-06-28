@@ -1,5 +1,40 @@
 # xdna-top Devlog
 
+## 2026-06-28 — Read-only AMDXDNA IOCTL backend (#5), validated on real silicon
+
+Built the v0.3 direct-AMDXDNA backend (`src/xdna_top/amdxdna_ioctl.py`) and wired
+it into `snapshot` (`devices.npu.ioctl`), `env-report`, and backend provenance.
+
+Struct layouts and ioctl request numbers were taken from the actual amdxdna uAPI
+header on this box (`include/uapi/drm/amdxdna_accel.h`, kernel 6.17) and
+cross-checked by compiling a `sizeof`/ioctl probe against the headers:
+`DRM_IOCTL_VERSION = 0xC0406400`, `DRM_IOCTL_AMDXDNA_GET_INFO = 0xC0106447`. The
+Python module computes its request numbers from `ctypes.sizeof` and a test
+asserts them against those header values, so struct drift fails loudly.
+
+**Validated read-only against a real NPU** (this machine has `/dev/accel/accel0`
+openable via the `render` group). Measured, not inferred:
+
+- DRM version: `amdxdna_accel_driver` **0.6.0**, desc "AMD XDNA DRM implementation".
+- AIE version **1.1**; AIE metadata **cols=8, rows=6, col_size=504**.
+- Clocks: MP-NPU **1267 MHz**, H **1800 MHz** (clock frequencies, not a busy %).
+- Firmware **1.1.2.65**.
+- `QUERY_SENSORS` ioctl returns **EOPNOTSUPP (errno 95)** on this kernel, so
+  `supports_sensors=false`, `sensors.available=false`,
+  `reason="ioctl_errno_95"`. This is exactly the "unsupported sensor" degraded
+  path the acceptance criteria call for — observed on hardware, not mocked.
+
+A live `xdna-top snapshot` → `env-report` round-trip on this box renders:
+`NPU direct backend (amdxdna ioctl): driver 0.6.0, AIE 1.1, clocks mp-npu 1267
+MHz / h 1800 MHz, fw 1.1.2.65`.
+
+Claims precision: clocks are reported as MHz frequencies; sensor values are not
+fabricated (the SENSORS query is unsupported here, so no sensor numbers are
+emitted). XRT remains the per-context PID/submission attribution path; this
+backend adds identity + static metadata only. Suite: **189 passed** (12 mocked
+ioctl unit tests covering unavailable / unreadable / non-amdxdna / unsupported-
+sensor / happy paths, plus a snapshot-wiring test).
+
 ## 2026-06-14 — On-hardware session: test suite green, but two handoff features are absent
 
 On the target Strix Halo box (kernel `6.17.0-35-generic`, `/dev/accel/accel0`,

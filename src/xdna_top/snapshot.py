@@ -17,6 +17,7 @@ from typing import Any
 
 from xdna_top.diagnostics import diagnose_memlock
 from xdna_top.gauge import HardwareGauge, load_sysfs_paths, parse_xrt_smi
+from xdna_top.amdxdna_ioctl import read_amdxdna_info
 from xdna_top.npu_power import read_npu_power
 
 SCHEMA_VERSION = "1.0"
@@ -75,6 +76,24 @@ def build_snapshot(
     # `examine` fails (e.g. the RLIMIT_MEMLOCK false-negative). The read is fully
     # guarded — root-only/absent debugfs yields available:false, never raises.
     npu_power = read_npu_power(xrt["device"]["bdf"])
+    # Direct-AMDXDNA read-only probe: device/driver identity + AIE metadata +
+    # clocks + firmware + sensors, straight from the kernel via DRM ioctls,
+    # independent of xrt-smi. Optional/additive and fully guarded.
+    npu_ioctl = read_amdxdna_info(xrt["device"]["bdf"])
+    ioctl_available = bool(npu_ioctl.get("available"))
+    ioctl_driver = npu_ioctl.get("driver") or {}
+    # Match the published schema shape: drm_version is an object, or null.
+    ioctl_drm_version = (
+        {
+            "major": ioctl_driver.get("major"),
+            "minor": ioctl_driver.get("minor"),
+            "patchlevel": ioctl_driver.get("patchlevel"),
+        }
+        if ioctl_available
+        else None
+    )
+    ioctl_supports_sensors = bool(npu_ioctl.get("supports_sensors"))
+    ioctl_sensors_available = bool((npu_ioctl.get("sensors") or {}).get("available"))
     igpu_busy_exists = bool(busy_path and os.path.exists(busy_path))
     igpu_power_exists = bool(power_path and os.path.exists(power_path))
 
@@ -136,6 +155,8 @@ def build_snapshot(
             xrt_device_available=xrt["device"]["bdf"] is not None,
             xrt_contexts_available=xrt_contexts_available,
             npu_power_available=bool(npu_power.get("available")),
+            amdxdna_ioctl_available=ioctl_available,
+            amdxdna_sensors_available=ioctl_sensors_available,
             igpu_busy_available=igpu_busy_exists,
             igpu_power_available=igpu_power_exists,
         ),
@@ -146,14 +167,15 @@ def build_snapshot(
                 "bdf": xrt["device"]["bdf"],
                 "name": xrt["device"]["name"],
                 "driver": {
-                    "drm_version": None,
-                    "supports_sensors": False,
+                    "drm_version": ioctl_drm_version,
+                    "supports_sensors": ioctl_supports_sensors,
                 },
                 "sensors": {
                     "power_w": {"value": None, "source": None},
                     "column_utilization_pct": {"value": None, "source": None},
                 },
                 "power_state": npu_power,
+                "ioctl": npu_ioctl,
                 "contexts": contexts,
                 "report_shape": {
                     "has_aie_partitions": xrt["aie_partitions_returncode"] == 0,
@@ -243,10 +265,13 @@ def _backend_provenance(
     igpu_busy_available: bool,
     igpu_power_available: bool,
     npu_power_available: bool = False,
+    amdxdna_ioctl_available: bool = False,
+    amdxdna_sensors_available: bool = False,
 ) -> dict[str, Any]:
     npu_signals = {
         "device": "xrt_smi" if xrt_available and xrt_device_available else None,
-        "sensors": None,
+        "driver": "amdxdna_ioctl" if amdxdna_ioctl_available else None,
+        "sensors": "amdxdna_ioctl" if amdxdna_sensors_available else None,
         "contexts": "xrt_smi" if xrt_available and xrt_contexts_available else None,
         "power_state": "debugfs" if npu_power_available else None,
     }
