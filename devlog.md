@@ -38,8 +38,24 @@ This is exactly the behaviour the design is for: ollama serves the request from
 the iGPU/CPU, not the NPU, so even with 10 live NPU contexts present and a
 concurrent `flm` runtime, `workload-check` reported **no** NPU counter movement
 attributable to the window — it never claimed the request touched the NPU.
-Claims precision held on real silicon. (A positive-delta capture — pointing the
-check at an NPU-backed endpoint mid-generation — is the remaining nice-to-have.)
+Claims precision held on real silicon.
+
+### Positive run against an NPU-backed endpoint
+
+`flm` is `flm serve gemma4-it:e2b --port 13306` — a FastFlowLM OpenAI-compatible
+server running the model **on the NPU**. Pointing `workload-check` at it:
+
+- `endpoint.chat`: HTTP 200, `finish_reason=stop`, and FastFlowLM even returns
+  prefill/decoding token-rates in `usage` (`prefill_speed_tps≈16.8`,
+  `decoding_speed_tps≈22.6`).
+- `npu.active_contexts`: **7** contexts moved, `max_submission_delta=205`, e.g.
+  "Observed PID 1528559 (flm) context 21 submission_delta=205 during request
+  window".
+
+So the same command, pointed at an NPU-backed endpoint, surfaces real per-context
+deltas — and still ships the concurrent-workload caveat rather than asserting the
+request *caused* them. Negative (ollama, iGPU/CPU) and positive (flm, NPU) paths
+are both now validated on hardware.
 
 ## 2026-06-14 — On-hardware session: test suite green, but two handoff features are absent
 
