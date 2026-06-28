@@ -150,6 +150,68 @@ def test_build_snapshot_degraded_path(
     assert "igpu_power_path_missing" in snapshot["degraded"]["igpu"]["reasons"]
 
 
+@patch("xdna_top.snapshot.read_amdxdna_info")
+@patch("xdna_top.snapshot._accel_entries")
+@patch("xdna_top.snapshot.HardwareGauge")
+@patch("xdna_top.snapshot.os.path.exists")
+@patch("xdna_top.snapshot.load_sysfs_paths")
+@patch("xdna_top.snapshot._probe_xrt_smi")
+def test_build_snapshot_wires_amdxdna_ioctl(
+    mock_probe_xrt,
+    mock_load_sysfs_paths,
+    mock_exists,
+    mock_gauge_class,
+    mock_accel_entries,
+    mock_ioctl,
+):
+    """When the direct AMDXDNA ioctl backend is available, its data lands in the
+    snapshot (devices.npu.ioctl + driver fields + backend provenance)."""
+    mock_probe_xrt.return_value = {
+        "path": "/usr/bin/xrt-smi",
+        "available": True,
+        "version_output": "XRT 2.x",
+        "examine_returncode": 0,
+        "aie_partitions_returncode": 0,
+        "device": {"bdf": "0000:c6:00.1", "name": "RyzenAI-npu5"},
+        "contexts": [],
+    }
+    mock_load_sysfs_paths.return_value = (None, None)
+    mock_exists.return_value = False
+    mock_accel_entries.return_value = [{"path": "/dev/accel/accel0", "exists": True}]
+    mock_ioctl.return_value = {
+        "available": True,
+        "source": "amdxdna_ioctl",
+        "reason": None,
+        "node": "/dev/accel/accel0",
+        "driver": {
+            "name": "amdxdna_accel_driver",
+            "version": "0.6.0",
+            "major": 0,
+            "minor": 6,
+            "patchlevel": 0,
+            "description": "x",
+        },
+        "aie_version": "1.1",
+        "aie": {"cols": 8, "rows": 6, "col_size": 504},
+        "clocks": {"mp_npu_mhz": 1267, "h_mhz": 1800},
+        "firmware_version": "1.1.2.65",
+        "supports_sensors": False,
+        "sensors": {"available": False, "reason": "ioctl_errno_95", "items": []},
+    }
+    reading = MagicMock()
+    reading.to_dict.return_value = {"npu_active": False, "state": "IDLE", "ts": 1.0}
+    mock_gauge_class.return_value.read_direct.return_value = reading
+
+    snapshot = build_snapshot(bench_dir="/tmp/xdna-top-test")
+    npu = snapshot["devices"]["npu"]
+    assert npu["ioctl"]["driver"]["version"] == "0.6.0"
+    assert npu["ioctl"]["clocks"]["mp_npu_mhz"] == 1267
+    assert npu["driver"]["drm_version"] == {"major": 0, "minor": 6, "patchlevel": 0}
+    assert npu["driver"]["supports_sensors"] is False
+    assert snapshot["backends"]["npu"]["signals"]["driver"] == "amdxdna_ioctl"
+    assert snapshot["backends"]["npu"]["signals"]["sensors"] is None
+
+
 def test_write_snapshot_to_file(tmp_path):
     out = tmp_path / "platform.json"
     write_snapshot({"schema_version": "1.0", "kind": "xdna-top.snapshot"}, out)

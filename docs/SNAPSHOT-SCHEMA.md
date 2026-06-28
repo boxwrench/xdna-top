@@ -133,6 +133,27 @@ A real capture from XDNA1 (`RyzenAI-npu1`, staging `amdxdna.ko`) is committed at
 `power_state.available: true`, active DPM `npuclk 847 / hclk 1600 MHz`,
 `powerstate: SMU power ON`, with `backends.npu.signals.power_state: debugfs`.
 
+`ioctl` is the read-only **direct-AMDXDNA backend** (`devices.npu.ioctl`):
+device/driver identity and static metadata read straight from the kernel via DRM
+ioctls on `/dev/accel/accelN` (`DRM_IOCTL_VERSION` + `DRM_IOCTL_AMDXDNA_GET_INFO`),
+independent of `xrt-smi`. It carries the DRM driver name/version, the AIE version
+and metadata (`cols`, `rows`, `col_size`), the MP-NPU and H clock **frequencies**
+in MHz (a clock level, never a utilization %), the firmware version, and a
+`sensors` block. Like `power_state` it is **additive and optional** (no
+`schema_version` bump): every probe is guarded, so a missing `/dev/accel`, an
+unreadable node, a non-amdxdna device, or an unsupported `GET_INFO` query yields
+`available: false` (or a `null` sub-probe) with a `reason`, never an exception.
+`supports_sensors` / `sensors.available` reflect whether the kernel's
+`QUERY_SENSORS` ioctl is implemented — on kernels that return `EOPNOTSUPP` it is
+`false` with `reason: "ioctl_errno_95"`. When available,
+`backends.npu.signals.driver` is `"amdxdna_ioctl"` (and `signals.sensors` when
+sensor data is present). Validated read-only on real silicon (amdxdna `0.6.0`,
+AIE `1.1`, MP-NPU `1267` / H `1800` MHz, firmware `1.1.2.65`); `xrt-smi` remains
+the per-context PID/submission attribution path. A real capture is committed at
+[`captures/snapshot_npu5_ioctl.json`](captures/snapshot_npu5_ioctl.json) —
+`RyzenAI-npu5` with the full `ioctl` block populated and ten live FastFlowLM
+hardware contexts attributed by PID.
+
 ### `devices`
 
 Detected device state.
@@ -154,9 +175,10 @@ Detected device state.
     "driver": {
       "drm_version": {
         "major": 0,
-        "minor": 7
+        "minor": 6,
+        "patchlevel": 0
       },
-      "supports_sensors": true
+      "supports_sensors": false
     },
     "sensors": {
       "power_w": {
@@ -178,6 +200,26 @@ Detected device state.
         "max": { "index": 7, "npuclk_mhz": 847, "hclk_mhz": 1600 },
         "levels": 8
       }
+    },
+    "ioctl": {
+      "available": true,
+      "source": "amdxdna_ioctl",
+      "reason": null,
+      "node": "/dev/accel/accel0",
+      "driver": {
+        "name": "amdxdna_accel_driver",
+        "version": "0.6.0",
+        "major": 0,
+        "minor": 6,
+        "patchlevel": 0,
+        "description": "AMD XDNA DRM implementation"
+      },
+      "aie_version": "1.1",
+      "aie": { "cols": 8, "rows": 6, "col_size": 504 },
+      "clocks": { "mp_npu_mhz": 1267, "h_mhz": 1800 },
+      "firmware_version": "1.1.2.65",
+      "supports_sensors": false,
+      "sensors": { "available": false, "reason": "ioctl_errno_95", "items": [] }
     },
     "contexts": [
       {
@@ -252,14 +294,17 @@ Machine-readable degraded status and reasons.
 
 Reason strings should be stable enough for tests and reports, for example:
 
-- `amdxdna_ioctl_unavailable`
-- `amdxdna_drm_version_unsupported`
-- `amdxdna_sensors_unavailable`
 - `xrt_smi_not_found`
 - `xrt_smi_examine_failed`
 - `aie_partitions_report_failed`
+- `rlimit_memlock_too_low`
 - `igpu_busy_path_missing`
 - `igpu_power_path_missing`
+
+Direct-AMDXDNA backend availability is **additive, not degraded**: it is reported
+in `devices.npu.ioctl.{available,reason}` and
+`backends.npu.signals.{driver,sensors}`, never as a degraded reason (XRT remains
+the primary NPU backend).
 
 ### `errors`
 

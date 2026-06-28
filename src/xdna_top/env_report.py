@@ -84,6 +84,7 @@ def render_markdown(snapshot: dict[str, Any]) -> str:
         f"- NPU name: {_value(npu.get('name'))}",
         f"- NPU context count: {_value(_get(npu, 'report_shape', 'context_count'))}",
         f"- NPU sensor support: {_bool(_get(npu, 'driver', 'supports_sensors'))}",
+        f"- NPU direct backend (amdxdna ioctl): {_npu_ioctl(npu.get('ioctl'))}",
         f"- NPU power state: {_npu_power_state(npu.get('power_state'))}",
         f"- iGPU busy path: {_path_status(igpu.get('busy_path'), igpu.get('busy_path_exists'))}",
         f"- iGPU power path: {_path_status(igpu.get('power_path'), igpu.get('power_path_exists'))}",
@@ -348,6 +349,28 @@ def _npu_power_state(power_state: Any) -> str:
             f"active DPM L{active.get('index')} "
             f"(npuclk {active.get('npuclk_mhz')} MHz / hclk {active.get('hclk_mhz')} MHz)"
         )
+    return ", ".join(parts) if parts else "available"
+
+
+def _npu_ioctl(ioctl: Any) -> str:
+    """Render the direct-AMDXDNA ioctl summary. Clocks are frequencies (MHz),
+    never a utilization %; unavailable states carry a reason."""
+    if not isinstance(ioctl, dict) or not ioctl.get("available"):
+        reason = ioctl.get("reason") if isinstance(ioctl, dict) else None
+        return f"unavailable ({reason})" if reason else "unavailable"
+    parts = []
+    driver = ioctl.get("driver") or {}
+    if driver.get("version"):
+        parts.append(f"driver {driver['version']}")
+    if ioctl.get("aie_version"):
+        parts.append(f"AIE {ioctl['aie_version']}")
+    clocks = ioctl.get("clocks") or {}
+    if clocks.get("mp_npu_mhz") is not None:
+        parts.append(
+            f"clocks mp-npu {clocks.get('mp_npu_mhz')} MHz / h {clocks.get('h_mhz')} MHz"
+        )
+    if ioctl.get("firmware_version"):
+        parts.append(f"fw {ioctl['firmware_version']}")
     return ", ".join(parts) if parts else "available"
 
 

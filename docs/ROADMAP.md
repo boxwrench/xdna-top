@@ -199,10 +199,14 @@ Release when:
 Build comparison workflows on top of the snapshot schema:
 
 - read-only `amdxdna_ioctl` backend for device probing and supported sensors
-  - first direct-AMDXDNA signal has **landed**: the NPU's active DPM clock state
-    (npuclk/hclk MHz) and SMU powerstate, read from `amdxdna` debugfs and
-    surfaced as `devices.npu.power_state` (additive, no `schema_version` bump).
-    Full IOCTL device/sensor probing is still pending.
+  - **landed**: the NPU's active DPM clock state (npuclk/hclk MHz) + SMU
+    powerstate from `amdxdna` debugfs (`devices.npu.power_state`).
+  - **landed**: read-only DRM-IOCTL backend (`devices.npu.ioctl`) — driver
+    identity + DRM version, AIE version/metadata, MP-NPU/H clock frequencies, and
+    firmware version via `DRM_IOCTL_VERSION` / `DRM_IOCTL_AMDXDNA_GET_INFO`,
+    validated on real silicon. Sensor values are gated on kernel support
+    (`QUERY_SENSORS` is `EOPNOTSUPP` on current kernels, reported honestly).
+    All additive, no `schema_version` bump.
 - `xdna-top compare`
 - `xdna-top baseline`
 - sharper degraded reasons for driver, device, sensor, and XRT shape changes
