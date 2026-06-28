@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "xdna-top"
-version = "0.3.0"
+version = "0.4.0"
 description = "Unified NPU+iGPU Telemetry Monitor for AMD Strix Halo"
 readme = "README.md"
 authors = [

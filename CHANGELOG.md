@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-28
+
+This release adds the read-only **direct-AMDXDNA DRM IOCTL backend** (driver / AIE
+/ clock / firmware identity straight from the kernel), the supervised
+**`workload-check`** command, and the first direct NPU **power-state** signal —
+all validated on real Strix Halo silicon (`RyzenAI-npu5`) against a live
+FastFlowLM workload.
+
 ### Added
 
 - **Read-only AMDXDNA IOCTL backend** — a new direct backend
@@ -152,6 +160,7 @@ activity guard for proving NPU work happened during a specific request window
 - Graceful degradation: panes flag themselves as degraded instead of crashing
   when a signal is missing.
 
+[0.4.0]: https://github.com/boxwrench/xdna-top/releases/tag/v0.4.0
 [0.3.0]: https://github.com/boxwrench/xdna-top/releases/tag/v0.3.0
 [0.2.0]: https://github.com/boxwrench/xdna-top/releases/tag/v0.2.0
 [0.1.0]: https://github.com/boxwrench/xdna-top/releases/tag/v0.1.0

@@ -11,7 +11,7 @@ where `amd-smi` comes up empty.
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Strix%20Halo-orange.svg)](docs/HOW-IT-WORKS.md)
-[![Status](https://img.shields.io/badge/status-v0.3-blue.svg)](#roadmap)
+[![Status](https://img.shields.io/badge/status-v0.4-blue.svg)](#roadmap)
 
 </div>
 
