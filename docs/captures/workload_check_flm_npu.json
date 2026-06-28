@@ -1,0 +1,104 @@
+{
+  "kind": "xdna-top.workload-check",
+  "endpoint": {
+    "models_url": "http://127.0.0.1:13306/v1/models",
+    "chat_url": "http://127.0.0.1:13306/v1/chat/completions",
+    "model": "gemma4-it:e2b",
+    "models": {
+      "ok": true,
+      "status": 200,
+      "latency_s": 0.001,
+      "error": null,
+      "model_count": 33
+    },
+    "chat": {
+      "ok": true,
+      "status": 200,
+      "latency_s": 1.636,
+      "error": null,
+      "id": "fastflowlm-chat-completion",
+      "usage": {
+        "prompt_tokens": 15,
+        "completion_tokens": 16,
+        "total_tokens": 31,
+        "load_duration": 6.8e-07,
+        "prefill_duration_ttft": 0.891517504,
+        "decoding_duration": 0.707717,
+        "prefill_speed_tps": 16.825244521502967,
+        "decoding_speed_tps": 22.607906832815942
+      },
+      "finish_reason": "stop"
+    }
+  },
+  "npu": {
+    "contexts_present_before": 10,
+    "contexts_present_after": 10,
+    "active_contexts": [
+      {
+        "pid": 1528559,
+        "process_name": "flm",
+        "ctx_id": 21,
+        "submission_delta": 205,
+        "completion_delta": 205
+      },
+      {
+        "pid": 1528559,
+        "process_name": "flm",
+        "ctx_id": 22,
+        "submission_delta": 175,
+        "completion_delta": 175
+      },
+      {
+        "pid": 1528559,
+        "process_name": "flm",
+        "ctx_id": 16,
+        "submission_delta": 71,
+        "completion_delta": 71
+      },
+      {
+        "pid": 1528559,
+        "process_name": "flm",
+        "ctx_id": 19,
+        "submission_delta": 32,
+        "completion_delta": 32
+      },
+      {
+        "pid": 1528559,
+        "process_name": "flm",
+        "ctx_id": 24,
+        "submission_delta": 28,
+        "completion_delta": 28
+      },
+      {
+        "pid": 1528559,
+        "process_name": "flm",
+        "ctx_id": 20,
+        "submission_delta": 17,
+        "completion_delta": 17
+      },
+      {
+        "pid": 1528559,
+        "process_name": "flm",
+        "ctx_id": 23,
+        "submission_delta": 7,
+        "completion_delta": 7
+      }
+    ],
+    "max_submission_delta": 205
+  },
+  "window": {
+    "started_at": 1782657837.1662757,
+    "ended_at": 1782657838.8026538,
+    "duration_s": 1.636
+  },
+  "measured": [
+    "Observed PID 1528559 (flm) context 21 submission_delta=205 during request window",
+    "Observed PID 1528559 (flm) context 22 submission_delta=175 during request window",
+    "Observed PID 1528559 (flm) context 16 submission_delta=71 during request window",
+    "Observed PID 1528559 (flm) context 19 submission_delta=32 during request window",
+    "Observed PID 1528559 (flm) context 24 submission_delta=28 during request window",
+    "Observed PID 1528559 (flm) context 20 submission_delta=17 during request window",
+    "Observed PID 1528559 (flm) context 23 submission_delta=7 during request window"
+  ],
+  "caveat": "Counter deltas are measured evidence, not proof of causality; a concurrent workload can move the same context counters."
+}

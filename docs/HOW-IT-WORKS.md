@@ -182,7 +182,10 @@ the same degraded flags as the live view.
   the output ships that caveat and never claims the request *caused* the NPU
   work. Endpoint availability, the model response summary, and the deltas are all
   distinct fields, and the exit code reflects only whether the endpoint
-  responded — not whether the NPU was active.
+  responded — not whether the NPU was active. A real capture against an
+  NPU-backed FastFlowLM endpoint is committed at
+  [../docs/captures/workload_check_flm_npu.json](captures/workload_check_flm_npu.json)
+  (7 contexts moved, `max_submission_delta=205`).
 
 The discipline throughout is *measured language*. A recording lets you say
 "observed PID 1234 context 1 submission_delta=42 during the request window" - which
