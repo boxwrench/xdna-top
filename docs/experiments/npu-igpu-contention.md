@@ -33,7 +33,7 @@ viz:
 
 **What this is.** Honest, reproducible numbers for deciding *what to run where* on
 an AMD Strix Halo APU — the XDNA NPU, the gfx1151 iGPU, and the CPU all share one
-unified ~256 GB/s memory bus. The engines are **compute-isolated but
+unified memory bus (256 GB/s theoretical, ~212–215 GB/s achieved). The engines are **compute-isolated but
 bandwidth-shared**, so the whole story is memory-bandwidth contention. Built and
 reproduced with xdna-top, which exists because `amd-smi` is broken on gfx1151.
 

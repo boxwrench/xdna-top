@@ -315,11 +315,17 @@ def inject_html(html_text: str, section: str) -> str:
         start = html_text.index(HTML_START)
         end = html_text.index(HTML_END) + len(HTML_END)
         return html_text[:start] + section + html_text[end:]
-    # First run: insert before </body> (or append if no body tag).
-    anchor = html_text.rfind("</body>")
+    # First run: insert before the footer so the Evidence Library renders above
+    # it; fall back to before </body>, or append if neither tag is present.
+    anchor = html_text.find("<!-- Footer -->")
     if anchor == -1:
-        return html_text.rstrip("\n") + "\n" + section + "\n"
-    return html_text[:anchor] + section + "\n  " + html_text[anchor:]
+        anchor = html_text.find("<footer")
+    if anchor == -1:
+        anchor = html_text.rfind("</body>")
+        if anchor == -1:
+            return html_text.rstrip("\n") + "\n" + section + "\n"
+        return html_text[:anchor] + section + "\n  " + html_text[anchor:]
+    return html_text[:anchor] + section + "\n\n  " + html_text[anchor:]
 
 
 def _html_escape(text: str) -> str:

@@ -2038,315 +2038,6 @@
     </div>
   </section>
 
-  <!-- Footer -->
-  <footer class="footer">
-    <div class="container">
-      <div class="footer-grid">
-        <div class="footer-brand">
-          <span class="brand-name">xdna-top</span>
-          <p class="footer-text">Bridging the telemetry gaps on AMD APU silicon. Built and maintained under the Boxwrench project for deep hardware monitoring precision.</p>
-        </div>
-        <div>
-          <h4 class="footer-title">Navigation</h4>
-          <ul class="footer-links">
-            <li><a href="#dashboard">Live Dashboard</a></li>
-            <li><a href="#lessons">Learning Hub</a></li>
-            <li><a href="#glossary">Telemetry Glossary</a></li>
-          </ul>
-        </div>
-        <div>
-          <h4 class="footer-title">Documentation</h4>
-          <ul class="footer-links">
-            <li><a href="https://github.com/boxwrench/xdna-top/blob/main/docs/HOW-IT-WORKS.md" target="_blank">How It Works Guide</a></li>
-            <li><a href="https://github.com/boxwrench/xdna-top/blob/main/docs/ORIGINS.md" target="_blank">Project Origins</a></li>
-            <li><a href="https://github.com/boxwrench/xdna-top" target="_blank">GitHub Repository</a></li>
-          </ul>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <div class="footer-copyright">
-          &copy; 2026 Boxwrench Project. Released under the Apache-2.0 license.
-        </div>
-        <div class="footer-text">
-          Illustrative telemetry modeled on AMD Ryzen AI Max+ 395 (Strix Halo).
-        </div>
-      </div>
-    </div>
-  </footer>
-
-  <!-- Telemetry Data Script Loading -->
-  <script src="telemetry_data.js"></script>
-  <script>
-    document.getElementById('traceLength').innerText = telemetryData.length;
-
-    // Extract datasets
-    const labels = telemetryData.map(d => d.relative_ts + 's');
-    const gpuBusy = telemetryData.map(d => d.gpu_busy_pct);
-    const gpuPower = telemetryData.map(d => d.gpu_power_w);
-    const npuActive = telemetryData.map(d => d.npu_active ? 100 : 0); // scale NPU active to 100 for visual comparison
-
-    // Render Chart using the new Blue Palette styling
-    const ctx = document.getElementById('telemetryChart').getContext('2d');
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            label: 'iGPU Busy %',
-            data: gpuBusy,
-            borderColor: '#2563eb', // Royal Blue
-            backgroundColor: 'rgba(37, 99, 235, 0.05)',
-            borderWidth: 2,
-            pointRadius: 0,
-            yAxisID: 'y'
-          },
-          {
-            label: 'iGPU Power (W)',
-            data: gpuPower,
-            borderColor: '#0ea5e9', // Sky Blue
-            backgroundColor: 'transparent',
-            borderWidth: 2,
-            pointRadius: 0,
-            yAxisID: 'y1'
-          },
-          {
-            label: 'NPU Active',
-            data: npuActive,
-            borderColor: '#3b82f6', // Medium blue
-            backgroundColor: 'rgba(59, 130, 246, 0.08)',
-            borderWidth: 1.5,
-            borderDash: [5, 5],
-            pointRadius: 0,
-            fill: true,
-            yAxisID: 'y'
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: {
-          mode: 'index',
-          intersect: false,
-        },
-        plugins: {
-          legend: {
-            display: false // Using custom HTML legends
-          },
-          tooltip: {
-            backgroundColor: '#0f2a4a',
-            titleColor: '#ffffff',
-            bodyColor: '#ffffff',
-            borderColor: '#e2e8f0',
-            borderWidth: 1,
-            callbacks: {
-              label: function(context) {
-                let label = context.dataset.label || '';
-                if (label === 'NPU Active') {
-                  return `NPU State: ${context.raw === 100 ? 'ACTIVE' : 'IDLE'}`;
-                }
-                return `${label}: ${context.raw}`;
-              }
-            }
-          }
-        },
-        scales: {
-          x: {
-            grid: {
-              color: '#f1f5f9'
-            },
-            ticks: {
-              color: '#64748b',
-              maxTicksLimit: 12
-            }
-          },
-          y: {
-            min: 0,
-            max: 100,
-            title: {
-              display: true,
-              text: 'GPU Load (%) / NPU (0-100)',
-              color: '#475569',
-              font: {
-                weight: '600'
-              }
-            },
-            grid: {
-              color: '#f1f5f9'
-            },
-            ticks: {
-              color: '#64748b'
-            }
-          },
-          y1: {
-            min: 0,
-            max: 100,
-            position: 'right',
-            title: {
-              display: true,
-              text: 'iGPU Power (Watts)',
-              color: '#475569',
-              font: {
-                weight: '600'
-              }
-            },
-            grid: {
-              drawOnChartArea: false
-            },
-            ticks: {
-              color: '#64748b'
-            }
-          }
-        }
-      }
-    });
-
-    // Lesson Switcher Logic
-    function switchLesson(lessonNum) {
-      // Deactivate all buttons and panes
-      document.querySelectorAll('.lesson-tab-btn').forEach(btn => btn.classList.remove('active'));
-      document.querySelectorAll('.lesson-body').forEach(body => body.classList.remove('active'));
-
-      // Activate selected button and pane
-      const selectedBtn = document.querySelectorAll('.lesson-tab-btn')[lessonNum - 1];
-      selectedBtn.classList.add('active');
-      document.getElementById(`lesson-${lessonNum}`).classList.add('active');
-    }
-
-    // Interactive Simulator Logic (Lesson 2)
-    let currentSub = 12450;
-    let currentComp = 12450;
-    let prevSub = 12450;
-
-    function runSimStep(action) {
-      const subEl = document.getElementById('sim-sub');
-      const compEl = document.getElementById('sim-comp');
-      const stateEl = document.getElementById('sim-state');
-      const expEl = document.getElementById('sim-exp');
-
-      prevSub = currentSub;
-
-      if (action === 'reset') {
-        currentSub = 0;
-        currentComp = 0;
-        prevSub = 0;
-      } else if (action === 'idle') {
-        // No counter changes
-      } else if (action === 'submit') {
-        // Normal workload: submissions and completions both advance
-        currentSub += Math.floor(Math.random() * 40) + 15;
-        currentComp = currentSub;
-      } else if (action === 'inflight') {
-        // High concurrency / queuing load: submissions outpace completions
-        currentSub += Math.floor(Math.random() * 30) + 10;
-        currentComp = currentSub - (Math.floor(Math.random() * 3) + 1);
-      }
-
-      // Format numbers with spaces
-      subEl.innerText = currentSub.toLocaleString();
-      compEl.innerText = currentComp.toLocaleString();
-
-      // State determination logic
-      const is_active = currentSub > prevSub;
-      const in_flight = currentSub > currentComp;
-
-      if (action === 'reset') {
-        stateEl.className = 'sim-badge idle';
-        stateEl.innerText = 'Idle';
-        expEl.innerHTML = 'Simulator reset. Counters are at 0. Derived state is <strong>IDLE</strong>.';
-      } else if (is_active) {
-        if (in_flight) {
-          stateEl.className = 'sim-badge inflight';
-          stateEl.innerText = 'Active (In-Flight)';
-          expEl.innerHTML = `Submissions delta is <strong>+${currentSub - prevSub}</strong> (Active execution). Submissions (${currentSub}) exceed Completions (${currentComp}), meaning <strong>${currentSub - currentComp} jobs are currently in flight</strong> in the hardware pipeline.`;
-        } else {
-          stateEl.className = 'sim-badge active';
-          stateEl.innerText = 'Active';
-          expEl.innerHTML = `Submissions delta is <strong>+${currentSub - prevSub}</strong> (Active execution). Since all submitted tasks have completed, the fabric is operating with zero queue latency.`;
-        }
-      } else {
-        stateEl.className = 'sim-badge idle';
-        stateEl.innerText = 'Idle';
-        expEl.innerHTML = `Submissions delta is <strong>0</strong>. Although the context exists, no new work has been dispatched since the last sample, deriving an <strong>IDLE</strong> state.`;
-      }
-    }
-
-    // Interactive Shell Scanner Logic (Lesson 3)
-    function runShellCmd(cmd) {
-      const termEl = document.getElementById('term-out');
-      
-      if (cmd === 'cat_busy') {
-        termEl.innerHTML = `<span class="term-prompt">user@strix-halo:~$</span> cat /sys/class/drm/card1/device/gpu_busy_percent\n<span style="color: #34d399;">76</span>\n\n<span class="term-prompt">user@strix-halo:~$</span> <span style="color: #64748b;"># iGPU is currently operating at 76% temporal utilization.</span>`;
-      } else if (cmd === 'cat_power') {
-        termEl.innerHTML = `<span class="term-prompt">user@strix-halo:~$</span> cat /sys/class/drm/card1/device/hwmon/hwmon4/power1_input\n<span style="color: #34d399;">24560000</span>\n\n<span class="term-prompt">user@strix-halo:~$</span> <span style="color: #64748b;"># Reading in microwatts. xdna-top translates 24,560,000 uW to 24.56 Watts.</span>`;
-      } else if (cmd === 'amdxdna_sensors') {
-        termEl.innerHTML = `<span class="term-prompt">user@strix-halo:~$</span> xdna-top snapshot --probe amdxdna-ioctl\n\nbackend: amdxdna_ioctl\naccel_device: /dev/accel/accel0\ndrm_version: 0.7\nsupports_sensors: true\nsensor.power_w: 4.20\nsensor.column_utilization_pct: 17.50\n\n<span class="term-prompt">user@strix-halo:~$</span> <span style="color: #64748b;"># Direct driver sensor values are useful, but request attribution still needs PID-owned context deltas.</span>`;
-      } else if (cmd === 'xrt_partitions') {
-        termEl.innerHTML = `<span class="term-prompt">user@strix-halo:~$</span> xrt-smi examine --report aie-partitions\n\n--------------------------------------------\nAI Engine Partitions\n--------------------------------------------\nPID      CTX   SUBMISSIONS   COMPLETIONS   STATUS\n158772    1        12480         12479      Active\n\n<span class="term-prompt">user@strix-halo:~$</span> <span style="color: #64748b;"># One active context owned by PID 158772 (local NPU inference).</span>`;
-      }
-    }
-
-    // Glossary Search & Filter Logic
-    let currentCategory = 'all';
-
-    function toggleCard(card) {
-      card.classList.toggle('expanded');
-    }
-
-    function filterCategory(category) {
-      currentCategory = category;
-      
-      // Update button classes
-      document.querySelectorAll('.filter-btn').forEach(btn => {
-        if (btn.innerText.toLowerCase() === category) {
-          btn.classList.add('active');
-        } else {
-          btn.classList.remove('active');
-        }
-      });
-      
-      filterGlossary();
-    }
-
-    function filterGlossary() {
-      const searchVal = document.getElementById('glossarySearch').value.toLowerCase();
-      const cards = document.querySelectorAll('.glossary-card');
-      
-      cards.forEach(card => {
-        const category = card.getAttribute('data-category');
-        const term = card.querySelector('.glossary-term');
-        const def = card.querySelector('.glossary-def');
-        const details = card.querySelector('.glossary-details');
-        
-        const textToSearch = (term.textContent + ' ' + def.textContent + ' ' + details.textContent).toLowerCase();
-        
-        const matchesSearch = textToSearch.includes(searchVal);
-        const matchesCategory = currentCategory === 'all' || category === currentCategory;
-        
-        if (matchesSearch && matchesCategory) {
-          card.style.display = 'flex';
-          
-          // Apply highlight
-          highlightText(term, searchVal);
-          highlightText(def, searchVal);
-        } else {
-          card.style.display = 'none';
-        }
-      });
-    }
-
-    function highlightText(element, query) {
-      const originalText = element.textContent;
-      if (!query) {
-        element.innerHTML = originalText;
-        return;
-      }
-      
-      const regex = new RegExp(`(${query})`, 'gi');
-      element.innerHTML = originalText.replace(regex, '<mark>$1</mark>');
-    }
-  </script>
 <!-- EVIDENCE-LIBRARY:START (generated by tools/build_experiments_index.py) -->
     <section id="evidence-library" class="evidence-library">
       <h2>Evidence Library</h2>
@@ -2664,5 +2355,315 @@
       </ul>
     </section>
     <!-- EVIDENCE-LIBRARY:END -->
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <span class="brand-name">xdna-top</span>
+          <p class="footer-text">Bridging the telemetry gaps on AMD APU silicon. Built and maintained under the Boxwrench project for deep hardware monitoring precision.</p>
+        </div>
+        <div>
+          <h4 class="footer-title">Navigation</h4>
+          <ul class="footer-links">
+            <li><a href="#dashboard">Live Dashboard</a></li>
+            <li><a href="#lessons">Learning Hub</a></li>
+            <li><a href="#glossary">Telemetry Glossary</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="footer-title">Documentation</h4>
+          <ul class="footer-links">
+            <li><a href="https://github.com/boxwrench/xdna-top/blob/main/docs/HOW-IT-WORKS.md" target="_blank">How It Works Guide</a></li>
+            <li><a href="https://github.com/boxwrench/xdna-top/blob/main/docs/ORIGINS.md" target="_blank">Project Origins</a></li>
+            <li><a href="https://github.com/boxwrench/xdna-top" target="_blank">GitHub Repository</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div class="footer-copyright">
+          &copy; 2026 Boxwrench Project. Released under the Apache-2.0 license.
+        </div>
+        <div class="footer-text">
+          Illustrative telemetry modeled on AMD Ryzen AI Max+ 395 (Strix Halo).
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Telemetry Data Script Loading -->
+  <script src="telemetry_data.js"></script>
+  <script>
+    document.getElementById('traceLength').innerText = telemetryData.length;
+
+    // Extract datasets
+    const labels = telemetryData.map(d => d.relative_ts + 's');
+    const gpuBusy = telemetryData.map(d => d.gpu_busy_pct);
+    const gpuPower = telemetryData.map(d => d.gpu_power_w);
+    const npuActive = telemetryData.map(d => d.npu_active ? 100 : 0); // scale NPU active to 100 for visual comparison
+
+    // Render Chart using the new Blue Palette styling
+    const ctx = document.getElementById('telemetryChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'iGPU Busy %',
+            data: gpuBusy,
+            borderColor: '#2563eb', // Royal Blue
+            backgroundColor: 'rgba(37, 99, 235, 0.05)',
+            borderWidth: 2,
+            pointRadius: 0,
+            yAxisID: 'y'
+          },
+          {
+            label: 'iGPU Power (W)',
+            data: gpuPower,
+            borderColor: '#0ea5e9', // Sky Blue
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            pointRadius: 0,
+            yAxisID: 'y1'
+          },
+          {
+            label: 'NPU Active',
+            data: npuActive,
+            borderColor: '#3b82f6', // Medium blue
+            backgroundColor: 'rgba(59, 130, 246, 0.08)',
+            borderWidth: 1.5,
+            borderDash: [5, 5],
+            pointRadius: 0,
+            fill: true,
+            yAxisID: 'y'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        plugins: {
+          legend: {
+            display: false // Using custom HTML legends
+          },
+          tooltip: {
+            backgroundColor: '#0f2a4a',
+            titleColor: '#ffffff',
+            bodyColor: '#ffffff',
+            borderColor: '#e2e8f0',
+            borderWidth: 1,
+            callbacks: {
+              label: function(context) {
+                let label = context.dataset.label || '';
+                if (label === 'NPU Active') {
+                  return `NPU State: ${context.raw === 100 ? 'ACTIVE' : 'IDLE'}`;
+                }
+                return `${label}: ${context.raw}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: {
+              color: '#f1f5f9'
+            },
+            ticks: {
+              color: '#64748b',
+              maxTicksLimit: 12
+            }
+          },
+          y: {
+            min: 0,
+            max: 100,
+            title: {
+              display: true,
+              text: 'GPU Load (%) / NPU (0-100)',
+              color: '#475569',
+              font: {
+                weight: '600'
+              }
+            },
+            grid: {
+              color: '#f1f5f9'
+            },
+            ticks: {
+              color: '#64748b'
+            }
+          },
+          y1: {
+            min: 0,
+            max: 100,
+            position: 'right',
+            title: {
+              display: true,
+              text: 'iGPU Power (Watts)',
+              color: '#475569',
+              font: {
+                weight: '600'
+              }
+            },
+            grid: {
+              drawOnChartArea: false
+            },
+            ticks: {
+              color: '#64748b'
+            }
+          }
+        }
+      }
+    });
+
+    // Lesson Switcher Logic
+    function switchLesson(lessonNum) {
+      // Deactivate all buttons and panes
+      document.querySelectorAll('.lesson-tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.lesson-body').forEach(body => body.classList.remove('active'));
+
+      // Activate selected button and pane
+      const selectedBtn = document.querySelectorAll('.lesson-tab-btn')[lessonNum - 1];
+      selectedBtn.classList.add('active');
+      document.getElementById(`lesson-${lessonNum}`).classList.add('active');
+    }
+
+    // Interactive Simulator Logic (Lesson 2)
+    let currentSub = 12450;
+    let currentComp = 12450;
+    let prevSub = 12450;
+
+    function runSimStep(action) {
+      const subEl = document.getElementById('sim-sub');
+      const compEl = document.getElementById('sim-comp');
+      const stateEl = document.getElementById('sim-state');
+      const expEl = document.getElementById('sim-exp');
+
+      prevSub = currentSub;
+
+      if (action === 'reset') {
+        currentSub = 0;
+        currentComp = 0;
+        prevSub = 0;
+      } else if (action === 'idle') {
+        // No counter changes
+      } else if (action === 'submit') {
+        // Normal workload: submissions and completions both advance
+        currentSub += Math.floor(Math.random() * 40) + 15;
+        currentComp = currentSub;
+      } else if (action === 'inflight') {
+        // High concurrency / queuing load: submissions outpace completions
+        currentSub += Math.floor(Math.random() * 30) + 10;
+        currentComp = currentSub - (Math.floor(Math.random() * 3) + 1);
+      }
+
+      // Format numbers with spaces
+      subEl.innerText = currentSub.toLocaleString();
+      compEl.innerText = currentComp.toLocaleString();
+
+      // State determination logic
+      const is_active = currentSub > prevSub;
+      const in_flight = currentSub > currentComp;
+
+      if (action === 'reset') {
+        stateEl.className = 'sim-badge idle';
+        stateEl.innerText = 'Idle';
+        expEl.innerHTML = 'Simulator reset. Counters are at 0. Derived state is <strong>IDLE</strong>.';
+      } else if (is_active) {
+        if (in_flight) {
+          stateEl.className = 'sim-badge inflight';
+          stateEl.innerText = 'Active (In-Flight)';
+          expEl.innerHTML = `Submissions delta is <strong>+${currentSub - prevSub}</strong> (Active execution). Submissions (${currentSub}) exceed Completions (${currentComp}), meaning <strong>${currentSub - currentComp} jobs are currently in flight</strong> in the hardware pipeline.`;
+        } else {
+          stateEl.className = 'sim-badge active';
+          stateEl.innerText = 'Active';
+          expEl.innerHTML = `Submissions delta is <strong>+${currentSub - prevSub}</strong> (Active execution). Since all submitted tasks have completed, the fabric is operating with zero queue latency.`;
+        }
+      } else {
+        stateEl.className = 'sim-badge idle';
+        stateEl.innerText = 'Idle';
+        expEl.innerHTML = `Submissions delta is <strong>0</strong>. Although the context exists, no new work has been dispatched since the last sample, deriving an <strong>IDLE</strong> state.`;
+      }
+    }
+
+    // Interactive Shell Scanner Logic (Lesson 3)
+    function runShellCmd(cmd) {
+      const termEl = document.getElementById('term-out');
+      
+      if (cmd === 'cat_busy') {
+        termEl.innerHTML = `<span class="term-prompt">user@strix-halo:~$</span> cat /sys/class/drm/card1/device/gpu_busy_percent\n<span style="color: #34d399;">76</span>\n\n<span class="term-prompt">user@strix-halo:~$</span> <span style="color: #64748b;"># iGPU is currently operating at 76% temporal utilization.</span>`;
+      } else if (cmd === 'cat_power') {
+        termEl.innerHTML = `<span class="term-prompt">user@strix-halo:~$</span> cat /sys/class/drm/card1/device/hwmon/hwmon4/power1_input\n<span style="color: #34d399;">24560000</span>\n\n<span class="term-prompt">user@strix-halo:~$</span> <span style="color: #64748b;"># Reading in microwatts. xdna-top translates 24,560,000 uW to 24.56 Watts.</span>`;
+      } else if (cmd === 'amdxdna_sensors') {
+        termEl.innerHTML = `<span class="term-prompt">user@strix-halo:~$</span> xdna-top snapshot --probe amdxdna-ioctl\n\nbackend: amdxdna_ioctl\naccel_device: /dev/accel/accel0\ndrm_version: 0.7\nsupports_sensors: true\nsensor.power_w: 4.20\nsensor.column_utilization_pct: 17.50\n\n<span class="term-prompt">user@strix-halo:~$</span> <span style="color: #64748b;"># Direct driver sensor values are useful, but request attribution still needs PID-owned context deltas.</span>`;
+      } else if (cmd === 'xrt_partitions') {
+        termEl.innerHTML = `<span class="term-prompt">user@strix-halo:~$</span> xrt-smi examine --report aie-partitions\n\n--------------------------------------------\nAI Engine Partitions\n--------------------------------------------\nPID      CTX   SUBMISSIONS   COMPLETIONS   STATUS\n158772    1        12480         12479      Active\n\n<span class="term-prompt">user@strix-halo:~$</span> <span style="color: #64748b;"># One active context owned by PID 158772 (local NPU inference).</span>`;
+      }
+    }
+
+    // Glossary Search & Filter Logic
+    let currentCategory = 'all';
+
+    function toggleCard(card) {
+      card.classList.toggle('expanded');
+    }
+
+    function filterCategory(category) {
+      currentCategory = category;
+      
+      // Update button classes
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        if (btn.innerText.toLowerCase() === category) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+      
+      filterGlossary();
+    }
+
+    function filterGlossary() {
+      const searchVal = document.getElementById('glossarySearch').value.toLowerCase();
+      const cards = document.querySelectorAll('.glossary-card');
+      
+      cards.forEach(card => {
+        const category = card.getAttribute('data-category');
+        const term = card.querySelector('.glossary-term');
+        const def = card.querySelector('.glossary-def');
+        const details = card.querySelector('.glossary-details');
+        
+        const textToSearch = (term.textContent + ' ' + def.textContent + ' ' + details.textContent).toLowerCase();
+        
+        const matchesSearch = textToSearch.includes(searchVal);
+        const matchesCategory = currentCategory === 'all' || category === currentCategory;
+        
+        if (matchesSearch && matchesCategory) {
+          card.style.display = 'flex';
+          
+          // Apply highlight
+          highlightText(term, searchVal);
+          highlightText(def, searchVal);
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    function highlightText(element, query) {
+      const originalText = element.textContent;
+      if (!query) {
+        element.innerHTML = originalText;
+        return;
+      }
+      
+      const regex = new RegExp(`(${query})`, 'gi');
+      element.innerHTML = originalText.replace(regex, '<mark>$1</mark>');
+    }
+  </script>
   </body>
 </html>

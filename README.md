@@ -168,6 +168,11 @@ annotated real capture of an LLM generation lighting up the NPU pane — is in
 **[docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md)**, and the hosted interactive
 view lives at **[boxwrench.github.io/xdna-top](https://boxwrench.github.io/xdna-top/)**.
 
+For what the hardware *is* — the NPU (XDNA 2), iGPU, and CPU spec, how they
+compare, and exactly which sensors this silicon does and doesn't expose — see
+**[docs/HARDWARE.md](docs/HARDWARE.md)**. For a worked use-case built on this
+platform, see **[REM](https://github.com/boxwrench/rem)**.
+
 ## Related tools
 
 - [`amdgpu_top`](https://github.com/Umio-Yasuno/amdgpu_top) is the mature,
