@@ -74,9 +74,9 @@ This work is suitable for a v0.4.x patch or a small stabilization release.
 - Promote [SNAPSHOT-SCHEMA.md](SNAPSHOT-SCHEMA.md) as the current schema 1.0
   contract and document the exact meaning or versioned deprecation path of
   `backends.npu.primary`.
-- Remove the dormant gauge daemon/cache path after a final search of releases,
-  docs, scripts, CI, benchmarks, and issues for external use. Discover sysfs
-  once per process rather than persisting discovery by default.
+- **Done:** remove the dormant gauge daemon/cache path after a final search of
+  releases, docs, scripts, CI, benchmarks, and issues for external use.
+- Discover sysfs once per process rather than persisting discovery by default.
 - Re-evaluate `--bench-dir` after the cache removal; retain it only for a real
   benchmark or explicit path-override workflow.
 - Archive completed implementation plans and the stale session handoff as

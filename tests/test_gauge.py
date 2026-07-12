@@ -177,6 +177,14 @@ def test_sample_direct_preserves_submission_delta_activity(
     assert mock_run_xrt_smi.call_count == 2
 
 
+def test_read_is_direct_compatibility_alias():
+    gauge = HardwareGauge.__new__(HardwareGauge)
+    expected = MagicMock()
+    with patch.object(gauge, "read_direct", return_value=expected) as read_direct:
+        assert gauge.read() is expected
+    read_direct.assert_called_once_with()
+
+
 @patch("xdna_top.gauge.load_sysfs_paths")
 @patch("builtins.open")
 @patch("os.path.exists")

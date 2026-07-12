@@ -57,6 +57,3 @@ venv.bak
 
 # Local cache
 e0_sysfs.json
-gauge_latest.json
-gauge_history.jsonl
-gauge_latest.json.tmp

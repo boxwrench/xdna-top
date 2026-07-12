@@ -37,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `workload-check` now emits clean JSON on stdout and sends its human summary
   and causality caveat to stderr. Its persistent artifact includes
   `schema_version: "1.0"`; endpoint success still determines the exit code.
+- Removed the undocumented gauge daemon, its latest/history cache writers, and
+  cache-first reads. `HardwareGauge.read()` remains as a compatibility alias
+  for a fresh direct sample; maintained CLI commands continue to own their
+  sampling loops.
 
 ## [0.4.0] - 2026-06-28
 

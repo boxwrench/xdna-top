@@ -35,6 +35,15 @@ measured evidence, and the causality caveat go to stderr. Focused exporter and
 workload-check validation: 17 tests pass. The broader Windows-compatible suite,
 excluding only the Linux PCI-BDF path tests, passes all 188 tests.
 
+Audited the private gauge daemon against current code, scripts, CI, benchmarks,
+docs, tags, git history, and public repository search. No maintained invocation
+or external reference was found. Removed `run_daemon()`, the module CLI,
+`gauge_latest.json`/`gauge_history.jsonl` writers, and cache-first reads.
+`HardwareGauge.read()` remains a direct-read compatibility alias.
+`--bench-dir` remains for now because the benchmark and sysfs path override
+still use it; persisted sysfs discovery is a separate cleanup decision. The
+broader Windows-compatible suite passes all 189 applicable tests.
+
 ## 2026-06-28 — On-hardware validation of the evidence surface (live NPU contexts)
 
 Ran the full v0.2/v0.3 surface on the real Strix Halo box (`RyzenAI-npu5`, kernel

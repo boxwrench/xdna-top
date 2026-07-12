@@ -1,21 +1,15 @@
 """Telemetry gauge for measuring iGPU and NPU activity.
 
-Provides both a standalone scraping daemon process and an in-process library API.
+Provides the in-process sampling API used by the CLI commands.
 """
 
 import os
-import sys
 import json
 import time
-import logging
-import argparse
 import subprocess
 from enum import Enum
 from pathlib import Path
 from functools import lru_cache
-
-logger = logging.getLogger("xdna_top.gauge")
-
 
 class GpuState(str, Enum):
     IDLE = "IDLE"
@@ -299,11 +293,7 @@ def sort_contexts_by_activity(
 
 
 class HardwareGauge:
-    """API for reading telemetries.
-
-    First attempts to read from gauge_latest.json written by daemon.
-    Falls back to direct hardware read if daemon not active.
-    """
+    """In-process API for reading hardware telemetry."""
 
     def __init__(
         self,
@@ -389,167 +379,5 @@ class HardwareGauge:
         )
 
     def read(self) -> GaugeReading:
-        """Reads the latest state from the daemon's cache with fallback to direct read."""
-        latest_file = Path(self.bench_dir) / "gauge_latest.json"
-        if latest_file.exists():
-            try:
-                # Check file age (max 1.0s to avoid stale cache)
-                mtime = latest_file.stat().st_mtime
-                if time.time() - mtime < 1.0:
-                    d = json.loads(latest_file.read_text(encoding="utf-8"))
-                    return GaugeReading.from_dict(d)
-            except Exception:
-                pass
-
-        # Daemon inactive or stale; read directly
+        """Compatibility alias for a fresh direct hardware reading."""
         return self.read_direct()
-
-
-def run_daemon(
-    gpu_idle_busy_pct: int = 10,
-    gpu_prefill_power_w: float = 35.0,
-    gauge_hysteresis_samples: int = 3,
-    bench_dir: str = "/tmp/xdna_top",
-    pessimistic_fallback: bool = False,
-    npu_device: str | None = None,
-) -> None:
-    """Daemon process loop that samples hardware at >= 5 Hz and caches output."""
-    b_dir = Path(bench_dir)
-    b_dir.mkdir(parents=True, exist_ok=True)
-
-    latest_file = b_dir / "gauge_latest.json"
-    history_file = b_dir / "gauge_history.jsonl"
-
-    logger.info("Starting xdna-top Telemetry Daemon...")
-    busy_path, power_path = load_sysfs_paths(bench_dir)
-    logger.info(f"iGPU paths: busy={busy_path}, power={power_path}")
-
-    prev_submissions = {}
-    history_states = []
-
-    # Sampling frequency >= 5 Hz (200 ms interval)
-    interval = 0.20
-
-    while True:
-        t0 = time.perf_counter()
-
-        # 1. Scrape iGPU
-        gpu_busy, gpu_power, igpu_degraded = read_igpu(busy_path, power_path)
-
-        display_busy = gpu_busy
-        display_power = gpu_power
-        if igpu_degraded and pessimistic_fallback:
-            display_busy = 100
-            display_power = 45.0
-
-        honest_degraded = igpu_degraded and not pessimistic_fallback
-        if honest_degraded:
-            # Honest mode: no real iGPU inputs -> refuse to classify.
-            raw_state = GpuState.UNKNOWN
-        else:
-            class_busy = gpu_busy if gpu_busy is not None else 100
-            class_power = gpu_power if gpu_power is not None else 45.0
-            raw_state = classify_state(
-                class_busy,
-                class_power,
-                gpu_idle_busy_pct=gpu_idle_busy_pct,
-                gpu_prefill_power_w=gpu_prefill_power_w,
-            )
-
-        # 2. Scrape NPU
-        npu_active = False
-        npu_degraded = False
-        npu_out = run_xrt_smi(device=npu_device)
-        if npu_out is None:
-            npu_degraded = True
-        else:
-            contexts = parse_xrt_smi(npu_out)
-            for ctx in contexts:
-                key = (ctx["pid"], ctx["ctx_id"])
-                subs = ctx["submissions"]
-                comps = ctx["completions"]
-                if subs > comps:
-                    npu_active = True
-                elif (
-                    key in prev_submissions
-                    and subs > prev_submissions[key]
-                ):
-                    npu_active = True
-                prev_submissions[key] = subs
-
-        # 3. Apply hysteresis majority vote (only over real classifications;
-        # an UNKNOWN reading is reported honestly and never voted into a state)
-        if honest_degraded:
-            stable_state = GpuState.UNKNOWN
-        else:
-            history_states.append(raw_state)
-            if len(history_states) > gauge_hysteresis_samples:
-                history_states.pop(0)
-            stable_state = get_stable_state(history_states)
-
-        reading = GaugeReading(
-            gpu_busy_pct=display_busy,
-            gpu_power_w=display_power,
-            npu_active=npu_active if not npu_degraded else False,
-            state=stable_state,
-            igpu_degraded=igpu_degraded,
-            npu_degraded=npu_degraded,
-        )
-        r_dict = reading.to_dict()
-
-        # Measure daemon's own overhead
-        t_elapsed = time.perf_counter() - t0
-        r_dict["daemon_overhead_s"] = round(t_elapsed, 4)
-
-        # 4. Write cache and history atomically
-        temp_latest = latest_file.with_suffix(".tmp")
-        try:
-            temp_latest.write_text(
-                json.dumps(r_dict), encoding="utf-8"
-            )
-            temp_latest.replace(latest_file)
-
-            with open(history_file, "a", encoding="utf-8") as f:
-                f.write(json.dumps(r_dict) + "\n")
-        except Exception as e:
-            logger.error(f"Failed to write telemetry files: {e}")
-
-        # Sleep to maintain >= 5 Hz loop
-        elapsed = time.perf_counter() - t0
-        sleep_time = max(0.005, interval - elapsed)
-        time.sleep(sleep_time)
-
-
-def main() -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        stream=sys.stderr,
-    )
-    ap = argparse.ArgumentParser(description="xdna-top Telemetry Gauge Daemon")
-    ap.add_argument("--idle-busy-pct", type=int, default=10, help="GPU idle/busy threshold percent")
-    ap.add_argument("--prefill-power-w", type=float, default=35.0, help="GPU prefill power threshold (W)")
-    ap.add_argument("--hysteresis-samples", type=int, default=3, help="Hysteresis majority vote window size")
-    ap.add_argument("--bench-dir", type=str, default="/tmp/xdna_top", help="Directory for latest gauge readings")
-    ap.add_argument("--pessimistic-fallback", action="store_true", help="Pessimistic fallback defaults for degraded state")
-    ap.add_argument("--npu-device", type=str, default=None, help="NPU device BDF")
-    args = ap.parse_args()
-
-    try:
-        run_daemon(
-            gpu_idle_busy_pct=args.idle_busy_pct,
-            gpu_prefill_power_w=args.prefill_power_w,
-            gauge_hysteresis_samples=args.hysteresis_samples,
-            bench_dir=args.bench_dir,
-            pessimistic_fallback=args.pessimistic_fallback,
-            npu_device=args.npu_device,
-        )
-    except KeyboardInterrupt:
-        logger.info("Daemon stopped by user.")
-    except Exception as e:
-        logger.error(f"Daemon crashed: {e}")
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()
