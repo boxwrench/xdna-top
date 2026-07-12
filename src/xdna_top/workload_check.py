@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -22,6 +23,7 @@ from typing import Any
 from xdna_top.gauge import parse_xrt_smi, resolve_process_name, run_xrt_smi
 
 KIND = "xdna-top.workload-check"
+SCHEMA_VERSION = "1.0"
 DEFAULT_PROMPT = "Reply with the single word: ok."
 DEFAULT_TIMEOUT_S = 30.0
 
@@ -182,6 +184,7 @@ def run_workload_check(
         )
 
     return {
+        "schema_version": SCHEMA_VERSION,
         "kind": KIND,
         "endpoint": {
             "models_url": models_url,
@@ -245,9 +248,9 @@ def workload_check_main(args: argparse.Namespace) -> int:
 
     chat = result["endpoint"]["chat"]
     status = "ok" if chat["ok"] else f"FAILED ({chat['error']})"
-    print(f"endpoint chat: {status}", flush=True)
+    print(f"endpoint chat: {status}", file=sys.stderr, flush=True)
     for line in result["measured"]:
-        print(line, flush=True)
-    print(result["caveat"], flush=True)
+        print(line, file=sys.stderr, flush=True)
+    print(result["caveat"], file=sys.stderr, flush=True)
 
     return 0 if chat["ok"] else 1

@@ -14,6 +14,7 @@ from prometheus_client import CollectorRegistry, start_http_server
 from prometheus_client.core import CounterMetricFamily, GaugeMetricFamily, Metric
 
 from xdna_top.gauge import GaugeReading, GpuState, HardwareGauge
+from xdna_top.npu_power import read_npu_power
 
 
 def _build_metrics(
@@ -94,8 +95,7 @@ def _hardware_reader(
     """Build the scrape-time read function for the production exporter."""
     def read() -> tuple[GaugeReading, list[dict], dict | None]:
         reading, contexts = gauge.sample_direct()
-        # power_state stays None until PR #13 (debugfs read_npu_power) lands.
-        return reading, contexts, None
+        return reading, contexts, read_npu_power(npu_device)
 
     return read
 

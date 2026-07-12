@@ -30,7 +30,7 @@ current priorities, triggers, and scope boundaries.
 The active milestone is a stabilization release. It takes precedence over HTML
 reports or a new feature family.
 
-1. **Truthful NPU detection**
+1. **Truthful NPU detection — done**
    - Set `devices.npu.detected` when any trusted source confirms the device:
      XRT identity, XRT contexts, or successful AMDXDNA ioctl identification.
    - Keep device detection separate from context availability.
@@ -39,14 +39,14 @@ reports or a new feature family.
    - Preserve `backends.npu.primary` semantics for schema 1.0; prefer the
      existing `backends.npu.signals.*` fields for precise provenance.
 
-2. **One coherent hardware sample**
+2. **One coherent hardware sample — done**
    - Produce a fused reading and parsed contexts from one XRT observation per
      logical TUI frame, record sample, exporter scrape, or snapshot.
    - Reuse contexts already obtained by snapshot probing.
    - Keep the existing activity-delta behavior, including first observation and
      in-flight submissions, without introducing a provider abstraction.
 
-3. **Finish existing integrations**
+3. **Finish existing integrations — done**
    - Feed the existing `read_npu_power()` result to the exporter so the
      documented clock metric is reachable; unavailable debugfs must remain a
      healthy degraded scrape.

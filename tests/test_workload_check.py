@@ -68,6 +68,7 @@ def test_endpoint_failure(mock_post, mock_ctx):
         "No NPU context counter movement observed during the request window."
     ]
     assert "causality" in result["caveat"]
+    assert result["schema_version"] == "1.0"
     assert wc.workload_check_main(_ns(chat_url="http://x/chat", model="m")) == 1
 
 
@@ -140,7 +141,7 @@ def test_models_probe_included_when_url_given(mock_post, mock_get, mock_ctx):
     assert models["ok"] is True and models["model_count"] == 1
 
 
-def test_out_file_written(tmp_path):
+def test_out_file_written(tmp_path, capsys):
     out = tmp_path / "wc.json"
     with patch("xdna_top.workload_check._contexts", side_effect=[[], []]), patch(
         "xdna_top.workload_check._http_post_json",
@@ -149,5 +150,29 @@ def test_out_file_written(tmp_path):
         rc = wc.workload_check_main(_ns(out=str(out)))
     assert rc == 0
     data = json.loads(out.read_text())
+    assert data["schema_version"] == "1.0"
     assert data["kind"] == "xdna-top.workload-check"
     assert "caveat" in data
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "endpoint chat: ok" in captured.err
+
+
+def test_stdout_is_clean_json_and_human_summary_is_stderr(capsys):
+    with patch("xdna_top.workload_check._contexts", side_effect=[[], []]), patch(
+        "xdna_top.workload_check._http_post_json",
+        return_value={
+            "ok": True,
+            "status": 200,
+            "latency_s": 0.1,
+            "body": "{}",
+            "error": None,
+        },
+    ):
+        rc = wc.workload_check_main(_ns())
+
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert json.loads(captured.out)["kind"] == "xdna-top.workload-check"
+    assert "endpoint chat: ok" in captured.err
+    assert "measured evidence" in captured.err

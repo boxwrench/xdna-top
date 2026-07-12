@@ -93,7 +93,7 @@ xdna-top baseline save known-good          # store a named known-good snapshot
 xdna-top baseline check known-good         # re-check the platform after updates
 xdna-top exporter --port 9477              # serve Prometheus metrics at /metrics
 xdna-top workload-check --chat-url http://localhost:8000/v1/chat/completions \
-  --model my-model            # supervised endpoint probe + NPU context evidence
+  --model my-model            # JSON stdout; human evidence summary on stderr
 xdna-top --theme phosphor   # pick a TUI theme (see --list-themes)
 lemonade-top                # same monitor, lemonade-stand theme
 ```

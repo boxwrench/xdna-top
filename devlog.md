@@ -27,6 +27,14 @@ tests and 9 exporter tests pass. The Windows-shim broader run reached 191
 passing tests; six Linux power-state tests cannot create PCI-BDF directory names
 containing colons on Windows.
 
+Finished the two existing integration seams from the audit. Exporter scrapes now
+call `read_npu_power()`, activating the already-rendered clock metric only when
+debugfs returns a parsed power state. `workload-check` artifacts now carry
+`schema_version: "1.0"`; JSON is the only stdout protocol, while status,
+measured evidence, and the causality caveat go to stderr. Focused exporter and
+workload-check validation: 17 tests pass. The broader Windows-compatible suite,
+excluding only the Linux PCI-BDF path tests, passes all 188 tests.
+
 ## 2026-06-28 — On-hardware validation of the evidence surface (live NPU contexts)
 
 Ran the full v0.2/v0.3 surface on the real Strix Halo box (`RyzenAI-npu5`, kernel

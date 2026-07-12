@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from unittest.mock import patch
+
 from prometheus_client import CollectorRegistry, generate_latest
 from prometheus_client.core import GaugeMetricFamily
 
@@ -112,15 +114,29 @@ class _FakeGauge:
         return reading, contexts
 
 
-def test_hardware_reader_collects_reading_and_contexts():
+@patch("xdna_top.exporter.read_npu_power")
+def test_hardware_reader_collects_reading_contexts_and_power(mock_power):
+    power = {
+        "available": True,
+        "source": "debugfs",
+        "dpm": {"active": {"npuclk_mhz": 847, "hclk_mhz": 1600}},
+    }
+    mock_power.return_value = power
     read = _hardware_reader(_FakeGauge(), None)
     reading, contexts, power_state = read()
     assert reading.gpu_busy_pct == 3
     assert len(contexts) == 1
-    assert power_state is None  # gated on PR #13
+    assert power_state == power
+    mock_power.assert_called_once_with(None)
 
 
-def test_hardware_reader_empty_contexts_when_xrt_absent():
+@patch("xdna_top.exporter.read_npu_power")
+def test_hardware_reader_empty_contexts_when_xrt_absent(mock_power):
+    mock_power.return_value = {
+        "available": False,
+        "source": None,
+        "reason": "debugfs_accel_absent",
+    }
     class DegradedGauge:
         def sample_direct(self):
             reading = GaugeReading(
@@ -133,5 +149,6 @@ def test_hardware_reader_empty_contexts_when_xrt_absent():
             return reading, []
 
     read = _hardware_reader(DegradedGauge(), None)
-    _reading, contexts, _ps = read()
+    _reading, contexts, power_state = read()
     assert contexts == []
+    assert power_state["available"] is False

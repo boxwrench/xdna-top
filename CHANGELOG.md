@@ -30,6 +30,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `npu_active` and their emitted contexts from one XRT observation. Snapshots
   reuse the contexts already captured by their detailed XRT probe instead of
   combining them with a second observation.
+- The exporter now calls the shipped debugfs power-state reader, making
+  `xdna_npu_clock_mhz` reachable when those nodes are readable. Unavailable or
+  unreadable debugfs remains an ordinary metric omission rather than a failed
+  scrape.
+- `workload-check` now emits clean JSON on stdout and sends its human summary
+  and causality caveat to stderr. Its persistent artifact includes
+  `schema_version: "1.0"`; endpoint success still determines the exit code.
 
 ## [0.4.0] - 2026-06-28
 
