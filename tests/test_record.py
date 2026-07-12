@@ -123,16 +123,12 @@ def test_record_stream_keyboard_interrupt_returns_partial_count():
     assert len(written) == 2
 
 
-@patch("xdna_top.record.run_xrt_smi")
 @patch("xdna_top.record.HardwareGauge")
-def test_run_record_writes_typed_jsonl(mock_gauge_class, mock_run_xrt, tmp_path):
-    mock_gauge_class.return_value.read_direct.return_value = _reading()
-    mock_run_xrt.return_value = "\n".join(
-        [
-            "| 1234 | 1 | 10 |",
-            "| n/a | Active | 9 |",
-        ]
-    )
+def test_run_record_writes_typed_jsonl(mock_gauge_class, tmp_path):
+    contexts = [
+        {"pid": 1234, "ctx_id": 1, "submissions": 10, "completions": 9}
+    ]
+    mock_gauge_class.return_value.sample_direct.return_value = (_reading(), contexts)
 
     out = tmp_path / "telemetry.jsonl"
     rc = run_record(duration=0.0, interval=0.2, out_path=out)
@@ -153,13 +149,13 @@ def test_run_record_writes_typed_jsonl(mock_gauge_class, mock_run_xrt, tmp_path)
     assert telemetry["reading"]["gpu_busy_pct"] == 42
     assert telemetry["contexts"][0]["pid"] == 1234
     assert telemetry["contexts"][0]["source"] == "xrt_smi"
+    mock_gauge_class.return_value.sample_direct.assert_called_once_with()
 
     assert events[2]["samples"] == 1
 
 
-@patch("xdna_top.record.run_xrt_smi", return_value=None)
 @patch("xdna_top.record.HardwareGauge")
-def test_run_record_degrades_without_xrt(mock_gauge_class, _mock_run_xrt, tmp_path):
+def test_run_record_degrades_without_xrt(mock_gauge_class, tmp_path):
     degraded = GaugeReading(
         gpu_busy_pct=None,
         gpu_power_w=None,
@@ -169,7 +165,7 @@ def test_run_record_degrades_without_xrt(mock_gauge_class, _mock_run_xrt, tmp_pa
         npu_degraded=True,
         ts=1.0,
     )
-    mock_gauge_class.return_value.read_direct.return_value = degraded
+    mock_gauge_class.return_value.sample_direct.return_value = (degraded, [])
 
     out = tmp_path / "telemetry.jsonl"
     rc = run_record(duration=0.0, interval=0.2, out_path=out)

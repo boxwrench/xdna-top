@@ -13,7 +13,7 @@ from typing import Callable, Iterator
 from prometheus_client import CollectorRegistry, start_http_server
 from prometheus_client.core import CounterMetricFamily, GaugeMetricFamily, Metric
 
-from xdna_top.gauge import GaugeReading, GpuState, HardwareGauge, parse_xrt_smi, run_xrt_smi
+from xdna_top.gauge import GaugeReading, GpuState, HardwareGauge
 
 
 def _build_metrics(
@@ -93,9 +93,7 @@ def _hardware_reader(
 ) -> Callable[[], tuple[GaugeReading, list[dict], dict | None]]:
     """Build the scrape-time read function for the production exporter."""
     def read() -> tuple[GaugeReading, list[dict], dict | None]:
-        reading = gauge.read()
-        out = run_xrt_smi(device=npu_device)
-        contexts = parse_xrt_smi(out) if out else []
+        reading, contexts = gauge.sample_direct()
         # power_state stays None until PR #13 (debugfs read_npu_power) lands.
         return reading, contexts, None
 

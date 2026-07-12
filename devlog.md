@@ -15,10 +15,17 @@ identity contribute to `devices.npu.detected` and
 XRT-unavailable/ioctl-available fixture proving that `require-npu` passes while
 `require-context-source` fails honestly.
 
-Validation: snapshot/assertion tests pass (36 tests). The full suite could not
-collect in the current Windows environment because the Linux TUI imports
-`termios` and the optional exporter dependency `prometheus_client` is not
-installed; WSL has Python but not pytest.
+Initial validation: snapshot/assertion tests pass (36 tests).
+
+Continued with coherent hardware sampling: `HardwareGauge.sample_direct()`
+returns a fused reading and the parsed contexts from the same XRT result.
+The TUI, recorder, and exporter consume that pair, while snapshots pass their
+already-probed contexts into the gauge's activity calculation. Compatibility
+`read_direct()` remains a reading-only wrapper. Validation after installing
+the optional exporter dependency: 61 focused sampling/snapshot/record/assertion
+tests and 9 exporter tests pass. The Windows-shim broader run reached 191
+passing tests; six Linux power-state tests cannot create PCI-BDF directory names
+containing colons on Windows.
 
 ## 2026-06-28 — On-hardware validation of the evidence surface (live NPU contexts)
 

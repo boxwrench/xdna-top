@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterator
 
-from xdna_top.gauge import GaugeReading, HardwareGauge, parse_xrt_smi, run_xrt_smi
+from xdna_top.gauge import GaugeReading, HardwareGauge
 from xdna_top.snapshot import host_facts
 
 RECORD_SCHEMA_VERSION = "1.0"
@@ -64,22 +64,12 @@ def mark_main(args: Any) -> int:
     return 0
 
 
-def sample_contexts(npu_device: str | None) -> list[dict[str, Any]]:
-    """Probe NPU hardware contexts, tagging each with its source backend."""
-    npu_out = run_xrt_smi(device=npu_device)
-    if npu_out is None:
-        return []
-    return [dict(ctx, source="xrt_smi") for ctx in parse_xrt_smi(npu_out)]
-
-
-def make_hardware_sampler(
-    gauge: HardwareGauge, npu_device: str | None
-) -> Callable[[], dict[str, Any]]:
+def make_hardware_sampler(gauge: HardwareGauge) -> Callable[[], dict[str, Any]]:
     """Return a callable that produces one telemetry event from real hardware."""
 
     def sample() -> dict[str, Any]:
-        reading = gauge.read_direct()
-        contexts = sample_contexts(npu_device)
+        reading, contexts = gauge.sample_direct()
+        contexts = [dict(ctx, source="xrt_smi") for ctx in contexts]
         return build_telemetry_event(reading, contexts)
 
     return sample
@@ -148,7 +138,7 @@ def run_record(
         pessimistic_fallback=False,
         npu_device=npu_device,
     )
-    sampler = make_hardware_sampler(gauge, npu_device)
+    sampler = make_hardware_sampler(gauge)
 
     started_at = _utc_now_iso()
     with _open_writer(out_path) as write_line:

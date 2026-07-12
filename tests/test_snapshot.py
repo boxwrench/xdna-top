@@ -85,7 +85,7 @@ def test_build_snapshot_happy_path(
         "npu_degraded": False,
         "ts": 123.456,
     }
-    mock_gauge_class.return_value.read_direct.return_value = reading
+    mock_gauge_class.return_value.read_direct_from_contexts.return_value = reading
 
     snapshot = build_snapshot(bench_dir="/tmp/xdna-top-test")
 
@@ -100,6 +100,9 @@ def test_build_snapshot_happy_path(
     assert snapshot["devices"]["igpu"]["busy_path_exists"] is True
     assert snapshot["degraded"]["overall"] is False
     assert snapshot["telemetry"]["gpu_busy_pct"] == 42
+    mock_gauge_class.return_value.read_direct_from_contexts.assert_called_once_with(
+        mock_probe_xrt.return_value["contexts"], npu_degraded=False
+    )
 
 
 @patch("xdna_top.snapshot._accel_entries")
@@ -137,7 +140,7 @@ def test_build_snapshot_degraded_path(
         "npu_degraded": True,
         "ts": 123.456,
     }
-    mock_gauge_class.return_value.read_direct.return_value = reading
+    mock_gauge_class.return_value.read_direct_from_contexts.return_value = reading
 
     snapshot = build_snapshot(bench_dir="/tmp/xdna-top-test")
 
@@ -201,7 +204,7 @@ def test_build_snapshot_wires_amdxdna_ioctl(
     }
     reading = MagicMock()
     reading.to_dict.return_value = {"npu_active": False, "state": "IDLE", "ts": 1.0}
-    mock_gauge_class.return_value.read_direct.return_value = reading
+    mock_gauge_class.return_value.read_direct_from_contexts.return_value = reading
 
     snapshot = build_snapshot(bench_dir="/tmp/xdna-top-test")
     npu = snapshot["devices"]["npu"]
@@ -266,7 +269,7 @@ def test_build_snapshot_detects_npu_from_ioctl_without_xrt(
         "igpu_degraded": True,
         "ts": 1.0,
     }
-    mock_gauge_class.return_value.read_direct.return_value = reading
+    mock_gauge_class.return_value.read_direct_from_contexts.return_value = reading
 
     snapshot = build_snapshot(bench_dir="/tmp/xdna-top-test")
 
@@ -334,7 +337,7 @@ def test_build_snapshot_surfaces_memlock_reason(
         "npu_degraded": True,
         "ts": 1.0,
     }
-    mock_gauge_class.return_value.read_direct.return_value = reading
+    mock_gauge_class.return_value.read_direct_from_contexts.return_value = reading
 
     # force a low soft limit so the real diagnose_memlock fires end-to-end
     monkeypatch.setattr("xdna_top.diagnostics.memlock_soft_limit", lambda: 8 * 1024 * 1024)

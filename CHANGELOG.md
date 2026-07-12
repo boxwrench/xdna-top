@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   provenance remains unavailable and degraded honestly. Signal-level device
   provenance records `amdxdna_ioctl`; schema 1.0's generic `primary` behavior
   is unchanged.
+- TUI frames, record samples, and exporter scrapes now derive both
+  `npu_active` and their emitted contexts from one XRT observation. Snapshots
+  reuse the contexts already captured by their detailed XRT probe instead of
+  combining them with a second observation.
 
 ## [0.4.0] - 2026-06-28
 

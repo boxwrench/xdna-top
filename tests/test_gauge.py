@@ -144,7 +144,7 @@ def test_hardware_gauge_direct_read(mock_read_igpu, mock_run_xrt_smi):
 """  # in-flight submissions > completions => npu_active
     
     gauge = HardwareGauge(gpu_idle_busy_pct=10, gpu_prefill_power_w=35.0)
-    reading = gauge.read_direct()
+    reading, contexts = gauge.sample_direct()
     
     assert reading.gpu_busy_pct == 50
     assert reading.gpu_power_w == 25.0
@@ -152,6 +152,29 @@ def test_hardware_gauge_direct_read(mock_read_igpu, mock_run_xrt_smi):
     assert reading.state == GpuState.ACTIVE
     assert reading.igpu_degraded is False
     assert reading.npu_degraded is False
+    assert contexts[0]["submissions"] == 15000
+    mock_run_xrt_smi.assert_called_once_with(device=None)
+
+
+@patch("xdna_top.gauge.run_xrt_smi")
+@patch("xdna_top.gauge.read_igpu", return_value=(5, 5.0, False))
+def test_sample_direct_preserves_submission_delta_activity(
+    _mock_read_igpu, mock_run_xrt_smi
+):
+    mock_run_xrt_smi.side_effect = [
+        "| 42 | 1 | 10 |\n| n/a | Idle | 10 |",
+        "| 42 | 1 | 11 |\n| n/a | Idle | 11 |",
+    ]
+    gauge = HardwareGauge()
+
+    first, first_contexts = gauge.sample_direct()
+    second, second_contexts = gauge.sample_direct()
+
+    assert first.npu_active is False
+    assert second.npu_active is True
+    assert first_contexts[0]["submissions"] == 10
+    assert second_contexts[0]["submissions"] == 11
+    assert mock_run_xrt_smi.call_count == 2
 
 
 @patch("xdna_top.gauge.load_sysfs_paths")

@@ -104,19 +104,15 @@ from xdna_top.exporter import _hardware_reader
 
 
 class _FakeGauge:
-    def read(self):
-        return GaugeReading(
+    def sample_direct(self):
+        reading = GaugeReading(
             gpu_busy_pct=3, gpu_power_w=11.0, npu_active=True, state=GpuState.IDLE
         )
+        contexts = [{"pid": 1, "ctx_id": 1, "submissions": 5, "completions": 4}]
+        return reading, contexts
 
 
-def test_hardware_reader_collects_reading_and_contexts(monkeypatch):
-    import xdna_top.exporter as exp
-    monkeypatch.setattr(exp, "run_xrt_smi", lambda device=None: "RAW")
-    monkeypatch.setattr(
-        exp, "parse_xrt_smi",
-        lambda out: [{"pid": 1, "ctx_id": 1, "submissions": 5, "completions": 4}],
-    )
+def test_hardware_reader_collects_reading_and_contexts():
     read = _hardware_reader(_FakeGauge(), None)
     reading, contexts, power_state = read()
     assert reading.gpu_busy_pct == 3
@@ -124,9 +120,18 @@ def test_hardware_reader_collects_reading_and_contexts(monkeypatch):
     assert power_state is None  # gated on PR #13
 
 
-def test_hardware_reader_empty_contexts_when_xrt_absent(monkeypatch):
-    import xdna_top.exporter as exp
-    monkeypatch.setattr(exp, "run_xrt_smi", lambda device=None: None)
-    read = _hardware_reader(_FakeGauge(), None)
+def test_hardware_reader_empty_contexts_when_xrt_absent():
+    class DegradedGauge:
+        def sample_direct(self):
+            reading = GaugeReading(
+                gpu_busy_pct=3,
+                gpu_power_w=11.0,
+                npu_active=False,
+                state=GpuState.IDLE,
+                npu_degraded=True,
+            )
+            return reading, []
+
+    read = _hardware_reader(DegradedGauge(), None)
     _reading, contexts, _ps = read()
     assert contexts == []

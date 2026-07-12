@@ -6,7 +6,6 @@ import select
 import tty
 import termios
 import argparse
-from pathlib import Path
 from dataclasses import dataclass, replace
 
 from rich.layout import Layout
@@ -23,10 +22,9 @@ from xdna_top.baseline import baseline_main
 from xdna_top.compare import compare_main
 from xdna_top.env_report import env_report_main
 from xdna_top.gauge import (
+    GaugeReading,
     HardwareGauge,
     GpuState,
-    run_xrt_smi,
-    parse_xrt_smi,
     sort_contexts_by_activity,
 )
 from xdna_top.record import mark_main, record_main
@@ -661,27 +659,24 @@ def run_monitor(args: argparse.Namespace, theme: TuiTheme = DEFAULT_THEME) -> in
     try:
         with Live(layout, refresh_per_second=5, screen=True) as live:
             while True:
-                # 1. Scrape hardware state (using client's cached read fallback)
+                # One XRT observation supplies both activity and visible contexts.
                 try:
-                    reading = gauge.read()
-                    xrt_error = reading.npu_degraded
+                    reading, contexts = gauge.sample_direct()
                 except Exception:
-                    # Graceful degradation on read failures
-                    reading = gauge.read_direct()
-                    xrt_error = reading.npu_degraded
-
-                # Scrape raw NPU contexts directly if daemon isn't running
-                contexts = []
-                npu_out = run_xrt_smi(device=args.npu_device)
-                if npu_out:
-                    contexts = parse_xrt_smi(npu_out)
-                    contexts = sort_contexts_by_activity(contexts, prev_submissions)
-                    prev_submissions = {
-                        (c["pid"], c["ctx_id"]): c["submissions"] for c in contexts
-                    }
-                else:
-                    if reading.npu_degraded or not Path(args.bench_dir, "gauge_latest.json").exists():
-                        xrt_error = True
+                    reading = GaugeReading(
+                        gpu_busy_pct=None,
+                        gpu_power_w=None,
+                        npu_active=False,
+                        state=GpuState.UNKNOWN,
+                        igpu_degraded=True,
+                        npu_degraded=True,
+                    )
+                    contexts = []
+                xrt_error = reading.npu_degraded
+                contexts = sort_contexts_by_activity(contexts, prev_submissions)
+                prev_submissions = {
+                    (c["pid"], c["ctx_id"]): c["submissions"] for c in contexts
+                }
 
                 # Update history buffers
                 if reading.gpu_busy_pct is not None:

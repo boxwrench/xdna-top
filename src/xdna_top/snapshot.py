@@ -50,6 +50,7 @@ def build_snapshot(
 
     busy_path, power_path = load_sysfs_paths(bench_dir)
     xrt = _probe_xrt_smi(npu_device=npu_device, errors=errors)
+    xrt_contexts_available = xrt["aie_partitions_returncode"] == 0
 
     gauge = HardwareGauge(
         gpu_idle_busy_pct=gpu_idle_busy_pct,
@@ -60,16 +61,19 @@ def build_snapshot(
         npu_device=npu_device,
     )
     try:
-        reading = gauge.read_direct()
+        reading = gauge.read_direct_from_contexts(
+            xrt["contexts"], npu_degraded=not xrt_contexts_available
+        )
     except Exception as exc:
-        errors.append({"probe": "gauge.read_direct", "message": str(exc)})
+        errors.append(
+            {"probe": "gauge.read_direct_from_contexts", "message": str(exc)}
+        )
         reading = None
 
     contexts = [
         {**ctx, "process_name": ctx.get("process_name"), "source": "xrt_smi"}
         for ctx in xrt["contexts"]
     ]
-    xrt_contexts_available = xrt["aie_partitions_returncode"] == 0
     # Read unconditionally and independently of xrt-smi: the debugfs power state
     # is a separate subsystem, so it can still confirm the NPU is alive when
     # `examine` fails (e.g. the RLIMIT_MEMLOCK false-negative). The read is fully

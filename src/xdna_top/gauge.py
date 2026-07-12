@@ -324,8 +324,24 @@ class HardwareGauge:
         self.busy_path, self.power_path = load_sysfs_paths(self.bench_dir)
         self.prev_submissions = {}
 
+    def sample_direct(self) -> tuple[GaugeReading, list[dict]]:
+        """Return one reading and the contexts from the same XRT observation."""
+        npu_out = run_xrt_smi(device=self.npu_device)
+        npu_degraded = npu_out is None
+        contexts = parse_xrt_smi(npu_out) if npu_out is not None else []
+        return self.read_direct_from_contexts(
+            contexts, npu_degraded=npu_degraded
+        ), contexts
+
     def read_direct(self) -> GaugeReading:
-        """Performs a direct synchronous scrape of the hardware."""
+        """Perform one direct scrape, returning only its fused reading."""
+        reading, _contexts = self.sample_direct()
+        return reading
+
+    def read_direct_from_contexts(
+        self, contexts: list[dict], *, npu_degraded: bool = False
+    ) -> GaugeReading:
+        """Build a direct reading from an already captured context observation."""
         gpu_busy, gpu_power, igpu_degraded = read_igpu(self.busy_path, self.power_path)
 
         display_busy = gpu_busy
@@ -349,12 +365,7 @@ class HardwareGauge:
             )
 
         npu_active = False
-        npu_degraded = False
-        npu_out = run_xrt_smi(device=self.npu_device)
-        if npu_out is None:
-            npu_degraded = True
-        else:
-            contexts = parse_xrt_smi(npu_out)
+        if not npu_degraded:
             for ctx in contexts:
                 key = (ctx["pid"], ctx["ctx_id"])
                 subs = ctx["submissions"]
