@@ -1,7 +1,7 @@
 # Design: Prometheus exporter for xdna-top
 
 > **Historical status:** Implemented and retained for context. This is not a
-> current requirements document; see [../../ROADMAP.md](../../ROADMAP.md).
+> current requirements document; see [../ROADMAP.md](../ROADMAP.md).
 
 **Date:** 2026-06-26
 **Status:** Implemented

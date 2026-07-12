@@ -61,24 +61,28 @@ reports or a new feature family.
      narrow/wide terminals.
 
 5. **Validate degraded paths and real hardware**
-   - Assert one XRT call and a shared context fixture for every sampling path.
-   - Cover absent, unreadable, and unparsable direct power-state data.
+   - **Done:** assert one XRT call and a shared context fixture for every
+     sampling path.
+   - **Done:** cover absent, unreadable, and unparsable direct power-state data.
    - Run idle, rapidly starting/stopping workload, XRT-failure, and
-     debugfs-unavailable smoke tests on supported hardware where possible.
+     debugfs-unavailable smoke tests on supported hardware.
 
-This work is suitable for a v0.4.x patch or a small stabilization release.
+This trust-and-coherence milestone is the v0.5.0 stabilization release. The
+off-hardware implementation and automated validation form the release
+candidate; the supported-hardware smoke pass is the remaining release gate.
 
 ## Next: Simplify the Product
 
-- Promote [SNAPSHOT-SCHEMA.md](SNAPSHOT-SCHEMA.md) as the current schema 1.0
+- **Done:** promote [SNAPSHOT-SCHEMA.md](SNAPSHOT-SCHEMA.md) as the current schema 1.0
   contract and document the exact meaning or versioned deprecation path of
   `backends.npu.primary`.
 - **Done:** remove the dormant gauge daemon/cache path after a final search of
   releases, docs, scripts, CI, benchmarks, and issues for external use.
-- Discover sysfs once per process rather than persisting discovery by default.
-- Re-evaluate `--bench-dir` after the cache removal; retain it only for a real
-  benchmark or explicit path-override workflow.
-- Archive completed implementation plans and the stale session handoff as
+- **Done:** discover sysfs once per process rather than persisting discovery by
+  default; continue honoring an explicit `e0_sysfs.json` override.
+- **Done:** retain `--bench-dir` for the contention benchmark and explicit
+  sysfs-path override workflow, with help text that states that purpose.
+- **Done:** archive completed implementation plans and the stale session handoff as
   historical context. Do not create another current-state document.
 - Complete a real-hardware XRT-absent/direct-backend-present validation when
   such a test environment is available.
@@ -132,7 +136,7 @@ Use one source for each purpose:
 - [devlog.md](../devlog.md): chronological implementation and hardware evidence
 - [SNAPSHOT-SCHEMA.md](SNAPSHOT-SCHEMA.md): artifact contract
 
-## Definition of Done for Stabilization
+## v0.5.0 Release Gate
 
 - Direct ioctl evidence can truthfully detect an NPU without XRT contexts.
 - Each logical sample uses one internally consistent XRT/context observation.
@@ -141,5 +145,8 @@ Use one source for each purpose:
 - `workload-check` stdout parses directly as JSON.
 - Documentation agrees on the active milestone, schema, layout behavior, and
   shipped capabilities.
-- Unit tests cover the degraded backend matrix, and available real hardware has
-  completed the regression smoke pass.
+- Unit tests cover the degraded backend matrix.
+- The package builds and installs, generated documentation is current, and the
+  supported Python test matrix passes.
+- Supported NPU hardware completes the idle, workload-churn, XRT-failure, and
+  debugfs-unavailable regression smoke pass before the version bump and tag.

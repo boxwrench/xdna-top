@@ -6,7 +6,12 @@ from pathlib import Path
 
 
 def discover_sysfs(bench_dir: Path | str | None = None) -> dict:
-    """Probes candidate sysfs paths for iGPU monitoring and writes to e0_sysfs.json."""
+    """Probe candidate sysfs paths for iGPU monitoring.
+
+    ``bench_dir`` is retained for callers that explicitly want to materialize
+    an ``e0_sysfs.json`` override. Normal runtime discovery passes ``None`` and
+    remains entirely in memory.
+    """
     result = {
         "gpu_busy_path": None,
         "gpu_power_path": None,

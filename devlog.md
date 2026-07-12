@@ -52,6 +52,13 @@ theme-regression, and narrow/wide rendering tests cover the three supported
 views: 50 focused TUI/theme tests and all 201 tests in the broader
 Windows-compatible suite pass.
 
+Prepared the off-hardware v0.5 release candidate. Default sysfs discovery is
+now read-only and cached only for the process lifetime; an explicitly supplied
+`e0_sysfs.json` remains supported through `--bench-dir`. Archived the
+superseded v0.3 handoff and implemented exporter plan/design, leaving the
+roadmap as the only active work queue. The remaining v0.5 release gate is the
+supported-hardware regression smoke pass followed by the version bump and tag.
+
 ## 2026-06-28 — On-hardware validation of the evidence surface (live NPU contexts)
 
 Ran the full v0.2/v0.3 surface on the real Strix Halo box (`RyzenAI-npu5`, kernel

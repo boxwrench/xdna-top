@@ -1,9 +1,9 @@
 # Session Handoff
 
 > **Superseded historical document:** This handoff describes the v0.3-era
-> repository and is not current work. Use [ROADMAP.md](ROADMAP.md) for active
-> priorities, [../CHANGELOG.md](../CHANGELOG.md) for shipped releases, and
-> [../devlog.md](../devlog.md) for validation history. It remains temporarily
+> repository and is not current work. Use [ROADMAP.md](../ROADMAP.md) for active
+> priorities, [CHANGELOG.md](../../CHANGELOG.md) for shipped releases, and
+> [devlog.md](../../devlog.md) for validation history. It remains temporarily
 > available while its unique hardware notes are consolidated.
 
 This note is for picking up `xdna-top` work across sessions without relying on
@@ -18,7 +18,7 @@ The evidence core (`snapshot`, `env-report`, `record`, `mark`, `assert`,
 and reflected in `v0.3.0` / `[Unreleased]`:
 
 - **Prometheus exporter** — `xdna-top exporter` serves the fused reading at
-  `/metrics` (optional `[exporter]` extra). See [EXPORTER.md](EXPORTER.md).
+  `/metrics` (optional `[exporter]` extra). See [EXPORTER.md](../EXPORTER.md).
 - **Per-context process names** + **most-active-first context ordering** in the
   TUI and artifacts.
 - **First direct-AMDXDNA signal** — `devices.npu.power_state`: active DPM
@@ -98,48 +98,48 @@ The project should stay complementary to
 
 Read these before changing implementation:
 
-- [ROADMAP.md](ROADMAP.md): release order, scope boundaries, and issue policy
-- [SNAPSHOT-SCHEMA.md](SNAPSHOT-SCHEMA.md): artifact shape for `snapshot`,
+- [ROADMAP.md](../ROADMAP.md): release order, scope boundaries, and issue policy
+- [SNAPSHOT-SCHEMA.md](../SNAPSHOT-SCHEMA.md): artifact shape for `snapshot`,
   `env-report`, `record`, `assert`, `compare`, and `baseline`
-- [HOW-IT-WORKS.md](HOW-IT-WORKS.md): teaching guide, now including the
+- [HOW-IT-WORKS.md](../HOW-IT-WORKS.md): teaching guide, now including the
   "From live view to evidence" tour of the evidence commands
-- [THEMES.md](THEMES.md): theme list, `--theme`/`XDNA_TOP_THEME` usage, and how to
+- [THEMES.md](../THEMES.md): theme list, `--theme`/`XDNA_TOP_THEME` usage, and how to
   contribute a theme
-- [../README.md](../README.md): public positioning and related-tools language
-- [index.html](index.html): the GitHub Pages dashboard; its interactive glossary
+- [README.md](../../README.md): public positioning and related-tools language
+- [index.html](../index.html): the GitHub Pages dashboard; its interactive glossary
   now has an "Evidence" category covering snapshot/record/mark/assert/compare/baseline
 
 Implementation entry points:
 
-- [../src/xdna_top/main.py](../src/xdna_top/main.py): current CLI, TUI, theme
+- [src/xdna_top/main.py](../../src/xdna_top/main.py): current CLI, TUI, theme
   rendering, and `--json`
-- [../src/xdna_top/gauge.py](../src/xdna_top/gauge.py): sysfs reads, XRT probe,
+- [src/xdna_top/gauge.py](../../src/xdna_top/gauge.py): sysfs reads, XRT probe,
   context parsing, and fused reading model
-- [../src/xdna_top/snapshot.py](../src/xdna_top/snapshot.py): snapshot artifact
+- [src/xdna_top/snapshot.py](../../src/xdna_top/snapshot.py): snapshot artifact
   builder and JSON writer
-- [../src/xdna_top/env_report.py](../src/xdna_top/env_report.py): Markdown
+- [src/xdna_top/env_report.py](../../src/xdna_top/env_report.py): Markdown
   report renderer for captured snapshots
-- [../src/xdna_top/record.py](../src/xdna_top/record.py): JSONL telemetry
+- [src/xdna_top/record.py](../../src/xdna_top/record.py): JSONL telemetry
   recorder, sampling loop, and event builders
-- [../src/xdna_top/assertions.py](../src/xdna_top/assertions.py): artifact
+- [src/xdna_top/assertions.py](../../src/xdna_top/assertions.py): artifact
   loader, named checks, and CI exit codes for `assert`
-- [../src/xdna_top/compare.py](../src/xdna_top/compare.py): high-signal snapshot
+- [src/xdna_top/compare.py](../../src/xdna_top/compare.py): high-signal snapshot
   diff rules and CI exit codes for `compare`
-- [../src/xdna_top/baseline.py](../src/xdna_top/baseline.py): named snapshot
+- [src/xdna_top/baseline.py](../../src/xdna_top/baseline.py): named snapshot
   save/check/list workflow over `snapshot` + `compare`
-- [../tests/test_xdna_top.py](../tests/test_xdna_top.py) and
-  [../tests/test_gauge.py](../tests/test_gauge.py): current behavior checks
-- [../tests/test_snapshot.py](../tests/test_snapshot.py): snapshot schema and
+- [tests/test_xdna_top.py](../../tests/test_xdna_top.py) and
+  [tests/test_gauge.py](../../tests/test_gauge.py): current behavior checks
+- [tests/test_snapshot.py](../../tests/test_snapshot.py): snapshot schema and
   degraded-path checks
-- [../tests/test_env_report.py](../tests/test_env_report.py): Markdown report
+- [tests/test_env_report.py](../../tests/test_env_report.py): Markdown report
   rendering and invalid-input checks
-- [../tests/test_record.py](../tests/test_record.py): record timing, JSONL
+- [tests/test_record.py](../../tests/test_record.py): record timing, JSONL
   shape, and degraded-path checks
-- [../tests/test_assertions.py](../tests/test_assertions.py): artifact loading,
+- [tests/test_assertions.py](../../tests/test_assertions.py): artifact loading,
   per-check pass/fail, and exit codes for both artifact types
-- [../tests/test_compare.py](../tests/test_compare.py): per-rule change/regression
+- [tests/test_compare.py](../../tests/test_compare.py): per-rule change/regression
   classification and compare exit codes
-- [../tests/test_baseline.py](../tests/test_baseline.py): name/path safety,
+- [tests/test_baseline.py](../../tests/test_baseline.py): name/path safety,
   save/check round trip, and baseline exit codes
 
 ## Completed Groundwork
@@ -258,7 +258,7 @@ remaining items genuinely need the target machine:
    (v0.4). It depends on the evidence artifact and has the largest design surface.
 
 Smaller community follow-ups that stay off-hardware: add more candidate themes
-from [ROADMAP.md](ROADMAP.md) (`fabric`, `team-red`, `lime`, `grapefruit`) as data
+from [ROADMAP.md](../ROADMAP.md) (`fabric`, `team-red`, `lime`, `grapefruit`) as data
 entries, and a screenshot gallery for `THEMES.md`. These are good
 first-contribution issues, not blockers.
 

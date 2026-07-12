@@ -13,6 +13,7 @@ from xdna_top.gauge import (
     sort_contexts_by_activity,
     HardwareGauge,
     discover_npu_device,
+    load_sysfs_paths,
     run_xrt_smi,
 )
 
@@ -183,6 +184,40 @@ def test_read_is_direct_compatibility_alias():
     with patch.object(gauge, "read_direct", return_value=expected) as read_direct:
         assert gauge.read() is expected
     read_direct.assert_called_once_with()
+
+
+def test_load_sysfs_paths_discovers_in_memory_without_writing(tmp_path):
+    load_sysfs_paths.cache_clear()
+    with patch(
+        "xdna_top.discover_sysfs.discover_sysfs",
+        return_value={"gpu_busy_path": "/busy", "gpu_power_path": "/power"},
+    ) as discover:
+        assert load_sysfs_paths(str(tmp_path)) == ("/busy", "/power")
+        assert load_sysfs_paths(str(tmp_path)) == ("/busy", "/power")
+
+    discover.assert_called_once_with()
+    assert not (tmp_path / "e0_sysfs.json").exists()
+
+
+def test_load_sysfs_paths_honors_explicit_override(tmp_path):
+    load_sysfs_paths.cache_clear()
+    (tmp_path / "e0_sysfs.json").write_text(
+        json.dumps(
+            {
+                "gpu_busy_path": "/override-busy",
+                "gpu_power_path": "/override-power",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with patch("xdna_top.discover_sysfs.discover_sysfs") as discover:
+        assert load_sysfs_paths(str(tmp_path)) == (
+            "/override-busy",
+            "/override-power",
+        )
+
+    discover.assert_not_called()
 
 
 @patch("xdna_top.gauge.load_sysfs_paths")

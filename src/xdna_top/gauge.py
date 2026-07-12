@@ -105,8 +105,15 @@ def get_stable_state(raw_states: list[GpuState]) -> GpuState:
     return max(candidates, key=lambda s: priority.get(s, 0))
 
 
+@lru_cache(maxsize=None)
 def load_sysfs_paths(bench_dir: str) -> tuple[str | None, str | None]:
-    """Loads discovered sysfs paths from bench_dir/e0_sysfs.json or discover_sysfs fallback."""
+    """Resolve iGPU sysfs paths once per process.
+
+    An existing ``bench_dir/e0_sysfs.json`` remains an explicit path override
+    for benchmarks and compatibility. Without that file, discovery is
+    read-only and kept in memory rather than persisted with potentially stale
+    device ordering or driver paths.
+    """
     sysfs_json = Path(bench_dir) / "e0_sysfs.json"
     if sysfs_json.exists():
         try:
@@ -117,7 +124,7 @@ def load_sysfs_paths(bench_dir: str) -> tuple[str | None, str | None]:
 
     try:
         from xdna_top.discover_sysfs import discover_sysfs
-        res = discover_sysfs(Path(bench_dir))
+        res = discover_sysfs()
         return res.get("gpu_busy_path"), res.get("gpu_power_path")
     except Exception:
         return None, None

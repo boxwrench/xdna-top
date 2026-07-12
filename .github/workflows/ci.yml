@@ -37,3 +37,9 @@ jobs:
 
       - name: Run tests
         run: pytest -q
+
+      - name: Check generated documentation
+        run: python tools/build_experiments_index.py --check
+
+      - name: Build distributions
+        run: python -m build

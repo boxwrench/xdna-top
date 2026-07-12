@@ -435,7 +435,7 @@ def _add_hardware_args(parser: argparse.ArgumentParser, *, suppress_defaults: bo
         "--bench-dir",
         type=str,
         default=default if suppress_defaults else "/tmp/xdna_top",
-        help="Directory for latest gauge readings",
+        help="Directory containing an optional e0_sysfs.json path override",
     )
     parser.add_argument(
         "--npu-device",

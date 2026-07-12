@@ -2,7 +2,7 @@
 
 > **Historical status:** Implemented and retained for context. The unchecked
 > steps below describe the original plan and are not current instructions; see
-> [../../ROADMAP.md](../../ROADMAP.md).
+> [../ROADMAP.md](../ROADMAP.md).
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

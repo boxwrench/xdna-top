@@ -24,7 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Narrowed public positioning to claims the repository can substantiate,
   promoted the shipped snapshot schema 1.0 documentation from draft status,
   clarified that the theme gallery is not a live layout option, and marked
-  stale handoff/exporter plans as historical.
+  stale handoff/exporter plans as historical. Those completed documents now
+  live under `docs/archive/` rather than beside active product documentation.
+- Sysfs discovery now runs once per process without writing a default cache.
+  An existing `e0_sysfs.json` in `--bench-dir` remains an explicit path
+  override for benchmark and compatibility workflows.
+- Package metadata now uses the standard SPDX license expression supported by
+  current Python build tooling. CI now also checks generated documentation and
+  builds the wheel and source distribution across the supported Python matrix.
 
 ### Fixed
 
