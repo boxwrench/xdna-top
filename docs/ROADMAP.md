@@ -54,12 +54,11 @@ reports or a new feature family.
      stderr. Preserve endpoint-based exit semantics and add `schema_version` if
      the artifact is intended for persistent automation.
 
-4. **Resolve the concrete presentation confusion**
+4. **Resolve the concrete presentation confusion — done**
    - Make clear that the theme gallery demonstrates palettes, not the live TUI
      layout.
-   - Confirm whether the real need is stacked panes, an NPU-only view, or both.
-     Implement only the selected direct layout branch and test narrow/wide
-     terminals.
+   - Implement the selected stacked and NPU-only direct branches and test
+     narrow/wide terminals.
 
 5. **Validate degraded paths and real hardware**
    - Assert one XRT call and a shared context fixture for every sampling path.

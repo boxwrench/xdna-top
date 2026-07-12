@@ -44,6 +44,14 @@ or external reference was found. Removed `run_daemon()`, the module CLI,
 still use it; persisted sysfs discovery is a separate cleanup decision. The
 broader Windows-compatible suite passes all 189 applicable tests.
 
+Implemented both concrete layout requests without a layout framework.
+`--layout stacked` switches the existing body split from a row to a column;
+`--npu-only` creates a single NPU child and skips iGPU panel updates. The
+default remains side by side, and the flags compose. Structural, CLI-plumbing,
+theme-regression, and narrow/wide rendering tests cover the three supported
+views: 50 focused TUI/theme tests and all 201 tests in the broader
+Windows-compatible suite pass.
+
 ## 2026-06-28 — On-hardware validation of the evidence surface (live NPU contexts)
 
 Ran the full v0.2/v0.3 surface on the real Strix Halo box (`RyzenAI-npu5`, kernel

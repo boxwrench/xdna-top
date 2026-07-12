@@ -386,18 +386,28 @@ def create_header_panel(
     return Panel(body, border_style=theme.header_border)
 
 
-def build_layout(theme: TuiTheme = DEFAULT_THEME) -> Layout:
-    """Defines terminal Grid layout."""
+def build_layout(
+    theme: TuiTheme = DEFAULT_THEME,
+    *,
+    layout_mode: str = "side-by-side",
+    npu_only: bool = False,
+) -> Layout:
+    """Define the live layout using the two supported direct arrangements."""
+    if layout_mode not in {"side-by-side", "stacked"}:
+        raise ValueError(f"unsupported layout mode: {layout_mode}")
+
     layout = Layout()
     layout.split_column(
         Layout(name="header", size=theme.header_size),
         Layout(name="body", ratio=1),
         Layout(name="footer", size=3)
     )
-    layout["body"].split_row(
-        Layout(name="igpu"),
-        Layout(name="npu")
-    )
+    if npu_only:
+        layout["body"].split_column(Layout(name="npu"))
+    elif layout_mode == "stacked":
+        layout["body"].split_column(Layout(name="igpu"), Layout(name="npu"))
+    else:
+        layout["body"].split_row(Layout(name="igpu"), Layout(name="npu"))
     return layout
 
 
@@ -452,6 +462,17 @@ def build_parser(
         "--list-themes",
         action="store_true",
         help="List available TUI theme names and exit.",
+    )
+    parser.add_argument(
+        "--layout",
+        choices=("side-by-side", "stacked"),
+        default="side-by-side",
+        help="Live pane arrangement (default: side-by-side).",
+    )
+    parser.add_argument(
+        "--npu-only",
+        action="store_true",
+        help="Show only the NPU pane in the live TUI.",
     )
     _add_hardware_args(parser)
 
@@ -629,7 +650,13 @@ def run_monitor(args: argparse.Namespace, theme: TuiTheme = DEFAULT_THEME) -> in
 
     # TUI loop
     console = Console()
-    layout = build_layout(theme)
+    layout_mode = getattr(args, "layout", "side-by-side")
+    npu_only = getattr(args, "npu_only", False)
+    layout = build_layout(
+        theme,
+        layout_mode=layout_mode,
+        npu_only=npu_only,
+    )
     
     # Header — label it with the NPU device actually detected (e.g.
     # "RyzenAI-npu5"), or no platform label at all when none is found, rather
@@ -695,17 +722,18 @@ def run_monitor(args: argparse.Namespace, theme: TuiTheme = DEFAULT_THEME) -> in
                     power_history.pop(0)
 
                 # 2. Update Panels
-                layout["body"]["igpu"].update(
-                    create_igpu_panel(
-                        reading.gpu_busy_pct,
-                        reading.gpu_power_w,
-                        reading.state,
-                        busy_history,
-                        power_history,
-                        igpu_degraded=reading.igpu_degraded,
-                        theme=theme,
+                if not npu_only:
+                    layout["body"]["igpu"].update(
+                        create_igpu_panel(
+                            reading.gpu_busy_pct,
+                            reading.gpu_power_w,
+                            reading.state,
+                            busy_history,
+                            power_history,
+                            igpu_degraded=reading.igpu_degraded,
+                            theme=theme,
+                        )
                     )
-                )
                 layout["body"]["npu"].update(
                     create_npu_panel(
                         reading.npu_active,

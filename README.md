@@ -95,6 +95,8 @@ xdna-top exporter --port 9477              # serve Prometheus metrics at /metric
 xdna-top workload-check --chat-url http://localhost:8000/v1/chat/completions \
   --model my-model            # JSON stdout; human evidence summary on stderr
 xdna-top --theme phosphor   # pick a TUI theme (see --list-themes)
+xdna-top --layout stacked   # iGPU above NPU for a narrow terminal
+xdna-top --npu-only        # hide the iGPU pane
 lemonade-top                # same monitor, lemonade-stand theme
 ```
 
@@ -140,6 +142,7 @@ degraded instead of crashing.
   per-context NPU submission/completion deltas across the request window —
   measured evidence, never a causality claim
 - Themes via `--theme`/`XDNA_TOP_THEME` (colors only — never the measured values)
+- Direct live-view options: `--layout stacked` and `--npu-only`
 - Pessimistic fallbacks everywhere — built for imperfect driver stacks
 - Zero daemon, zero root*, zero ROCm dependency
   <sub>*standard sysfs/xrt permissions apply</sub>

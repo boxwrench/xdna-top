@@ -8,6 +8,7 @@ from rich.console import Console
 from xdna_top.main import (
     DEFAULT_THEME,
     LEMONADE_THEME,
+    build_layout,
     create_header_panel,
     make_bar,
     make_sparkline,
@@ -185,6 +186,65 @@ def test_header_never_hardcodes_strix_halo():
     output = _render(create_header_panel(DEFAULT_THEME, "RyzenAI-npu1"))
     assert "Strix Halo" not in output
     assert "RyzenAI-npu1" in output
+
+
+def test_default_layout_is_side_by_side():
+    layout = build_layout()
+    body = layout["body"]
+    assert [child.name for child in body.children] == ["igpu", "npu"]
+    assert type(body.splitter).__name__ == "RowSplitter"
+
+
+def test_stacked_layout_places_igpu_above_npu():
+    layout = build_layout(layout_mode="stacked")
+    body = layout["body"]
+    assert [child.name for child in body.children] == ["igpu", "npu"]
+    assert type(body.splitter).__name__ == "ColumnSplitter"
+
+
+@pytest.mark.parametrize("layout_mode", ["side-by-side", "stacked"])
+def test_npu_only_layout_has_one_pane(layout_mode):
+    layout = build_layout(layout_mode=layout_mode, npu_only=True)
+    assert [child.name for child in layout["body"].children] == ["npu"]
+
+
+def test_unknown_layout_mode_is_rejected():
+    with pytest.raises(ValueError, match="unsupported layout mode"):
+        build_layout(layout_mode="diagonal")
+
+
+@pytest.mark.parametrize("width", [60, 160])
+@pytest.mark.parametrize(
+    ("layout_mode", "npu_only"),
+    [("side-by-side", False), ("stacked", False), ("stacked", True)],
+)
+def test_layout_options_render_at_narrow_and_wide_widths(
+    width, layout_mode, npu_only
+):
+    layout = build_layout(layout_mode=layout_mode, npu_only=npu_only)
+    layout["header"].update("HEADER")
+    layout["footer"].update("FOOTER")
+    if not npu_only:
+        layout["body"]["igpu"].update("IGPU_PANE")
+    layout["body"]["npu"].update("NPU_PANE")
+
+    console = Console(width=width, height=24)
+    with console.capture() as capture:
+        console.print(layout)
+    output = capture.get()
+
+    assert "NPU_PANE" in output
+    assert ("IGPU_PANE" in output) is (not npu_only)
+
+
+@patch("xdna_top.main.run_monitor")
+@patch("sys.argv", ["xdna-top", "--layout", "stacked", "--npu-only"])
+def test_layout_flags_reach_monitor(mock_run_monitor):
+    mock_run_monitor.return_value = 0
+    assert main() == 0
+    args = mock_run_monitor.call_args.args[0]
+    assert args.layout == "stacked"
+    assert args.npu_only is True
 
 
 @patch("xdna_top.main.HardwareGauge")

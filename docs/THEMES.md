@@ -33,9 +33,11 @@ compatibility alias: it defaults to the `lemonade` theme but still honors
 | `halo` | deep navy and silver |
 
 The gallery above is rendered with illustrative values to show each palette. It
-stacks the two sample panels for compact documentation and does not depict a
-selectable live TUI layout. The live TUI remains side by side; metric columns,
-units, state values, and numbers are identical across all themes.
+stacks the two sample panels for compact documentation rather than capturing a
+live session. The same pane arrangement is available with
+`xdna-top --layout stacked`; `--npu-only` hides the iGPU pane. The default
+remains side by side. Metric columns, units, state values, and numbers are
+identical across all themes and layouts.
 
 ## Contributing a theme
 

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Small, direct live-view options: `--layout stacked` places the iGPU pane
+  above the NPU pane, and `--npu-only` hides the iGPU pane. They compose
+  without introducing profiles or a generalized layout system; side by side
+  remains the default.
+
 ### Changed
 
 - Replaced the feature-heavy v0.5 roadmap with a trust-and-coherence
