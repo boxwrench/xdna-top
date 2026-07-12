@@ -69,7 +69,6 @@ def build_snapshot(
         {**ctx, "process_name": ctx.get("process_name"), "source": "xrt_smi"}
         for ctx in xrt["contexts"]
     ]
-    npu_detected = xrt["device"]["bdf"] is not None or bool(contexts)
     xrt_contexts_available = xrt["aie_partitions_returncode"] == 0
     # Read unconditionally and independently of xrt-smi: the debugfs power state
     # is a separate subsystem, so it can still confirm the NPU is alive when
@@ -81,6 +80,9 @@ def build_snapshot(
     # independent of xrt-smi. Optional/additive and fully guarded.
     npu_ioctl = read_amdxdna_info(xrt["device"]["bdf"])
     ioctl_available = bool(npu_ioctl.get("available"))
+    npu_detected = (
+        xrt["device"]["bdf"] is not None or bool(contexts) or ioctl_available
+    )
     ioctl_driver = npu_ioctl.get("driver") or {}
     # Match the published schema shape: drm_version is an object, or null.
     ioctl_drm_version = (
@@ -269,7 +271,13 @@ def _backend_provenance(
     amdxdna_sensors_available: bool = False,
 ) -> dict[str, Any]:
     npu_signals = {
-        "device": "xrt_smi" if xrt_available and xrt_device_available else None,
+        "device": (
+            "amdxdna_ioctl"
+            if amdxdna_ioctl_available
+            else "xrt_smi"
+            if xrt_available and xrt_device_available
+            else None
+        ),
         "driver": "amdxdna_ioctl" if amdxdna_ioctl_available else None,
         "sensors": "amdxdna_ioctl" if amdxdna_sensors_available else None,
         "contexts": "xrt_smi" if xrt_available and xrt_contexts_available else None,

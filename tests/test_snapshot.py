@@ -3,6 +3,7 @@
 import json
 from unittest.mock import MagicMock, patch
 
+from xdna_top.assertions import Artifact, evaluate
 from xdna_top.snapshot import build_snapshot, detect_npu_device, write_snapshot
 
 
@@ -210,6 +211,74 @@ def test_build_snapshot_wires_amdxdna_ioctl(
     assert npu["driver"]["supports_sensors"] is False
     assert snapshot["backends"]["npu"]["signals"]["driver"] == "amdxdna_ioctl"
     assert snapshot["backends"]["npu"]["signals"]["sensors"] is None
+
+
+@patch("xdna_top.snapshot.read_amdxdna_info")
+@patch("xdna_top.snapshot._accel_entries")
+@patch("xdna_top.snapshot.HardwareGauge")
+@patch("xdna_top.snapshot.os.path.exists")
+@patch("xdna_top.snapshot.load_sysfs_paths")
+@patch("xdna_top.snapshot._probe_xrt_smi")
+def test_build_snapshot_detects_npu_from_ioctl_without_xrt(
+    mock_probe_xrt,
+    mock_load_sysfs_paths,
+    mock_exists,
+    mock_gauge_class,
+    mock_accel_entries,
+    mock_ioctl,
+):
+    """Direct kernel identity proves device presence without context attribution."""
+    mock_probe_xrt.return_value = {
+        "path": None,
+        "available": False,
+        "version_output": None,
+        "examine_returncode": None,
+        "aie_partitions_returncode": None,
+        "device": {"bdf": None, "name": None},
+        "contexts": [],
+    }
+    mock_load_sysfs_paths.return_value = (None, None)
+    mock_exists.return_value = False
+    mock_accel_entries.return_value = [
+        {"path": "/dev/accel/accel0", "exists": True}
+    ]
+    mock_ioctl.return_value = {
+        "available": True,
+        "source": "amdxdna_ioctl",
+        "reason": None,
+        "node": "/dev/accel/accel0",
+        "driver": {
+            "name": "amdxdna_accel_driver",
+            "version": "0.6.0",
+            "major": 0,
+            "minor": 6,
+            "patchlevel": 0,
+            "description": "x",
+        },
+        "supports_sensors": False,
+        "sensors": {"available": False, "reason": "ioctl_errno_95", "items": []},
+    }
+    reading = MagicMock()
+    reading.to_dict.return_value = {
+        "npu_active": False,
+        "state": "IDLE",
+        "npu_degraded": True,
+        "igpu_degraded": True,
+        "ts": 1.0,
+    }
+    mock_gauge_class.return_value.read_direct.return_value = reading
+
+    snapshot = build_snapshot(bench_dir="/tmp/xdna-top-test")
+
+    assert snapshot["devices"]["npu"]["detected"] is True
+    assert snapshot["backends"]["npu"]["primary"] is None
+    assert snapshot["backends"]["npu"]["signals"]["device"] == "amdxdna_ioctl"
+    assert snapshot["backends"]["npu"]["signals"]["contexts"] is None
+    assert "xrt_smi_not_found" in snapshot["degraded"]["npu"]["reasons"]
+
+    artifact = Artifact(kind="snapshot", snapshot=snapshot, events=[])
+    assert evaluate("require-npu", artifact).ok
+    assert not evaluate("require-context-source", artifact).ok
 
 
 def test_write_snapshot_to_file(tmp_path):

@@ -1,5 +1,25 @@
 # xdna-top Devlog
 
+## 2026-07-12 — Ponytail audit alignment and direct-backend detection
+
+Folded the repository audit into a lean trust-and-coherence roadmap. HTML
+reporting and speculative cross-project tooling are now trigger-gated or out of
+scope; README positioning is narrower, snapshot schema 1.0 is documented as the
+current contract, the theme gallery is explicitly not a live layout mode, and
+completed handoff/exporter plans are marked historical.
+
+Started the stabilization milestone by making successful read-only AMDXDNA ioctl
+identity contribute to `devices.npu.detected` and
+`backends.npu.signals.device`. The generic schema 1.0
+`backends.npu.primary` behavior is unchanged. Added an
+XRT-unavailable/ioctl-available fixture proving that `require-npu` passes while
+`require-context-source` fails honestly.
+
+Validation: snapshot/assertion tests pass (36 tests). The full suite could not
+collect in the current Windows environment because the Linux TUI imports
+`termios` and the optional exporter dependency `prometheus_client` is not
+installed; WSL has Python but not pytest.
+
 ## 2026-06-28 — On-hardware validation of the evidence surface (live NPU contexts)
 
 Ran the full v0.2/v0.3 surface on the real Strix Halo box (`RyzenAI-npu5`, kernel

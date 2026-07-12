@@ -1,684 +1,146 @@
 # Roadmap
 
-`xdna-top` started as a live terminal monitor for AMD Ryzen AI NPU and iGPU
-telemetry. The next phase is to make that telemetry usable as evidence:
-preflight checks, update canaries, eval logs, and workload proofs.
-
-The roadmap is schema-first. Four commands are views over the same artifact:
-
-- `snapshot`: capture JSON
-- `env-report`: render Markdown from that JSON
-- `compare`: diff two snapshots
-- `baseline`: diff a new snapshot against a named local snapshot
-
-Getting the snapshot schema right makes those commands thin and keeps future
-comparison compatible.
-
-## Product Direction
-
-The core promise should stay narrow and testable:
-
-> `xdna-top` reports observed Ryzen AI NPU and iGPU telemetry, and makes that
-> evidence reproducible across scripts, reports, and update checks.
-
-This means future features should prefer machine-readable evidence over pretty
-output. The TUI remains useful for humans, but new commands should be designed
-for scripts, CI gates, devlogs, bug reports, and eval artifacts.
-
-Claims precision applies to every verdict. Commands should report exactly what
-they measured, such as:
-
-> Contexts owned by PID 1234 incremented submissions by 42 during the request
-> window.
-
-They should avoid stronger claims such as:
-
-> The NPU ran your request.
-
-Concurrent workloads can increment counters too. Per-context PID attribution is
-therefore part of the evidence model, not a cosmetic detail.
-
-## Telemetry Backends
-
-Prefer direct kernel interfaces over external tools where possible.
-
-For AMD XDNA NPU telemetry, the preferred backend should be direct AMDXDNA DRM
-IOCTL probing through `/dev/accel/*`. External tools such as `xrt-smi` should
-remain compatibility fallbacks and sources for signals that are not yet exposed
-through the direct backend.
-
-Initial backend split:
-
-- `amdxdna_ioctl`: device probing, DRM version, sensor support, NPU power, and
-  column utilization where supported by the kernel
-- `xrt_smi`: per-context PID, context ID, submissions, completions, and status
-  until equivalent direct attribution is available
-- degraded fallback: preserve zero-root operation and report exactly which
-  signals are unavailable
-
-Snapshot and record output should include backend provenance so reports can say
-which interface produced each signal.
-
-## Telemetry Inventory
-
-The project should track potentially useful telemetry without trying to become a
-general AMDGPU monitor. The inventory gives contributors and users a clear place
-to see what is already captured, what appears available from related tooling,
-and what belongs in a separate tool.
-
-### In Scope Now
-
-- iGPU busy percent from `amdgpu` sysfs
-- iGPU power in watts from `amdgpu` hwmon sysfs
-- NPU context PID from `xrt-smi examine --report aie-partitions`
-- NPU context ID from `xrt-smi examine --report aie-partitions`
-- NPU submission/completion counters from `xrt-smi examine --report aie-partitions`
-- NPU derived active/idle state from counter deltas
-- degraded flags when a source is missing or unreadable
-
-### Available Elsewhere, Good Candidates
-
-These are useful signals observed through `amdgpu_top` or direct AMDXDNA driver
-probing. They are candidates for `xdna-top` only when they strengthen workload
-evidence, snapshot reporting, or NPU+iGPU concurrency analysis.
-
-- NPU firmware version
-- AIE version
-- AIE metadata such as columns and rows
-- NPU clock metadata
-- NPU task/resource limits
-- NPU TOPS/resource info
-- NPU power sensor
-- NPU column-utilization sensor
-- NPU read/write bandwidth sensors
-- APU/iGPU memory clock and fabric clock
-- iGPU GPU metrics and process memory attribution
-
-### Likely Out of Scope
-
-These are valuable, but they are already broad GPU-monitor territory. Prefer
-linking users to `amdgpu_top` unless a specific signal is needed for
-`xdna-top`'s workload-evidence story.
-
-- full GRBM/GRBM2 counter views
-- full GPU process/fdinfo dashboard
-- complete VRAM/GTT monitoring UI
-- GUI mode
-- full video/media engine dashboard
-- generic AMDGPU replacement features
-
-### Issue Policy
-
-Telemetry requests should name:
-
-- the exact signal requested
-- why it helps prove workload behavior or platform health
-- where the signal is known to exist, if known
-- whether the value needs provenance in `snapshot` or `record`
-
-This lets users ask for missing signals while keeping the default answer honest:
-use `amdgpu_top` for broad hardware monitoring, use `xdna-top` for Ryzen AI
-workload evidence.
-
-## Development Path
-
-Keep the roadmap public and versioned, but keep risky backend work isolated.
-The split should be:
-
-- `main`: current release docs, stable commands, schema drafts, and issue links
-- feature branches: one command family at a time, such as `feature/evidence-core`
-  or `feature/workload-check`
-- experimental backend branch: read-only driver probing before it graduates into
-  released commands
-
-Use a focused experimental branch for direct AMDXDNA work:
-
-```bash
-git switch -c exp/amdxdna-backend
-```
-
-Recommended sequence:
-
-1. Keep current docs and schema changes on `main`.
-2. Open public issues for the evidence core, direct backend, workload check,
-   telemetry inventory, and themes.
-3. Start `exp/amdxdna-backend` with read-only probes only.
-4. Add a backend abstraction before adding more metrics.
-5. Capture provenance for every signal.
-6. Promote one signal at a time into `snapshot` and `record`.
-7. Keep `amdgpu_top` linked as the general monitor rather than duplicating its
-   full feature set.
-
-For session-to-session pickup, use [HANDOFF.md](HANDOFF.md).
-
-## Release Sequence
-
-This should be the public roadmap. It is concrete enough to guide development,
-but it still leaves implementation details open until each feature is designed.
-
-**Current status (2026-06-28): `v0.4.0` released.** v0.1.x–v0.4 are delivered;
-**v0.5 (Community and Reports) is the active milestone.** Per-release notes live
-in [../CHANGELOG.md](../CHANGELOG.md).
-
-### v0.1.x: Positioning and Schema
-
-No major behavior change. This line is for getting the project framed correctly
-before more commands land.
-
-- document `xdna-top` as a workload-evidence tool, not a general AMDGPU monitor
-- acknowledge `amdgpu_top` as the broad AMDGPU/APU monitor and inspiration for
-  direct driver-facing telemetry
-- publish the snapshot schema draft with `schema_version`
-- publish the telemetry inventory and issue policy
-- update the teaching guide and glossary for DRM, IOCTL, `/dev/accel`, AMDXDNA,
-  XRT, and backend provenance
-
-Release when the docs are coherent and the current TUI/`--json` behavior remains
-unchanged.
-
-### v0.2: Evidence Core
-
-Build the pieces needed for reliable preflight, trial evidence, bug reports, and
-update checks:
-
-- `xdna-top snapshot`
-- `xdna-top env-report`
-- `xdna-top record`
-- `xdna-top assert`
-
-The direct AMDXDNA backend does not have to be complete for v0.2. The important
-part is the artifact model: versioned JSON, backend provenance, degraded flags,
-and non-zero exits for failed assertions.
-
-Release when:
-
-- snapshot JSON is stable enough for later compare/baseline work
-- `record` writes JSONL with typed telemetry events
-- `env-report` renders only captured snapshot facts
-- `assert` names each check and prints observed values
-- missing NPU/iGPU/XRT/sysfs signals degrade gracefully
-
-### v0.3: Direct Backend and Upgrade Canary — ✅ delivered
-
-The compare/baseline upgrade-canary workflow shipped in `v0.2.0`; the first
-read-only direct AMDXDNA backend (debugfs power state + DRM-IOCTL identity/AIE/
-clocks/firmware) landed in `v0.4.0`. All release criteria below are met.
-
-Comparison workflows on top of the snapshot schema:
-
-- read-only `amdxdna_ioctl` backend for device probing and supported sensors
-  - **landed**: the NPU's active DPM clock state (npuclk/hclk MHz) + SMU
-    powerstate from `amdxdna` debugfs (`devices.npu.power_state`).
-  - **landed**: read-only DRM-IOCTL backend (`devices.npu.ioctl`) — driver
-    identity + DRM version, AIE version/metadata, MP-NPU/H clock frequencies, and
-    firmware version via `DRM_IOCTL_VERSION` / `DRM_IOCTL_AMDXDNA_GET_INFO`,
-    validated on real silicon. Sensor values are gated on kernel support
-    (`QUERY_SENSORS` is `EOPNOTSUPP` on current kernels, reported honestly).
-    All additive, no `schema_version` bump.
-- `xdna-top compare`
-- `xdna-top baseline`
-- sharper degraded reasons for driver, device, sensor, and XRT shape changes
-- more complete backend provenance in snapshots and recordings
-
-Release when:
-
-- a known-good snapshot can be saved and checked after kernel, BIOS, distro, or
-  XRT updates
-- compare output highlights meaningful platform drift instead of generic JSON
-  noise
-- direct AMDXDNA probes are optional and never break zero-root operation
-
-### v0.4: Supervised Workload Checks — ✅ delivered (v0.4.0)
-
-`xdna-top workload-check` shipped in `v0.4.0`, validated on real silicon with
-both a negative (iGPU/CPU endpoint, no NPU movement) and a positive (NPU-backed
-FastFlowLM endpoint, per-context deltas) capture. Release criteria met.
-
-Workload supervision over the lower-level evidence commands:
-
-- `xdna-top workload-check` — **landed**: probes an OpenAI-compatible endpoint
-  (models GET + chat POST via stdlib `urllib`, no new dependency), brackets the
-  request with before/after context reads, and reports per-context
-  submission/completion deltas with PID attribution. Output carries the
-  concurrent-workload caveat; the exit code reflects only endpoint success, never
-  a causality claim.
-- optional OpenAI-compatible endpoint probing where useful
-- request-window telemetry capture
-- PID/context attribution in the output
-- careful verdict language that reports measured counter movement, not certainty
-  about request causality
-
-This has the widest design surface: endpoint configuration, request timing
-windows, context attribution, and careful verdict language.
-
-Release when:
-
-- the command can prove that the endpoint responded and measured NPU counters
-  changed during the supervised window
-- concurrent workload ambiguity is documented in the output and docs
-- the JSON output is useful for automated evidence review
-
-### v0.5: Community and Reports — ◀ active
-
-This is the right place for lower-risk community features now the evidence core
-exists. The theme registry and Prometheus `exporter` already shipped; the
-remaining work is richer HTML reports and more Ryzen AI captures.
-
-- theme registry behind `--theme <name>`
-- optional `XDNA_TOP_THEME`
-- keep `lemonade-top` as a compatibility alias
-- `THEMES.md` with screenshots and contribution rules
-- richer HTML reports for captured telemetry
-- Prometheus `exporter` (**shipped**) — serves the fused reading at `/metrics`
-  for scraping into Prometheus/Grafana; optional `[exporter]` extra
-- more captures from additional Ryzen AI machines
-
-Release when theme and report changes are data/config additions, not duplicated
-entry points or renamed metrics.
-
-### Version Timing
-
-- Patch releases: docs, wording, bug fixes, theme additions, and small telemetry
-  compatibility fixes.
-- Minor releases: one new command family or one new backend capability.
-- Avoid bundling more than one big concept into a minor release. For example,
-  `snapshot`/`record`/`assert` can ship together as the evidence core, but
-  `workload-check` should wait until that core is usable.
-- Prefer shipping small, honest releases over holding features for a large
-  milestone. A young monitoring tool gains trust by making each measured claim
-  inspectable.
-
-## Commands
-
-### `xdna-top snapshot`
-
-Capture a point-in-time platform and telemetry record.
-
-Example:
-
-```bash
-xdna-top snapshot --out bench/platform.json
-```
-
-The snapshot should include:
-
-- `schema_version`
-- capture metadata and command line
-- kernel version
-- relevant command versions where available
-- `/dev/accel/accel*` device presence
-- direct AMDXDNA DRM/IOCTL probe status where available
-- NPU BDF and device name from the best available backend
-- NPU sensor support, power, and column utilization where available
-- per-context PID/submission/completion data where available
-- iGPU sysfs telemetry paths
-- one fused telemetry reading
-- degraded flags and reasons
-
-Why first: every other evidence feature needs a stable record format.
-
-See [SNAPSHOT-SCHEMA.md](SNAPSHOT-SCHEMA.md) for the draft schema.
-
-### `xdna-top env-report`
-
-Render a concise report from a captured snapshot.
-
-Example:
-
-```bash
-xdna-top env-report bench/platform.json --markdown
-```
-
-This should generate a paste-ready section for devlogs, bug reports, and eval
-notes: platform, driver/device visibility, degraded flags, one fused reading,
-and exact command versions.
-
-It should not probe the system again. It should summarize captured facts from
-the snapshot so reports remain reproducible.
-
-`env-report` also accepts a `record` JSONL stream: it auto-detects the artifact
-and renders a telemetry report (recording window, host, observed activity,
-first/last reading, and any marks) from the captured events alone.
-
-### `xdna-top record`
-
-Record telemetry as JSONL over a time window.
-
-Example:
-
-```bash
-xdna-top record --duration 60 --interval 0.2 --out bench/telemetry.jsonl
-```
-
-Each line should be a typed event:
-
-```json
-{"type":"telemetry","schema_version":"1.0","ts":123.4,"reading":{},"contexts":[]}
-```
-
-This mostly formalizes what the gauge daemon and existing one-shot JSON logging
-already do, with a stable stream format for eval evidence.
-
-### `xdna-top assert`
-
-Provide machine-readable pass/fail checks for scripts and CI.
-
-Examples:
-
-```bash
-xdna-top assert snapshot.json --require-npu --require-npu-sensors
-xdna-top assert telemetry.jsonl --require-npu-activity
-```
-
-Each check should be named and should print the observed value next to the
-threshold or requirement. Exit codes matter:
-
-- `0`: requirements satisfied
-- non-zero: one or more requirements failed
-
-Example output shape:
-
-```text
-PASS require-npu-sensors: observed devices.npu.driver.supports_sensors=true
-PASS require-context-source: observed backends.npu.signals.contexts=xrt_smi
-FAIL require-npu-activity: observed submission_delta=0, required >0
-```
-
-#### Windowed checks: `--between START END`
-
-Whole-stream checks answer "did the NPU do work *somewhere* in this recording?"
-For a contention experiment the sharper question is "did the NPU do work *during
-the request itself*?" — between two `mark`s, not just concurrently. `--between`
-restricts the requested `--require-*` checks to the telemetry slice bounded by
-the **first** mark labelled `START` and the **last** mark labelled `END`:
-
-```bash
-xdna-top mark --out trial.jsonl request-start
-# ... issue the request against the background job ...
-xdna-top mark --out trial.jsonl request-end
-xdna-top assert trial.jsonl --require-npu-activity \
-  --between request-start request-end
-```
-
-The window is named in each check label, and resolution problems fail honestly
-(non-zero exit) rather than passing vacuously:
-
-```text
-PASS require-npu-activity[request-start..request-end]: observed submission_delta=42, npu_active_samples=18/20
-FAIL require-npu-activity[request-start..MISSING]: observed end mark 'request-end' not found, required resolvable window
-```
-
-A missing mark, an end that precedes the start, an empty window (no telemetry in
-range), or `--between` against a `snapshot` (which has no timeline) each fail
-with a named reason. Without `--between`, behaviour is unchanged (full stream).
-
-### `xdna-top compare`
-
-Compare snapshots without drowning the user in generic diff noise.
-
-Example:
-
-```bash
-xdna-top compare before.json after.json
-```
-
-The default comparison should emphasize platform and telemetry changes that
-affect trust in an experiment:
-
-- kernel changed
-- `amdxdna` or accel device missing
-- `/dev/accel/accel0` changed or disappeared
-- direct AMDXDNA IOCTL backend became unavailable
-- NPU sensor support changed
-- NPU BDF changed
-- `xrt-smi` missing or report shape changed when it is needed for context data
-- iGPU sysfs paths changed
-- telemetry became degraded when it was previously healthy
-
-Profiles can tune policy later, but they should not fork the data model.
-
-### `xdna-top baseline`
-
-Wrap snapshot and compare into a named local workflow.
-
-Examples:
-
-```bash
-xdna-top baseline save known-good
-xdna-top baseline check known-good
-```
-
-Baseline names in public docs should stay generic, such as `known-good` or
-`post-kernel-update`.
-
-Named snapshots are stored under the XDG state directory
-(`$XDG_STATE_HOME/xdna-top/baselines/`, defaulting to
-`~/.local/state/xdna-top/baselines/`), overridable with `--dir`. `check` reuses
-the `compare` rules and exit codes (`0` clean, `1` drift, `2` on a missing
-baseline, unsafe name, or unreadable snapshot), and only `save` probes hardware.
-
-Why later: this is a workflow convenience over snapshot and compare, not a new
-measurement capability.
-
-### `xdna-top workload-check`
-
-Run a short supervised request and report whether measured NPU context counters
-changed during the request window.
-
-Example:
-
-```bash
-xdna-top workload-check \
-  --models-url http://127.0.0.1:13306/v1/models \
-  --chat-url http://127.0.0.1:13306/v1/chat/completions \
-  --model llama3.2:1b \
-  --out bench/workload-check.json
-```
-
-The result should distinguish:
-
-- server exists
-- model endpoint responds
-- chat request completes
-- NPU contexts appear
-- expected PID owns one or more contexts, when PID attribution is available
-- submissions/completions increment during the supervised request window
-
-The verdict must use measured language. For example:
-
-```text
-Observed PID 1234 context 1 submission_delta=42 completion_delta=42 during request window.
-```
-
-This is stronger and more honest than claiming the request definitely ran on the
-NPU, because unrelated concurrent workloads can move counters.
-
-## Additional Ideas
-
-### Eval artifact diff viewer
-
-Generate a single HTML report from eval artifacts that shows:
-
-- raw transcript
-- transformed or post-processed output
-- facts ledger
-- which tracked facts survived
-- which tracked facts dropped
-- the transformation step where each fact changed
-
-This is a companion to diagnose-before-patching workflows. When an eval fails,
-the goal is to turn artifact inspection from manual JSON spelunking into a
-direct view of what changed.
-
-### Eval cassette replayer
-
-Record real model or service responses during a hardware-backed run, then replay
-them deterministically in sandboxed CI.
-
-This would make evals re-runnable anywhere and make two runs diffable even when
-the original hardware or service is unavailable. It is adjacent to, but separate
-from, `xdna-top` telemetry recording.
-
-### Vacuity guard
-
-Make every eval declare proof that the tested mechanism actually fired.
-
-Each eval should have both:
-
-- pass criteria
-- mechanism-fired criteria
-
-A trial that satisfies pass criteria without exercising the target mechanism
-should be invalid, not passing. This pattern applies broadly to telemetry,
-routing, tool-use, and other evals.
-
-### Wiki doctor
-
-Build a vault linter for LLM-maintained Markdown or Obsidian-style knowledge
-bases.
-
-Potential checks:
-
-- dead wikilinks
-- orphan pages
-- unresolved supersedes chains
-- stale drafts in inbox folders
-- naming violations
-- schema violations
-
-This could stand alone as "CI for LLM-maintained knowledge bases."
-
-### Vault graph visualizer
-
-Render a knowledge-base link graph for review:
-
-- orphans
-- hubs
-- supersession lineage
-- disconnected clusters
-- high-risk stale branches
-
-This can start as an HTML report mode for a wiki doctor rather than a separate
-tool.
-
-### Endpoint prober
-
-Probe an OpenAI-compatible server and report:
-
-- available endpoints
-- available models
-- basic request success/failure
-- context limits where discoverable
-- rough tokens per second
-- whether a supervised request coincided with measured NPU context deltas
-
-This overlaps with `xdna-top workload-check`, but may be useful as a sibling
-tool focused on serving-layer diagnostics.
-
-### Evidence linter
-
-Lint project trackers and implementation plans for evidence hygiene:
-
-- completed rows have evidence links
-- verdict rows are append-only
-- devlog entries exist for closure
-- required artifact paths exist
-- failure diagnoses are recorded before patches
-
-This is process tooling, but it reinforces the same evidence-first principle as
-the telemetry roadmap.
-
-### Theme registry
-
-Implemented: a `THEMES` registry backs `--theme <name>` and `XDNA_TOP_THEME`,
-`lemonade-top` is a thin alias defaulting to the `lemonade` theme, and the
-shipped themes are `default`, `lemonade`, `paper`, `phosphor`, `amber`, and
-`halo`. See [THEMES.md](THEMES.md). Remaining work is adding more candidate
-themes as data entries and a screenshot gallery.
-
-Themes are a low-priority community feature and a good source of first
-contributions. The generalized implementation provides:
-
-- a theme registry
-- support for `--theme <name>`
-- support for `XDNA_TOP_THEME`
-- keep `lemonade-top` as a compatibility alias
-- make each new theme a small data entry, not a new command
-
-Themes must only affect colors, borders, header art, and glyph choices. They
-must not rename metrics, states, units, counters, or measured values. A
-screenshot in any theme should stay claims-accurate.
-
-Candidate themes:
-
-- `paper`: high-contrast, colorblind-safe, print-friendly documentation theme
-- `halo`: deep navy/silver, inspired by Strix Halo without using marks
-- `fabric`: teal tile-grid motif, reflecting the NPU's spatial dataflow fabric
-- `phosphor`: green monochrome CRT terminal theme
-- `amber`: amber CRT terminal theme
-- `team-red`: generic red/black hardware-enthusiast theme
-- `lime`: citrus sibling to `lemonade`
-- `grapefruit`: citrus sibling to `lemonade`
-
-Potential community docs:
-
-- `THEMES.md`
-- screenshot gallery
-- "contribute a theme" good-first-issue template
-
-This is intentionally behind the evidence-core work. Themes are useful for
-community ownership, but they should not displace snapshot, record, assert, or
-compare.
-
-### Event markers
-
-Allow scripts to annotate telemetry logs. Implemented: `xdna-top mark` appends a
-typed `mark` event to a record stream, and `env-report` surfaces marks in its
-record report.
-
-Example:
-
-```bash
-xdna-top record --out bench/trial.jsonl &
-xdna-top mark --out bench/trial.jsonl "trial-1-start"
-xdna-top mark --out bench/trial.jsonl "phase-start"
-xdna-top mark --out bench/trial.jsonl "trial-1-end"
-```
-
-Marker lines should use the same JSONL stream:
-
-```json
-{"type":"mark","schema_version":"1.0","ts":124.0,"label":"phase-start"}
-```
-
-### PID-aware watch
-
-Track whether a specific process owns NPU contexts.
-
-Example:
-
-```bash
-xdna-top watch --pid "$(pgrep -f 'model-server')"
-```
-
-If XRT exposes only PID, resolving command names and tracking context deltas per
-PID is still enough to prove whether the expected process is exercising the NPU.
-
-### Public issues
-
-Once the v0.2 plan is settled, open one GitHub issue per command. A public
-roadmap on a young project invites contributors and makes the project read as
-active without overpromising implementation dates.
-
-## Invariants
-
-- Keep JSON schemas explicit and versioned.
-- Preserve zero-root operation.
-- Preserve graceful degradation for missing drivers, commands, or sysfs paths.
-- Prefer direct kernel/DRM interfaces over shelling out to external tools.
-- Prefer composable primitives over one-off workflow commands.
-- Do not infer NPU utilization percentages. Use context presence and
-  submission/completion deltas, or clearly label direct sensor values such as
-  column utilization.
-- Degraded data should stay visible and machine-readable. A missing signal is a
-  result, not a reason to invent one.
+`xdna-top` reports observed Ryzen AI NPU and iGPU telemetry and preserves that
+telemetry as trustworthy evidence. Every addition should improve the accuracy
+of a real hardware observation, preserve it reproducibly, or satisfy a
+demonstrated way users need to consume it.
+
+The live TUI, snapshot/record artifacts, assertions, comparisons, baselines,
+supervised workload checks, and Prometheus exporter are shipped. Release
+history belongs in [CHANGELOG.md](../CHANGELOG.md); this document contains only
+current priorities, triggers, and scope boundaries.
+
+## Product Boundaries
+
+- Report exactly what was observed, including unavailable and degraded signals.
+- Preserve signal-level provenance. Device discovery, contexts, sensors, and
+  power state may legitimately come from different sources.
+- Prefer direct kernel interfaces where they expose the needed signal; retain
+  `xrt-smi` for per-context PID and counter attribution.
+- Preserve zero-root operation and a small base dependency set.
+- Do not infer a generic NPU utilization percentage or request causality from
+  coincident counter movement.
+- Do not build provider frameworks, plugin registries, generalized layout
+  systems, or other architecture for hypothetical future sources.
+- Use `amdgpu_top` for broad AMDGPU monitoring. Keep this project focused on
+  Ryzen AI workload evidence and concurrent NPU+iGPU observation.
+
+## Now: Trust and Coherence
+
+The active milestone is a stabilization release. It takes precedence over HTML
+reports or a new feature family.
+
+1. **Truthful NPU detection**
+   - Set `devices.npu.detected` when any trusted source confirms the device:
+     XRT identity, XRT contexts, or successful AMDXDNA ioctl identification.
+   - Keep device detection separate from context availability.
+   - Add an XRT-unavailable/ioctl-available fixture. `--require-npu` should pass
+     while `--require-context-source` fails with a precise reason.
+   - Preserve `backends.npu.primary` semantics for schema 1.0; prefer the
+     existing `backends.npu.signals.*` fields for precise provenance.
+
+2. **One coherent hardware sample**
+   - Produce a fused reading and parsed contexts from one XRT observation per
+     logical TUI frame, record sample, exporter scrape, or snapshot.
+   - Reuse contexts already obtained by snapshot probing.
+   - Keep the existing activity-delta behavior, including first observation and
+     in-flight submissions, without introducing a provider abstraction.
+
+3. **Finish existing integrations**
+   - Feed the existing `read_npu_power()` result to the exporter so the
+     documented clock metric is reachable; unavailable debugfs must remain a
+     healthy degraded scrape.
+   - Make `workload-check` emit JSON only on stdout and human explanation on
+     stderr. Preserve endpoint-based exit semantics and add `schema_version` if
+     the artifact is intended for persistent automation.
+
+4. **Resolve the concrete presentation confusion**
+   - Make clear that the theme gallery demonstrates palettes, not the live TUI
+     layout.
+   - Confirm whether the real need is stacked panes, an NPU-only view, or both.
+     Implement only the selected direct layout branch and test narrow/wide
+     terminals.
+
+5. **Validate degraded paths and real hardware**
+   - Assert one XRT call and a shared context fixture for every sampling path.
+   - Cover absent, unreadable, and unparsable direct power-state data.
+   - Run idle, rapidly starting/stopping workload, XRT-failure, and
+     debugfs-unavailable smoke tests on supported hardware where possible.
+
+This work is suitable for a v0.4.x patch or a small stabilization release.
+
+## Next: Simplify the Product
+
+- Promote [SNAPSHOT-SCHEMA.md](SNAPSHOT-SCHEMA.md) as the current schema 1.0
+  contract and document the exact meaning or versioned deprecation path of
+  `backends.npu.primary`.
+- Remove the dormant gauge daemon/cache path after a final search of releases,
+  docs, scripts, CI, benchmarks, and issues for external use. Discover sysfs
+  once per process rather than persisting discovery by default.
+- Re-evaluate `--bench-dir` after the cache removal; retain it only for a real
+  benchmark or explicit path-override workflow.
+- Archive completed implementation plans and the stale session handoff as
+  historical context. Do not create another current-state document.
+- Complete a real-hardware XRT-absent/direct-backend-present validation when
+  such a test environment is available.
+
+Public schema fields or CLI flags must not be removed in the same patch as the
+lower-risk correctness work. Compatibility changes need explicit fixtures and
+release notes.
+
+## Triggered Later
+
+These items are intentionally dormant until their trigger occurs.
+
+- **HTML reports:** at least two concrete users or workflows need a
+  self-contained shareable report that Markdown and Grafana do not satisfy.
+- **Configurable poll rate:** a measured overhead problem, driver limitation,
+  or documented sampling requirement exists.
+- **Per-context live history:** a user needs history inside the TUI and
+  `record` or Prometheus cannot satisfy the workflow.
+- **Additional APU support:** a contributor supplies access, a real capture, or
+  a committed tester for the hardware.
+- **New direct sensor fields:** a tested kernel exposes the corresponding ioctl
+  or sysfs interface and the signal strengthens workload evidence.
+- **PID-specific watch mode:** `workload-check` and record/assert cannot answer
+  a documented process-attribution use case.
+- **Additional themes:** accept small, claims-accurate community contributions;
+  do not schedule candidate palettes as milestone work.
+
+## Parking Lot
+
+- Presentation modes beyond the concrete open layout request.
+- Self-contained monitoring-stack examples.
+- Experimental research visualizations.
+- Community theme ideas without a contributor.
+
+Generic evaluation tooling, endpoint probing beyond `workload-check`, wiki or
+vault tooling, and evidence-process linters are separate product ideas. They do
+not belong in this repository roadmap and must not influence its architecture.
+
+## Research and Documentation
+
+Retain raw captures, negative sensor probes, reproduced experiments, benchmark
+measurements, limitations, and withdrawn claims. Label research documents as
+one of: observed capture, reproduced experiment, interpretation, design idea,
+implemented historical plan, or superseded plan.
+
+Use one source for each purpose:
+
+- [README.md](../README.md): current public capability and near-term direction
+- this roadmap: active priority, triggers, and scope boundaries
+- [CHANGELOG.md](../CHANGELOG.md): delivered release history
+- [devlog.md](../devlog.md): chronological implementation and hardware evidence
+- [SNAPSHOT-SCHEMA.md](SNAPSHOT-SCHEMA.md): artifact contract
+
+## Definition of Done for Stabilization
+
+- Direct ioctl evidence can truthfully detect an NPU without XRT contexts.
+- Each logical sample uses one internally consistent XRT/context observation.
+- Exporter clock metrics are either reachable from production or no longer
+  promised.
+- `workload-check` stdout parses directly as JSON.
+- Documentation agrees on the active milestone, schema, layout behavior, and
+  shipped capabilities.
+- Unit tests cover the degraded backend matrix, and available real hardware has
+  completed the regression smoke pass.

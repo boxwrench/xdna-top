@@ -2,7 +2,7 @@
 
 # `xdna-top`
 
-**The missing system monitor for AMD Ryzen AI NPUs.**
+**Ryzen AI NPU context activity and concurrent iGPU telemetry.**
 
 Unified, real-time NPU + iGPU telemetry for Strix Halo — in your terminal,
 where `amd-smi` comes up empty.
@@ -36,15 +36,13 @@ If you run local AI on an AMD Strix Halo machine, you are flying blind twice ove
 | Is the **NPU** doing anything at all? | — | — | ✅ live contexts + activity |
 | Both, side by side, while two models run | — | — | ✅ that's the whole point |
 
-When this tool was built, the NPU half didn't exist anywhere: nothing surfaced
-XDNA activity. (GNOME Resources 1.10, Feb 2026, has since added a desktop GUI
-view of AMD NPUs.) `xdna-top` remains the only *terminal* monitor for it, the
-only *unified* NPU + iGPU view on this silicon, and the only *per-context* one —
-owning PID and live submission counters, not a single aggregate number. Today it
-reads NPU context attribution through AMD's XRT tooling (`xrt-smi`) and pairs it
-with iGPU telemetry scraped directly from `sysfs`; the roadmap moves low-level
-NPU device and sensor probes toward direct AMDXDNA DRM IOCTLs through
-`/dev/accel/*`.
+When this tool was built, the NPU half was difficult to observe. (GNOME
+Resources 1.10, Feb 2026, has since added a desktop GUI view of AMD NPUs.)
+`xdna-top` focuses on a unified terminal view of Ryzen AI NPU context activity
+and concurrent iGPU telemetry, with schema-backed workload evidence. It reads
+per-context ownership and counters through AMD's XRT tooling (`xrt-smi`), pairs
+them with iGPU telemetry from `sysfs`, and uses read-only AMDXDNA interfaces for
+direct device and power-state facts where the running driver exposes them.
 
 Born from a practical need: while experimenting with **concurrent NPU + iGPU
 local LLM inference** on Strix Halo, "is the NPU actually executing?" turned out
@@ -155,7 +153,8 @@ claims-accurate in any theme.
 
 ![xdna-top themes gallery](docs/themes/gallery.png)
 
-> Rendered with illustrative values to show the palettes. See
+> Rendered with illustrative values to show the palettes, not the live TUI
+> layout. See
 > [docs/THEMES.md](docs/THEMES.md) for the full list and how to contribute one.
 
 ## How it works (30 seconds)
@@ -182,9 +181,9 @@ platform, see **[REM](https://github.com/boxwrench/rem)**.
 
   `xdna-top` is complementary. It focuses on Ryzen AI workload evidence: NPU
   context ownership, submission/completion deltas, and what the iGPU was doing
-  at the same time. The planned direct AMDXDNA backend is inspired by
-  `amdgpu_top`'s driver-facing approach while keeping `xdna-top` scoped to
-  workload evidence and NPU+iGPU concurrency.
+  at the same time. Its read-only AMDXDNA probes follow the same driver-facing
+  spirit while keeping `xdna-top` scoped to workload evidence and NPU+iGPU
+  concurrency.
 
 ## NPU Field Guide
 
@@ -207,14 +206,16 @@ no application specifics. Start at [docs/npu/](docs/npu/index.md).
       driver/AIE/clocks/firmware identity (validated on real silicon)
 - [x] v0.4 supervised `workload-check`: endpoint probe + per-context NPU
       submission/completion deltas across the request window
-- [ ] v0.5 community/reporting work: theme registry (done), HTML reports, and
-      more Ryzen AI captures
-- [ ] Ongoing: configurable poll rate, per-context history, and more APUs
-      (Phoenix/Hawk Point XDNA1) — testers welcome
+- [ ] Active stabilization: coherent single-read samples, truthful direct-backend
+      NPU detection, exporter power-state integration, and clean JSON output
+- [ ] Next cleanup: retire the unused daemon/cache path and collapse stale
+      planning documents after compatibility checks
+- [ ] Triggered later: reports, poll-rate controls, live context history, and
+      more hardware support only when a concrete user or tester needs them
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for the prioritized command plan and
+See [docs/ROADMAP.md](docs/ROADMAP.md) for current priorities and
 [docs/SNAPSHOT-SCHEMA.md](docs/SNAPSHOT-SCHEMA.md) for the snapshot artifact
-draft.
+contract.
 
 ## Contributing
 

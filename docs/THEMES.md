@@ -32,8 +32,10 @@ compatibility alias: it defaults to the `lemonade` theme but still honors
 | `amber` | amber monochrome CRT terminal |
 | `halo` | deep navy and silver |
 
-The gallery above is rendered with illustrative values to show each palette; the
-metric columns, units, state values, and numbers are identical across all themes.
+The gallery above is rendered with illustrative values to show each palette. It
+stacks the two sample panels for compact documentation and does not depict a
+selectable live TUI layout. The live TUI remains side by side; metric columns,
+units, state values, and numbers are identical across all themes.
 
 ## Contributing a theme
 

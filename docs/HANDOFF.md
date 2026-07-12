@@ -1,5 +1,11 @@
 # Session Handoff
 
+> **Superseded historical document:** This handoff describes the v0.3-era
+> repository and is not current work. Use [ROADMAP.md](ROADMAP.md) for active
+> priorities, [../CHANGELOG.md](../CHANGELOG.md) for shipped releases, and
+> [../devlog.md](../devlog.md) for validation history. It remains temporarily
+> available while its unique hardware notes are consolidated.
+
 This note is for picking up `xdna-top` work across sessions without relying on
 chat history. Keep it public, generic, and free of private project names.
 

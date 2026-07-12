@@ -1,5 +1,9 @@
 # Prometheus Exporter Implementation Plan
 
+> **Historical status:** Implemented and retained for context. The unchecked
+> steps below describe the original plan and are not current instructions; see
+> [../../ROADMAP.md](../../ROADMAP.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a standalone `xdna-top exporter` subcommand that serves hardware telemetry at an HTTP `/metrics` endpoint in Prometheus format, with docs and an example Grafana dashboard.

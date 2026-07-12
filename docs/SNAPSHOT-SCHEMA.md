@@ -1,8 +1,8 @@
-# Snapshot Schema Draft
+# Snapshot Schema 1.0
 
-This document defines the first draft of the `xdna-top snapshot` JSON artifact.
-The schema should be explicit, versioned, and stable enough for `env-report`,
-`compare`, and `baseline` to remain thin views over the same capture.
+This document defines the current schema 1.0 contract for the shipped
+`xdna-top snapshot` JSON artifact. The schema is explicit and versioned so
+`env-report`, `compare`, and `baseline` remain thin views over the same capture.
 
 ## Top-Level Shape
 
@@ -92,8 +92,8 @@ Telemetry backend provenance.
 ```json
 {
   "npu": {
-    "primary": "amdxdna_ioctl",
-    "fallbacks_used": ["xrt_smi"],
+    "primary": "xrt_smi",
+    "fallbacks_used": [],
     "signals": {
       "device": "amdxdna_ioctl",
       "sensors": "amdxdna_ioctl",
@@ -114,6 +114,13 @@ Telemetry backend provenance.
 The preferred NPU backend is direct AMDXDNA DRM IOCTL probing through
 `/dev/accel/*`. `xrt-smi` remains useful for compatibility and for per-context
 PID/submission/completion data until equivalent direct attribution is available.
+
+In schema 1.0, `backends.npu.primary` is retained for compatibility and records
+the backend selected by the capture implementation as its general NPU source.
+It does not override signal-level provenance and must not be used to infer that
+every NPU field came from one backend. Consumers should prefer
+`backends.npu.signals.*`. Any redefinition or removal of `primary` requires a
+schema revision.
 
 `power_state` is an optional, additive signal — XRT submission-counter deltas remain xdna-top's primary NPU activity signal — exposing the NPU's active DPM
 (Dynamic Power Management) clock state — `npuclk_mhz` and `hclk_mhz`, both clock
@@ -157,6 +164,12 @@ hardware contexts attributed by PID.
 ### `devices`
 
 Detected device state.
+
+`devices.npu.detected` is true when any trusted device source confirms the NPU:
+XRT device identity, an XRT hardware context, or successful direct AMDXDNA ioctl
+identification. Detection does not imply that per-context attribution is
+available; consumers that require contexts must also inspect
+`backends.npu.signals.contexts`.
 
 ```json
 {

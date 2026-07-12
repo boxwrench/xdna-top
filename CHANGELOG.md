@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Replaced the feature-heavy v0.5 roadmap with a trust-and-coherence
+  stabilization milestone: truthful direct-backend NPU detection, one coherent
+  context observation per sample, completion of existing exporter and
+  machine-readable-output integrations, and documentation cleanup. Speculative
+  reports and unrelated evaluation/wiki tooling no longer drive product scope.
+- Narrowed public positioning to claims the repository can substantiate,
+  promoted the shipped snapshot schema 1.0 documentation from draft status,
+  clarified that the theme gallery is not a live layout option, and marked
+  stale handoff/exporter plans as historical.
+
+### Fixed
+
+- A successful direct AMDXDNA ioctl identity now sets
+  `devices.npu.detected=true` even when XRT is unavailable, while context
+  provenance remains unavailable and degraded honestly. Signal-level device
+  provenance records `amdxdna_ioctl`; schema 1.0's generic `primary` behavior
+  is unchanged.
+
 ## [0.4.0] - 2026-06-28
 
 This release adds the read-only **direct-AMDXDNA DRM IOCTL backend** (driver / AIE
