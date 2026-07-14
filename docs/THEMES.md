@@ -31,13 +31,19 @@ compatibility alias: it defaults to the `lemonade` theme but still honors
 | `phosphor` | green monochrome CRT terminal |
 | `amber` | amber monochrome CRT terminal |
 | `halo` | deep navy and silver |
+| `lime` | citrus sibling to `lemonade` — chartreuse/green |
+| `grapefruit` | citrus sibling to `lemonade` — pink/salmon |
+| `team-red` | generic red/black hardware-enthusiast theme |
 
 The gallery above is rendered with illustrative values to show each palette. It
 stacks the two sample panels for compact documentation rather than capturing a
 live session. The same pane arrangement is available with
 `xdna-top --layout stacked`; `--npu-only` hides the iGPU pane. The default
 remains side by side. Metric columns, units, state values, and numbers are
-identical across all themes and layouts.
+identical across all themes and layouts. The gallery image predates `lime`,
+`grapefruit`, and `team-red` and needs a re-run of
+`docs/themes/render_gallery.py` (requires the dev-only `cairosvg`/`pillow`
+extras) to pick them up.
 
 ## Contributing a theme
 
@@ -58,4 +64,4 @@ contributions.
    renamed or hid a metric would fail that test.
 
 Candidate themes still open (see [ROADMAP.md](ROADMAP.md)): `fabric` (teal
-tile-grid), `team-red`, `lime`, and `grapefruit`.
+tile-grid).

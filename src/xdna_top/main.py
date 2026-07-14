@@ -186,6 +186,66 @@ HALO_THEME = replace(
 )
 
 
+LIME_THEME = replace(
+    DEFAULT_THEME,
+    header="[bold chartreuse1]xdna-top[/bold chartreuse1] - Unified NPU+iGPU Monitor",
+    footer="Press [bold chartreuse1]q[/bold chartreuse1] or [bold chartreuse1]Ctrl-C[/bold chartreuse1] to quit. Telemetry refresh rate: 5 Hz.",
+    stopped_message="[chartreuse1]xdna-top stopped cleanly.[/chartreuse1]",
+    header_border="chartreuse1",
+    footer_border="chartreuse1",
+    igpu_title="[bold chartreuse1]iGPU Telemetry[/bold chartreuse1]",
+    igpu_border="chartreuse1",
+    npu_title="[bold green1]Ryzen AI NPU[/bold green1]",
+    npu_border="green1",
+    table_title_style="bold chartreuse1",
+    state_idle_style="green1",
+    state_active_style="chartreuse1",
+    state_prefill_style="bold spring_green1",
+    npu_idle_style="green1",
+    npu_active_style="bold chartreuse1",
+)
+
+
+GRAPEFRUIT_THEME = replace(
+    DEFAULT_THEME,
+    header="[bold deep_pink3]xdna-top[/bold deep_pink3] - Unified NPU+iGPU Monitor",
+    footer="Press [bold deep_pink3]q[/bold deep_pink3] or [bold deep_pink3]Ctrl-C[/bold deep_pink3] to quit. Telemetry refresh rate: 5 Hz.",
+    stopped_message="[deep_pink3]xdna-top stopped cleanly.[/deep_pink3]",
+    header_border="deep_pink3",
+    footer_border="deep_pink3",
+    igpu_title="[bold hot_pink]iGPU Telemetry[/bold hot_pink]",
+    igpu_border="hot_pink",
+    npu_title="[bold salmon1]Ryzen AI NPU[/bold salmon1]",
+    npu_border="salmon1",
+    table_title_style="bold deep_pink3",
+    state_idle_style="salmon1",
+    state_active_style="deep_pink3",
+    state_prefill_style="bold hot_pink",
+    npu_idle_style="salmon1",
+    npu_active_style="bold deep_pink3",
+)
+
+
+TEAM_RED_THEME = replace(
+    DEFAULT_THEME,
+    header="[bold red3]xdna-top[/bold red3] - Unified NPU+iGPU Monitor",
+    footer="Press [bold red3]q[/bold red3] or [bold red3]Ctrl-C[/bold red3] to quit. Telemetry refresh rate: 5 Hz.",
+    stopped_message="[red3]xdna-top stopped cleanly.[/red3]",
+    header_border="red3",
+    footer_border="grey23",
+    igpu_title="[bold grey78]iGPU Telemetry[/bold grey78]",
+    igpu_border="grey23",
+    npu_title="[bold red3]Ryzen AI NPU[/bold red3]",
+    npu_border="red3",
+    table_title_style="bold red3",
+    state_idle_style="grey58",
+    state_active_style="red3",
+    state_prefill_style="bold bright_red",
+    npu_idle_style="grey58",
+    npu_active_style="bold bright_red",
+)
+
+
 # Theme registry. New themes should be a small data entry here, not a new
 # command or renamed metric.
 THEMES: dict[str, TuiTheme] = {
@@ -195,6 +255,9 @@ THEMES: dict[str, TuiTheme] = {
     "phosphor": PHOSPHOR_THEME,
     "amber": AMBER_THEME,
     "halo": HALO_THEME,
+    "lime": LIME_THEME,
+    "grapefruit": GRAPEFRUIT_THEME,
+    "team-red": TEAM_RED_THEME,
 }
 
 

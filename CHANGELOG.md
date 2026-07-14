@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   above the NPU pane, and `--npu-only` hides the iGPU pane. They compose
   without introducing profiles or a generalized layout system; side by side
   remains the default.
+- **Three new TUI themes** — `lime` and `grapefruit` (citrus siblings to
+  `lemonade`) and `team-red` (a generic red/black hardware-enthusiast theme),
+  registered in `THEMES` alongside the existing six. Data-only additions per
+  the theme contribution guide: colors and chrome only, no renamed or hidden
+  metrics. The `docs/themes/gallery.png` screenshot still needs a re-run of
+  `docs/themes/render_gallery.py` to include them.
 
 ### Changed
 
@@ -55,6 +61,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cache-first reads. `HardwareGauge.read()` remains as a compatibility alias
   for a fresh direct sample; maintained CLI commands continue to own their
   sampling loops.
+
+### Docs
+
+- **`docs/HARDWARE.md`** — a spatial-AIE hardware reference for the Strix Halo
+  platform (CPU/iGPU/NPU block specs, cited vendor figures vs. measured
+  figures on the reference box).
+- Corrected the NPU-iGPU contention experiment's memory-bandwidth line to
+  distinguish the theoretical bus figure (256 GB/s) from the achieved figure
+  (~212-215 GB/s).
 
 ## [0.4.0] - 2026-06-28
 

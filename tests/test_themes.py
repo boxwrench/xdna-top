@@ -21,7 +21,17 @@ from xdna_top.gauge import GpuState
 
 
 def test_registry_contains_expected_themes():
-    assert {"default", "lemonade", "paper", "phosphor", "amber", "halo"} <= set(THEMES)
+    assert {
+        "default",
+        "lemonade",
+        "paper",
+        "phosphor",
+        "amber",
+        "halo",
+        "lime",
+        "grapefruit",
+        "team-red",
+    } <= set(THEMES)
     assert all(isinstance(theme, TuiTheme) for theme in THEMES.values())
 
 
