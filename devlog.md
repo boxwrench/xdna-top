@@ -1,5 +1,33 @@
 # xdna-top Devlog
 
+## 2026-10-11 — Local AI GPU scope and read-only NPU ENODEV diagnosis
+
+Accepted the concrete need for AMD GPU inference monitoring: APU iGPUs and
+discrete cards, alone or alongside a Ryzen AI NPU. README, roadmap boundaries
+and Unreleased notes now reflect the already implemented per-device telemetry.
+General-purpose GPU process monitoring remains with amdgpu_top/nvtop; GPU
+device counters do not establish process or request attribution, and the new
+scope does not claim every card or sensor has been validated.
+
+Read-only inspection on nimo found the failure before any ioctl: kernel logs
+report `amdxdna_drm_open: SVA bind device failed, ret -19`, and the installed
+driver calls `iommu_sva_bind_device()` at open. The kernel command line has
+`amd_iommu=off`, no device IOMMU group is present, and direct probing returns
+`node_unreadable_errno_19`. Firmware `amdnpu/17f0_11/npu_7.sbin` is present in
+the firmware updates directory and loaded as 1.1.2.65. Kernel 6.17.0-35 matches
+the DKMS build and its supported 6.17–6.19 range; the user has render-group
+access. Runtime PM shows suspended/D3hot with usage 0, without evidence of a
+resume failure. These observations identify disabled IOMMU/SVA as the cause of
+the current open failure; a successful recovery still requires a later boot
+test. No GPU workload, server, driver, firmware, power or boot setting changed.
+
+Recommend retaining the unpublished 0.5.0 candidate for one combined release
+after the supported-hardware smoke gate. Schema 1.1 is independently versioned
+and retains readable 1.0 captures. Healthy idle and workload-churn validation,
+plus isolated XRT/debugfs degraded checks with a working NPU, remain pending.
+Validation: all 235 pytest tests pass; generated documentation and whitespace
+checks pass. AI-assisted diagnosis, documentation and review: OpenAI Codex.
+
 ## 2026-10-11 — Per-device AMD GPU telemetry
 
 Ported the sysfs sensor mapping from Project Maya commit `5d63c79` into a

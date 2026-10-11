@@ -1,7 +1,8 @@
 # Roadmap
 
-`xdna-top` reports observed Ryzen AI NPU and iGPU telemetry and preserves that
-telemetry as trustworthy evidence. Every addition should improve the accuracy
+`xdna-top` reports observed AMD GPU telemetry for local AI inference, alongside
+Ryzen AI NPU context evidence where available, and preserves that telemetry as
+trustworthy evidence. Every addition should improve the accuracy
 of a real hardware observation, preserve it reproducibly, or satisfy a
 demonstrated way users need to consume it.
 
@@ -22,13 +23,18 @@ current priorities, triggers, and scope boundaries.
   coincident counter movement.
 - Do not build provider frameworks, plugin registries, generalized layout
   systems, or other architecture for hypothetical future sources.
-- Use `amdgpu_top` for broad AMDGPU monitoring. Keep this project focused on
-  Ryzen AI workload evidence and concurrent NPU+iGPU observation.
+- Cover AMD GPUs used for local AI inference: APU iGPUs and discrete cards,
+  alone or alongside a Ryzen AI NPU. Preserve per-device observations and
+  workload evidence without inferring GPU process or request attribution.
+  Defer general-purpose GPU process monitoring to `amdgpu_top` / `nvtop`.
+  Hardware and sensor coverage require observed captures, not scope alone.
 
 ## Now: Trust and Coherence
 
-The active milestone is a stabilization release. It takes precedence over HTML
-reports or a new feature family.
+The active milestone combines the v0.5 stabilization work and the shipped
+per-device GPU feature family in one release. The local AI GPU scope was
+accepted on 2026-10-11 in response to a concrete user need. HTML reports and
+other untriggered feature families remain deferred.
 
 1. **Truthful NPU detection — done**
    - Set `devices.npu.detected` when any trusted source confirms the device:
@@ -67,14 +73,15 @@ reports or a new feature family.
    - Run idle, rapidly starting/stopping workload, XRT-failure, and
      debugfs-unavailable smoke tests on supported hardware.
 
-This trust-and-coherence milestone is the v0.5.0 stabilization release. The
+This combined milestone retains v0.5.0 as the release candidate. The
 off-hardware implementation and automated validation form the release
 candidate; the supported-hardware smoke pass is the remaining release gate.
 
 ## Next: Simplify the Product
 
-- **Done:** promote [SNAPSHOT-SCHEMA.md](SNAPSHOT-SCHEMA.md) as the current schema 1.0
-  contract and document the exact meaning or versioned deprecation path of
+- **Done:** promote [SNAPSHOT-SCHEMA.md](SNAPSHOT-SCHEMA.md) as the artifact
+  contract (now schema 1.1, with 1.0 captures still readable) and document the
+  exact meaning or versioned deprecation path of
   `backends.npu.primary`.
 - **Done:** remove the dormant gauge daemon/cache path after a final search of
   releases, docs, scripts, CI, benchmarks, and issues for external use.
@@ -149,4 +156,4 @@ Use one source for each purpose:
 - The package builds and installs, generated documentation is current, and the
   supported Python test matrix passes.
 - Supported NPU hardware completes the idle, workload-churn, XRT-failure, and
-  debugfs-unavailable regression smoke pass before the version bump and tag.
+  debugfs-unavailable regression smoke pass before finalizing the version and tag.

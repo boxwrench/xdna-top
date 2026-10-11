@@ -2,15 +2,15 @@
 
 # `xdna-top`
 
-**Ryzen AI NPU context activity and concurrent iGPU telemetry.**
+**AMD GPU telemetry for local AI inference, with Ryzen AI NPU context evidence.**
 
-Unified, real-time NPU + iGPU telemetry for Strix Halo — in your terminal,
-where `amd-smi` comes up empty.
+Real-time, per-device telemetry for AMD APU iGPUs and discrete GPUs — alone or
+alongside a Ryzen AI NPU — in your terminal.
 
 [![CI](https://github.com/boxwrench/xdna-top/actions/workflows/ci.yml/badge.svg)](https://github.com/boxwrench/xdna-top/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
-[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Strix%20Halo-orange.svg)](docs/HOW-IT-WORKS.md)
+[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20AMD-orange.svg)](docs/HOW-IT-WORKS.md)
 [![Status](https://img.shields.io/badge/status-v0.4-blue.svg)](#roadmap)
 
 </div>
@@ -28,21 +28,25 @@ where `amd-smi` comes up empty.
 
 ## Why this exists
 
-If you run local AI on an AMD Strix Halo machine, you are flying blind twice over:
+Local AI inference needs visibility into GPU memory and activity, and, when a
+Ryzen AI NPU is present, its hardware contexts:
 
-| You want to know… | `amd-smi` | `nvtop` / `amdgpu_top` | **`xdna-top`** |
-|---|---|---|---|
-| AMD GPU busy, memory, sensors and PCIe (including gfx1151) | `N/A` ([ROCm #6035](https://github.com/ROCm/ROCm/issues/6035)) | partial | ✅ per device, from kernel sysfs |
-| Is the **NPU** doing anything at all? | — | — | ✅ live contexts + activity |
-| Both, side by side, while two models run | — | — | ✅ that's the whole point |
+| You want to know… | **`xdna-top`** | Related tools |
+|---|---|---|
+| AMD GPU busy, VRAM/GTT, sensors and PCIe | Per-device kernel sysfs readings where exposed; works without an NPU | [`amdgpu_top`](https://github.com/Umio-Yasuno/amdgpu_top) and [`nvtop`](https://github.com/Syllo/nvtop) offer general GPU and process views |
+| Is the **NPU** doing anything at all? | PID-owned contexts and submission/completion deltas via XRT | `xrt-smi` supplies the native reports; `amdgpu_top` also supports XDNA devices |
+| What was observed during an inference window? | GPU telemetry alongside available NPU evidence, with snapshots, recordings and assertions | Choose a general monitor for GPU process attribution; device busy/memory readings alone do not attribute a request |
 
 When this tool was built, the NPU half was difficult to observe. (GNOME
 Resources 1.10, Feb 2026, has since added a desktop GUI view of AMD NPUs.)
-`xdna-top` focuses on a unified terminal view of Ryzen AI NPU context activity
-and concurrent iGPU telemetry, with schema-backed workload evidence. It reads
+`xdna-top` focuses on AMD GPUs used for local AI inference: APU iGPUs and
+discrete cards, alone or alongside a Ryzen AI NPU, with schema-backed workload
+evidence. GPU coverage depends on the running `amdgpu` driver's exposed files;
+this is not a claim that every AMD card or sensor has been validated. It reads
 per-context ownership and counters through AMD's XRT tooling (`xrt-smi`), pairs
-them with iGPU telemetry from `sysfs`, and uses read-only AMDXDNA interfaces for
-direct device and power-state facts where the running driver exposes them.
+them with per-device GPU telemetry from `sysfs`, and uses read-only AMDXDNA
+interfaces for direct device and power-state facts where the running driver
+exposes them.
 
 Born from a practical need: while experimenting with **concurrent NPU + iGPU
 local LLM inference** on Strix Halo, "is the NPU actually executing?" turned out
@@ -99,8 +103,8 @@ xdna-top exporter --port 9477              # serve Prometheus metrics at /metric
 xdna-top workload-check --chat-url http://localhost:8000/v1/chat/completions \
   --model my-model            # JSON stdout; human evidence summary on stderr
 xdna-top --theme phosphor   # pick a TUI theme (see --list-themes)
-xdna-top --layout stacked   # iGPU above NPU for a narrow terminal
-xdna-top --npu-only        # hide the iGPU pane
+xdna-top --layout stacked   # GPU pane above NPU for a narrow terminal
+xdna-top --npu-only        # hide the GPU pane
 lemonade-top                # same monitor, lemonade-stand theme
 ```
 
@@ -111,7 +115,7 @@ you prefer plain `pip`, this also works:
 pip install git+https://github.com/boxwrench/xdna-top.git
 ```
 
-`lemonade-top` is the very same telemetry engine - identical NPU + iGPU signals
+`lemonade-top` is the very same telemetry engine - identical NPU + GPU signals
 and `--json` output - just wearing a lemonade-stand theme. It's purely cosmetic
 (no extra dependencies, nothing to do with the Lemonade SDK); pick whichever
 palette you prefer.
@@ -135,9 +139,12 @@ degraded instead of crashing.
 | PCIe current / max | Link generation and width; not meaningful on APUs |
 
 
-- Unified live view: both engines, one screen, 5 Hz
-- All amdgpu devices in numeric DRM card order, each with VRAM **and GTT**,
-  temperature, power/cap, shader clock and PCIe link readings
+- Local AI inference telemetry for APU iGPUs and discrete AMD GPUs, with or
+  without a Ryzen AI NPU; unified live view at nominal 5 Hz
+- Discovered amdgpu devices in numeric DRM card order, each with available
+  VRAM **and GTT**, temperature, power/cap, shader clock and PCIe link readings
+- Device-level GPU observations, without GPU process or request attribution;
+  missing fields stay `N/A`
 - Per-device rolling sparklines for GPU busy and power (missing samples are gaps)
 - Per-context NPU table: PID, process name, submissions, completions, derived
   activity — ordered most-active-first by submission delta
@@ -197,14 +204,16 @@ platform, see **[REM](https://github.com/boxwrench/rem)**.
 
 - [`amdgpu_top`](https://github.com/Umio-Yasuno/amdgpu_top) is the mature,
   broad AMDGPU/APU monitor, with GPU metrics, sensors, fdinfo, process memory
-  views, TUI/GUI/JSON modes, and XDNA device support. If you want a general AMD
-  GPU monitor, start there.
+  views, TUI/GUI/JSON modes, and XDNA device support.
+- [`nvtop`](https://github.com/Syllo/nvtop) provides GPU and accelerator process
+  monitoring across multiple vendors. Use it or `amdgpu_top` for general-purpose
+  GPU process monitoring.
 
-  `xdna-top` is complementary. It focuses on Ryzen AI workload evidence: NPU
-  context ownership, submission/completion deltas, and what the iGPU was doing
-  at the same time. Its read-only AMDXDNA probes follow the same driver-facing
-  spirit while keeping `xdna-top` scoped to workload evidence and NPU+iGPU
-  concurrency.
+`xdna-top` is complementary: it focuses on device telemetry and preserved
+evidence for local AI inference on AMD APU iGPUs and discrete GPUs, including
+GPU-only machines. When a Ryzen AI NPU is available, context ownership and
+submission/completion deltas show what was observed alongside the GPUs.
+Its GPU readings do not identify which process or request caused the activity.
 
 ## NPU Field Guide
 
@@ -227,8 +236,8 @@ no application specifics. Start at [docs/npu/](docs/npu/index.md).
       driver/AIE/clocks/firmware identity (validated on real silicon)
 - [x] v0.4 supervised `workload-check`: endpoint probe + per-context NPU
       submission/completion deltas across the request window
-- [ ] Active stabilization: coherent single-read samples, truthful direct-backend
-      NPU detection, exporter power-state integration, and clean JSON output
+- [ ] Combined v0.5 release: stabilization and per-device AMD GPU telemetry for
+      local AI inference; supported-hardware regression smoke pass remains
 - [ ] Next cleanup: retire the unused daemon/cache path and collapse stale
       planning documents after compatibility checks
 - [ ] Triggered later: reports, poll-rate controls, live context history, and

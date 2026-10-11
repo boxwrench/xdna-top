@@ -29,6 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Widened product scope to AMD GPUs used for local AI inference: APU iGPUs
+  and discrete cards, alone or alongside a Ryzen AI NPU. The per-device GPU
+  feature family ships with the v0.5 stabilization work in one release.
+  General-purpose GPU process monitoring remains with `amdgpu_top` / `nvtop`;
+  GPU device counters do not imply process or request attribution, and scope
+  does not imply validation of every card or sensor.
 - Replaced the feature-heavy v0.5 roadmap with a trust-and-coherence
   stabilization milestone: truthful direct-backend NPU detection, one coherent
   context observation per sample, completion of existing exporter and
