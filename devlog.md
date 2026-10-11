@@ -1,5 +1,36 @@
 # xdna-top Devlog
 
+## 2026-10-11 — Per-device AMD GPU telemetry
+
+Ported the sysfs sensor mapping from Project Maya commit `5d63c79` into a
+small xdna-top backend, using DRM card identity rather than Maya's HIP index
+selection. Each amdgpu device supplies its own busy, VRAM, GTT, edge temperature,
+power/cap, current shader-clock sample and PCIe current/max link fields. Names
+prefer product_name, installed libdrm IDs, then PCI identity. Missing and
+permission-denied sensors remain null, and partial readings remain visible.
+
+The gauge, TUI, exporter, snapshot, record and env-report share the per-card
+list. Snapshot/record schema is 1.1; legacy scalars and unlabeled exporter
+metrics remain a first-numeric-card view. Explicit benchmark path overrides
+apply only to those scalars. APU power includes CPU/SoC; recognized APU PCIe is
+labeled not meaningful and omitted from exporter samples. Device-type hints
+are deliberately limited to the verified PCI families, with unknown for others.
+Removed synthetic pessimistic readings and the unsupported fixed power maximum;
+sparklines preserve gaps and use 300 samples plus bounded peak buckets.
+
+Validation: 235 tests pass after `pip install -e '.[dev]'` in `.venv`;
+generated documentation check and wheel/sdist builds pass, and sources compile
+with Python 3.11. Read-only captures on the local RX 7900 XT + R9700 box also
+found a small integrated AMD GPU; no NPU is present locally. Nimo reports the
+8060S with about 94 GiB GTT used and a 4 GiB VRAM carve-out. Its NPU is bound
+in sysfs but XRT and direct probes return ENODEV, reported as degraded;
+healthy NPU operation was not validated. The remote temporary package was
+removed. No workload, driver change, process kill, push, PR or release was run.
+
+AI-assisted implementation and review: OpenAI Codex. Commit trailers preserve
+the user's requested Claude attribution/session provenance.
+
+
 ## 2026-07-12 — Ponytail audit alignment and direct-backend detection
 
 Folded the repository audit into a lean trust-and-coherence roadmap. HTML

@@ -12,3 +12,16 @@ for _sub in ("bench", "tools"):
     _path = str(_ROOT / _sub)
     if _path not in sys.path:
         sys.path.insert(0, _path)
+
+
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def isolate_gpu_discovery(monkeypatch):
+    """Existing mocked gauge tests must never consume the host's real cards."""
+    monkeypatch.setattr("xdna_top.gauge.discover_gpus", lambda: [])
+    from xdna_top.gauge import load_sysfs_paths
+    load_sysfs_paths.cache_clear()
+    yield
+    load_sysfs_paths.cache_clear()

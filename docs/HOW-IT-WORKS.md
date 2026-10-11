@@ -29,19 +29,63 @@ shapes this whole tool:
 > that a specific request used the NPU. For that, per-context ownership and
 > submission/completion deltas are the stronger evidence.
 
-## Reading the iGPU: sysfs, not amd-smi
+## Reading AMD GPUs: per-device sysfs
 
-The obvious tool, `amd-smi`, returns `N/A` for essentially everything on
-gfx1151 ([ROCm #6035](https://github.com/ROCm/ROCm/issues/6035)). But the
-driver's own counters are sitting right there in sysfs:
+Discovery enumerates numeric `cardN` entries under `/sys/class/drm`, verifies
+AMD vendor `0x1002` and an `amdgpu` driver binding, and binds each device to its
+own `hwmon` directory named `amdgpu`. It ignores connectors, other drivers,
+HIP visibility masks, and NPU availability. Cards are not aggregated, and
+busy/power never come from different devices. Names prefer `product_name`, then
+`/usr/share/libdrm/amdgpu.ids` (device + revision), then PCI identity.
 
-- **busy:** `gpu_busy_percent` under the card's device node — the driver's own
-  0–100 load figure.
-- **power:** the card's `hwmon` node reports instantaneous draw in microwatts;
-  we render watts.
+| Reading | Device-relative source | Conversion / limit |
+|---|---|---|
+| Busy | `gpu_busy_percent` | Driver percentage; no process attribution |
+| VRAM | `mem_info_vram_used`, `mem_info_vram_total` | Bytes |
+| GTT | `mem_info_gtt_used`, `mem_info_gtt_total` | Bytes; host-memory budget, not VRAM |
+| Edge temperature | `hwmon/.../temp1_input` | Millidegrees → °C; not hotspot |
+| Power | `power1_average`, falling back to `power1_input` | Microwatts → W |
+| Cap | `power1_cap` | Microwatts → W |
+| Shader clock | `freq1_input` | Hz → MHz; current **sclk sample**, not a maximum |
+| PCIe | `current_link_speed`, `max_link_speed`, `current_link_width`, `max_link_width` | Recognized GT/s values map to Gen1–6; lane counts |
 
-`xdna-top` polls these at 5 Hz and keeps a 60-second rolling window for the
-sparklines. There is no estimation layer: if the kernel says 87, we print 87.
+These mappings follow the kernel's [hwmon documentation](https://docs.kernel.org/gpu/amdgpu/thermal.html)
+and [memory sysfs documentation](https://docs.kernel.org/gpu/amdgpu/driver-misc.html).
+**APU power includes CPU/SoC**: it is not isolated GPU watts. PCIe links are not
+meaningful for an integrated GPU. Conservative PCI identity hints currently
+recognize Strix Halo (`1586`), the verified desktop iGPU (`13c0`),
+Navi 31 (`744c`) and Navi 48
+(`7551`); other devices have `is_apu: null`, with the general APU caveat still
+shown. Unknown type does not block any sensor. No memory-size heuristic guesses
+a device's type. Recognized APU PCIe numbers remain raw in JSON with
+`pcie_meaningful: false`; the TUI labels them inapplicable and the exporter
+omits those PCIe samples.
+
+On Strix Halo, VRAM can be a small firmware carve-out while a model lives in
+GTT. Keep them separate. Each card's GTT total is a budget backed by the same
+host RAM; adding budgets across cards would count that RAM repeatedly. These
+are device allocation counters, not proof that a particular model owns memory.
+
+Every read is guarded: absent, unreadable, removed, malformed or unknown-speed
+files yield `null` (`N/A` in the TUI). Each card carries an `unavailable` field
+list; `degraded` means busy or power is missing. Optional missing sensors do not
+hide readable fields. No percentage or power value is fabricated, including
+with the legacy private `pessimistic_fallback` argument.
+
+The gauge discovers devices once for its lifetime and polls read-only at nominal
+5 Hz. Each card keeps 300 samples for nominal 60-second sparklines; a slow NPU
+probe can lengthen that wall-clock window. Missing samples use visible gaps,
+display buckets retain observed peaks to fit the pane,
+and power history uses an explicitly marked automatic scale, not a claimed
+hardware maximum. Multi-card panes need a taller terminal to show every row.
+
+`--json`, snapshot telemetry and record readings share a `gpus` list.
+Snapshot/record schema **1.1** adds per-card telemetry; older 1.0 captures remain
+readable. Legacy scalar `gpu_busy_pct`, `gpu_power_w`, `state`, `igpu_degraded`,
+and `xdna_igpu_*` metrics describe the **first numeric amdgpu card**, which may
+be discrete. `state` is a threshold heuristic, not proof of an inference phase.
+An explicit `--bench-dir/e0_sysfs.json` still overrides only those legacy
+scalars; the per-card list always reports actual per-device sysfs readings.
 
 ## Reading the NPU: IOCTLs first, XRT where it helps
 

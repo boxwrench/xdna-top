@@ -1,14 +1,31 @@
-# Snapshot Schema 1.0
+# Snapshot Schema 1.1
 
-This document defines the current schema 1.0 contract for the shipped
+This document defines the current schema 1.1 contract for the shipped
 `xdna-top snapshot` JSON artifact. The schema is explicit and versioned so
 `env-report`, `compare`, and `baseline` remain thin views over the same capture.
+
+Schema 1.1 adds `telemetry.gpus` (also `devices.gpus` in snapshots) and
+`reading.gpus` in record events. Older 1.0 artifacts remain readable; unknown
+keys should be ignored. Legacy scalar GPU fields and `devices.igpu` paths now
+refer explicitly to the first numeric amdgpu card, including a discrete GPU.
+An explicit path override applies only to those legacy fields.
+
+Each GPU object carries `card`, `bdf`, `name`, `device_id`, nullable `is_apu`,
+`busy_pct`, `vram_used_bytes`, `vram_total_bytes`, `gtt_used_bytes`,
+`gtt_total_bytes`, `edge_temp_c`, `power_w`, `power_cap_w`, `power_source`,
+`sclk_mhz`, `pcie_gen`, `pcie_gen_max`, `pcie_width`, `pcie_width_max`, nullable
+`pcie_meaningful`, `unavailable` (names of null fields), and `degraded` (busy or
+power missing). Numeric fields are null when unavailable. Power uses
+`power1_average` then `power1_input`; on APUs it includes CPU/SoC. The shader
+clock is a current sample. Raw PCIe numbers on recognized APUs are retained
+with `pcie_meaningful: false`. GTT budgets must not be summed across devices.
+See [HOW-IT-WORKS.md](HOW-IT-WORKS.md) for identity hint coverage and sources.
 
 ## Top-Level Shape
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "kind": "xdna-top.snapshot",
   "captured_at": "2026-06-11T12:34:56.789Z",
   "host": {},
@@ -349,9 +366,9 @@ The stream is framed by a `meta` header line and a `summary` footer line, with
 zero or more `telemetry` lines in between:
 
 ```json
-{"type":"meta","schema_version":"1.0","kind":"xdna-top.record","started_at":"2026-06-13T02:16:39Z","params":{"duration_s":60.0,"interval_s":0.2},"host":{}}
-{"type":"telemetry","schema_version":"1.0","ts":123.4,"reading":{},"contexts":[]}
-{"type":"summary","schema_version":"1.0","kind":"xdna-top.record","started_at":"2026-06-13T02:16:39Z","ended_at":"2026-06-13T02:17:39Z","samples":301}
+{"type":"meta","schema_version":"1.1","kind":"xdna-top.record","started_at":"2026-06-13T02:16:39Z","params":{"duration_s":60.0,"interval_s":0.2},"host":{}}
+{"type":"telemetry","schema_version":"1.1","ts":123.4,"reading":{},"contexts":[]}
+{"type":"summary","schema_version":"1.1","kind":"xdna-top.record","started_at":"2026-06-13T02:16:39Z","ended_at":"2026-06-13T02:17:39Z","samples":301}
 ```
 
 ### `meta`

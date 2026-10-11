@@ -20,7 +20,7 @@ from xdna_top.gauge import HardwareGauge, load_sysfs_paths, parse_xrt_smi
 from xdna_top.amdxdna_ioctl import read_amdxdna_info
 from xdna_top.npu_power import read_npu_power
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
 SNAPSHOT_KIND = "xdna-top.snapshot"
 COMMAND_TIMEOUT_S = 1.5
 
@@ -126,6 +126,8 @@ def build_snapshot(
         igpu_reasons.append("igpu_power_path_missing")
 
     npu_degraded = bool(npu_reasons)
+    if reading is not None and reading.to_dict().get("igpu_degraded", False) and not igpu_reasons:
+        igpu_reasons.append("igpu_sensor_unreadable")
     igpu_degraded = bool(igpu_reasons)
 
     telemetry = (
@@ -139,6 +141,7 @@ def build_snapshot(
             "igpu_degraded": True,
             "npu_degraded": True,
             "ts": time.time(),
+            "gpus": [],
         }
     )
 
@@ -163,10 +166,11 @@ def build_snapshot(
             npu_power_available=bool(npu_power.get("available")),
             amdxdna_ioctl_available=ioctl_available,
             amdxdna_sensors_available=ioctl_sensors_available,
-            igpu_busy_available=igpu_busy_exists,
-            igpu_power_available=igpu_power_exists,
+            igpu_busy_available=telemetry.get("gpu_busy_pct") is not None,
+            igpu_power_available=telemetry.get("gpu_power_w") is not None,
         ),
         "devices": {
+            "gpus": telemetry.get("gpus", []),
             "accel": {"entries": _accel_entries()},
             "npu": {
                 "detected": npu_detected,

@@ -106,6 +106,8 @@ def render_markdown(snapshot: dict[str, Any]) -> str:
         f"- NPU reasons: {_list(_get(degraded, 'npu', 'reasons'))}",
     ]
 
+    lines.extend(_gpu_lines(telemetry))
+
     if errors:
         lines.extend(["", "## Probe Errors", ""])
         for error in errors:
@@ -197,10 +199,12 @@ def render_record_markdown(events: list[Any]) -> str:
         "## First Reading",
         "",
         *_reading_lines(first),
+        *_gpu_lines(first),
         "",
         "## Last Reading",
         "",
         *_reading_lines(last),
+        *_gpu_lines(last),
     ]
 
     if marks:
@@ -256,6 +260,31 @@ def _reading_lines(reading: dict[str, Any]) -> list[str]:
         f"- NPU active: {_bool(reading.get('npu_active'))}",
         f"- Timestamp: {_value(reading.get('ts'))}",
     ]
+
+
+def _gpu_lines(reading: dict[str, Any]) -> list[str]:
+    gpus = reading.get("gpus", [])
+    if not gpus:
+        return []
+    lines = ["", "### AMD GPU devices", ""]
+    for gpu in gpus:
+        lines.append(f"- {_value(gpu.get('card'))} / {_value(gpu.get('bdf'))}: {_value(gpu.get('name'))}")
+        for label, field, unit in (
+            ("Busy", "busy_pct", "%"), ("VRAM used", "vram_used_bytes", "bytes"),
+            ("VRAM total", "vram_total_bytes", "bytes"), ("GTT used", "gtt_used_bytes", "bytes"),
+            ("GTT budget", "gtt_total_bytes", "bytes"), ("Edge temperature", "edge_temp_c", "°C"),
+            ("Power", "power_w", "W"), ("Power cap", "power_cap_w", "W"),
+            ("sclk (current sample)", "sclk_mhz", "MHz"),
+        ):
+            lines.append(f"  - {label}: {_metric(gpu.get(field), unit)}")
+        if gpu.get("is_apu") is True:
+            lines.append("  - PCIe: not meaningful on an APU")
+        else:
+            lines.append(f"  - PCIe current/max: Gen{_value(gpu.get('pcie_gen'))} x{_value(gpu.get('pcie_width'))} / "
+                         f"Gen{_value(gpu.get('pcie_gen_max'))} x{_value(gpu.get('pcie_width_max'))}")
+        lines.append(f"  - Unavailable fields: {_list(gpu.get('unavailable'))}")
+    lines.append("APU power includes CPU/SoC; PCIe link values are not meaningful on APUs.")
+    return lines
 
 
 def _window_seconds(telemetry: list[dict[str, Any]]) -> str:

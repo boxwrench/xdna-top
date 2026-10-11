@@ -33,14 +33,43 @@ def _build_metrics(
     )
 
     if reading.gpu_busy_pct is not None:
-        busy = GaugeMetricFamily("xdna_igpu_busy_percent", "iGPU busy percentage (0-100)")
+        busy = GaugeMetricFamily("xdna_igpu_busy_percent", "First amdgpu device busy percentage (0-100)")
         busy.add_metric([], float(reading.gpu_busy_pct))
         yield busy
 
     if reading.gpu_power_w is not None:
-        power = GaugeMetricFamily("xdna_igpu_power_watts", "iGPU package power (watts)")
+        power = GaugeMetricFamily("xdna_igpu_power_watts", "First amdgpu device power (watts); on APUs includes CPU/SoC")
         power.add_metric([], float(reading.gpu_power_w))
         yield power
+
+    info = GaugeMetricFamily("xdna_gpu_info", "amdgpu device identity", labels=["card", "bdf", "name", "type"])
+    for gpu in reading.gpus:
+        kind = "apu" if gpu.get("is_apu") is True else "discrete" if gpu.get("is_apu") is False else "unknown"
+        info.add_metric([gpu["card"], gpu["bdf"], gpu["name"], kind], 1)
+    yield info
+    fields = {
+        "busy_pct": ("busy_percent", "Driver GPU busy percentage"),
+        "vram_used_bytes": ("vram_used_bytes", "VRAM used in bytes"),
+        "vram_total_bytes": ("vram_total_bytes", "VRAM capacity in bytes"),
+        "gtt_used_bytes": ("gtt_used_bytes", "GTT used in bytes"),
+        "gtt_total_bytes": ("gtt_total_bytes", "GTT budget in bytes; shared host RAM, do not sum budgets"),
+        "edge_temp_c": ("edge_temperature_celsius", "GPU edge temperature"),
+        "power_w": ("power_watts", "amdgpu power; on APUs includes CPU/SoC"),
+        "power_cap_w": ("power_cap_watts", "amdgpu power cap"),
+        "sclk_mhz": ("sclk_mhz", "Current shader clock sample from hwmon freq1_input (MHz)"),
+        "pcie_gen": ("pcie_generation", "Current PCIe generation; not meaningful on APUs"),
+        "pcie_gen_max": ("pcie_generation_max", "Maximum PCIe generation; not meaningful on APUs"),
+        "pcie_width": ("pcie_width", "Current PCIe lanes; not meaningful on APUs"),
+        "pcie_width_max": ("pcie_width_max", "Maximum PCIe lanes; not meaningful on APUs"),
+        "degraded": ("degraded", "1 if busy or power is unavailable"),
+    }
+    for field, (suffix, help_text) in fields.items():
+        metric = GaugeMetricFamily(f"xdna_gpu_{suffix}", help_text, labels=["card", "bdf"])
+        for gpu in reading.gpus:
+            value = gpu.get(field)
+            if value is not None and not (field.startswith("pcie_") and gpu.get("is_apu") is True):
+                metric.add_metric([gpu["card"], gpu["bdf"]], float(value))
+        yield metric
 
     yield GaugeMetricFamily(
         "xdna_npu_active", "1 if the NPU has in-flight work, else 0",

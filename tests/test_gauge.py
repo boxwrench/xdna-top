@@ -240,14 +240,14 @@ def test_igpu_degradation_honest_vs_pessimism(mock_exists, mock_open, mock_load_
     assert reading_honest.state == GpuState.UNKNOWN
     assert reading_honest.to_dict()["state"] is None
 
-    # 2. Pessimistic fallback (pessimistic_fallback=True)
+    # 2. Legacy argument no longer fabricates sensor values
     gauge_pessimistic = HardwareGauge(gpu_idle_busy_pct=10, pessimistic_fallback=True)
     reading_pessimistic = gauge_pessimistic.read_direct()
     
-    assert reading_pessimistic.gpu_busy_pct == 100
-    assert reading_pessimistic.gpu_power_w == 45.0
+    assert reading_pessimistic.gpu_busy_pct is None
+    assert reading_pessimistic.gpu_power_w is None
     assert reading_pessimistic.igpu_degraded is True
-    assert reading_pessimistic.state == GpuState.PREFILL_BURST
+    assert reading_pessimistic.state == GpuState.UNKNOWN
 
 
 @patch("xdna_top.gauge.run_xrt_smi")

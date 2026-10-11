@@ -89,7 +89,7 @@ def test_build_snapshot_happy_path(
 
     snapshot = build_snapshot(bench_dir="/tmp/xdna-top-test")
 
-    assert snapshot["schema_version"] == "1.0"
+    assert snapshot["schema_version"] == "1.1"
     assert snapshot["kind"] == "xdna-top.snapshot"
     assert snapshot["commands"]["xrt_smi"]["available"] is True
     assert snapshot["backends"]["npu"]["primary"] == "xrt_smi"

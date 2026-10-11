@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Per-device AMD GPU telemetry, including multiple discrete cards with or
+  without an NPU: names, busy %, separate VRAM/GTT used and total, edge
+  temperature, power/cap, current sclk sample, and PCIe current/max links.
+  TUI, JSON, exporter, snapshot, record, and env-report share the readings;
+  snapshot/record schema is now 1.1. Missing sensors stay unavailable.
+  APU power includes CPU/SoC; APU PCIe is labeled not meaningful.
+
 - Small, direct live-view options: `--layout stacked` places the iGPU pane
   above the NPU pane, and `--npu-only` hides the iGPU pane. They compose
   without introducing profiles or a generalized layout system; side by side
@@ -40,6 +47,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   builds the wheel and source distribution across the supported Python matrix.
 
 ### Fixed
+
+- Bind busy and hwmon sensors to the same amdgpu device. Missing samples now
+  appear as sparkline gaps, and 60-second history holds 300 samples at 5 Hz.
+  Removed the unsupported fixed 100 W display maximum and the private
+  pessimistic mode's synthetic busy/power readings.
 
 - A successful direct AMDXDNA ioctl identity now sets
   `devices.npu.detected=true` even when XRT is unavailable, while context

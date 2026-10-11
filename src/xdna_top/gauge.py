@@ -11,6 +11,8 @@ from enum import Enum
 from pathlib import Path
 from functools import lru_cache
 
+from xdna_top.amdgpu import discover_gpus
+
 class GpuState(str, Enum):
     IDLE = "IDLE"
     ACTIVE = "ACTIVE"
@@ -33,6 +35,7 @@ class GaugeReading:
         igpu_degraded: bool = False,
         npu_degraded: bool = False,
         ts: float | None = None,
+        gpus: list[dict] | None = None,
     ) -> None:
         self.gpu_busy_pct = gpu_busy_pct
         self.gpu_power_w = gpu_power_w
@@ -41,6 +44,7 @@ class GaugeReading:
         self.igpu_degraded = igpu_degraded
         self.npu_degraded = npu_degraded
         self.ts = ts or time.time()
+        self.gpus = gpus or []
 
     def to_dict(self) -> dict:
         return {
@@ -51,6 +55,7 @@ class GaugeReading:
             "igpu_degraded": self.igpu_degraded,
             "npu_degraded": self.npu_degraded,
             "ts": self.ts,
+            "gpus": self.gpus,
         }
 
     @classmethod
@@ -63,6 +68,7 @@ class GaugeReading:
             igpu_degraded=d.get("igpu_degraded", False),
             npu_degraded=d.get("npu_degraded", False),
             ts=d["ts"],
+            gpus=d.get("gpus", []),
         )
 
 
@@ -300,7 +306,11 @@ def sort_contexts_by_activity(
 
 
 class HardwareGauge:
-    """In-process API for reading hardware telemetry."""
+    """In-process API for reading hardware telemetry.
+
+    ``pessimistic_fallback`` is retained for API compatibility but no longer
+    substitutes synthetic busy/power readings. Missing values always stay null.
+    """
 
     def __init__(
         self,
@@ -319,6 +329,8 @@ class HardwareGauge:
         self.npu_device = npu_device
 
         self.busy_path, self.power_path = load_sysfs_paths(self.bench_dir)
+        self.gpus = discover_gpus()
+        self.sysfs_override = (Path(self.bench_dir) / "e0_sysfs.json").is_file()
         self.prev_submissions = {}
 
     def sample_direct(self) -> tuple[GaugeReading, list[dict]]:
@@ -339,24 +351,21 @@ class HardwareGauge:
         self, contexts: list[dict], *, npu_degraded: bool = False
     ) -> GaugeReading:
         """Build a direct reading from an already captured context observation."""
-        gpu_busy, gpu_power, igpu_degraded = read_igpu(self.busy_path, self.power_path)
+        gpus = [gpu.read() for gpu in self.gpus]
+        if gpus and not self.sysfs_override:
+            first = gpus[0]
+            gpu_busy, gpu_power = first["busy_pct"], first["power_w"]
+            igpu_degraded = first["degraded"]
+        else:
+            gpu_busy, gpu_power, igpu_degraded = read_igpu(self.busy_path, self.power_path)
 
         display_busy = gpu_busy
         display_power = gpu_power
-        if igpu_degraded and self.pessimistic_fallback:
-            display_busy = 100
-            display_power = 45.0
-
-        if igpu_degraded and not self.pessimistic_fallback:
-            # Honest mode: we have no real iGPU inputs, so we refuse to
-            # classify. State is UNKNOWN (serializes to JSON null).
+        if igpu_degraded:
             raw_state = GpuState.UNKNOWN
         else:
-            class_busy = gpu_busy if gpu_busy is not None else 100
-            class_power = gpu_power if gpu_power is not None else 45.0
             raw_state = classify_state(
-                class_busy,
-                class_power,
+                gpu_busy, gpu_power,
                 gpu_idle_busy_pct=self.gpu_idle_busy_pct,
                 gpu_prefill_power_w=self.gpu_prefill_power_w,
             )
@@ -383,6 +392,7 @@ class HardwareGauge:
             state=raw_state,
             igpu_degraded=igpu_degraded,
             npu_degraded=npu_degraded,
+            gpus=gpus,
         )
 
     def read(self) -> GaugeReading:

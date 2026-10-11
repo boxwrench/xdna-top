@@ -32,7 +32,7 @@ If you run local AI on an AMD Strix Halo machine, you are flying blind twice ove
 
 | You want to know… | `amd-smi` | `nvtop` / `amdgpu_top` | **`xdna-top`** |
 |---|---|---|---|
-| iGPU busy % / power on gfx1151 | `N/A` ([ROCm #6035](https://github.com/ROCm/ROCm/issues/6035)) | partial | ✅ live, from kernel sysfs |
+| AMD GPU busy, memory, sensors and PCIe (including gfx1151) | `N/A` ([ROCm #6035](https://github.com/ROCm/ROCm/issues/6035)) | partial | ✅ per device, from kernel sysfs |
 | Is the **NPU** doing anything at all? | — | — | ✅ live contexts + activity |
 | Both, side by side, while two models run | — | — | ✅ that's the whole point |
 
@@ -53,9 +53,13 @@ to be unanswerable with stock tools. So we built the answer.
 
 Honesty matters in a measurement tool, so here is exactly what each pane is:
 
-- **iGPU:** `busy %` and `power (W)` read from the kernel's `amdgpu` sysfs
-  endpoints at 5 Hz, with 60-second rolling sparklines. These are the same
-  counters the driver itself maintains — no estimation.
+- **AMD GPUs (integrated and discrete):** per-card name, driver busy %, VRAM
+  used/total, GTT used/budget, edge temperature, power/cap, current shader-clock
+  sample (`sclk`), and current/max PCIe generation/width from sysfs. GTT is
+  separate from the small APU VRAM carve-out; it can hold a large Strix model.
+  **APU power includes CPU/SoC**, and PCIe link values are **not meaningful on
+  an APU**. Missing sensors show `N/A`, never invented numbers. Busy and power
+  sparklines keep 300 samples at the nominal 5 Hz (60 seconds).
 - **NPU:** hardware context list from `xrt-smi examine --report aie-partitions` —
   owning PID, context ID, submission/completion counters, and an **activity
   state derived from counter deltas** (a context whose submissions are
@@ -112,15 +116,29 @@ and `--json` output - just wearing a lemonade-stand theme. It's purely cosmetic
 (no extra dependencies, nothing to do with the Lemonade SDK); pick whichever
 palette you prefer.
 
-**Requirements:** Linux with the `amdxdna` driver bound (`/dev/accel/accel0`),
-Python ≥ 3.11, and `xrt-smi` on your PATH for the NPU pane. No ROCm required.
+**Requirements:** Linux, Python ≥ 3.11, and `amdgpu` for GPU telemetry. The
+NPU pane additionally needs `amdxdna` bound (`/dev/accel/accel0`) and `xrt-smi`
+on your PATH. GPU telemetry also works without an NPU. No ROCm required.
 Missing a piece? The tool **degrades gracefully** — panes flag themselves as
 degraded instead of crashing.
 
 ## Features
 
+| GPU field | Source / interpretation |
+|---|---|
+| Name | `product_name`, installed libdrm device/revision IDs, then PCI fallback |
+| Busy % | `gpu_busy_percent`; driver load, not process attribution |
+| VRAM / GTT used and total | Separate byte counts; GTT budgets share host RAM |
+| Edge temperature | `temp1_input`; °C, not junction temperature |
+| Power / cap | `power1_average` then `power1_input` / `power1_cap`; W; APU includes CPU/SoC |
+| Shader clock | `freq1_input`; current sclk sample in MHz |
+| PCIe current / max | Link generation and width; not meaningful on APUs |
+
+
 - Unified live view: both engines, one screen, 5 Hz
-- Rolling ASCII sparklines for iGPU busy and power
+- All amdgpu devices in numeric DRM card order, each with VRAM **and GTT**,
+  temperature, power/cap, shader clock and PCIe link readings
+- Per-device rolling sparklines for GPU busy and power (missing samples are gaps)
 - Per-context NPU table: PID, process name, submissions, completions, derived
   activity — ordered most-active-first by submission delta
 - `--json` mode for scripts, logging, and dashboards
@@ -162,7 +180,7 @@ claims-accurate in any theme.
 
 ## How it works (30 seconds)
 
-`sysfs` supplies the iGPU's own driver counters; `xrt-smi` exposes the NPU's
+`sysfs` supplies each AMD GPU's driver counters; `xrt-smi` exposes the NPU's
 hardware-context bookkeeping; `xdna-top` polls both, derives activity from
 submission-counter deltas, fuses them into one reading, and renders it with
 [rich](https://github.com/Textualize/rich). The full guided tour — including an

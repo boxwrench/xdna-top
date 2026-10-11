@@ -19,7 +19,7 @@ from typing import Any, Callable, Iterator
 from xdna_top.gauge import GaugeReading, HardwareGauge
 from xdna_top.snapshot import host_facts
 
-RECORD_SCHEMA_VERSION = "1.0"
+RECORD_SCHEMA_VERSION = "1.1"
 RECORD_KIND = "xdna-top.record"
 
 

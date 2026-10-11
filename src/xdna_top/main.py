@@ -56,7 +56,7 @@ class TuiTheme:
 
 DEFAULT_THEME = TuiTheme(
     app_name="xdna-top",
-    header="[bold white]xdna-top[/bold white] - Unified NPU+iGPU Monitor",
+    header="[bold white]xdna-top[/bold white] - Unified NPU+AMD GPU Monitor",
     footer="Press [bold red]q[/bold red] or [bold red]Ctrl-C[/bold red] to quit. Telemetry refresh rate: 5 Hz.",
     stopped_message="[green]xdna-top stopped cleanly.[/green]",
     header_border="white",
@@ -77,7 +77,7 @@ DEFAULT_THEME = TuiTheme(
 
 LEMONADE_THEME = TuiTheme(
     app_name="lemonade-top",
-    header="[bold yellow]lemonade-top[/bold yellow] - Fresh NPU+iGPU Stand",
+    header="[bold yellow]lemonade-top[/bold yellow] - Fresh NPU+AMD GPU Stand",
     footer="Press [bold green]q[/bold green] or [bold green]Ctrl-C[/bold green] to close the stand. Fresh squeeze: 5 Hz.",
     stopped_message="[yellow]lemonade-top stand closed cleanly.[/yellow]",
     header_border="yellow",
@@ -108,7 +108,7 @@ LEMONADE_THEME = TuiTheme(
 # units, or values, so a screenshot in any theme stays claims-accurate.
 PAPER_THEME = replace(
     DEFAULT_THEME,
-    header="[bold]xdna-top[/bold] - Unified NPU+iGPU Monitor",
+    header="[bold]xdna-top[/bold] - Unified NPU+AMD GPU Monitor",
     footer="Press [bold]q[/bold] or [bold]Ctrl-C[/bold] to quit. Telemetry refresh rate: 5 Hz.",
     stopped_message="[bold]xdna-top stopped cleanly.[/bold]",
     header_border="blue",
@@ -128,7 +128,7 @@ PAPER_THEME = replace(
 
 PHOSPHOR_THEME = replace(
     DEFAULT_THEME,
-    header="[bold green]xdna-top[/bold green] - Unified NPU+iGPU Monitor",
+    header="[bold green]xdna-top[/bold green] - Unified NPU+AMD GPU Monitor",
     footer="Press [bold green]q[/bold green] or [bold green]Ctrl-C[/bold green] to quit. Telemetry refresh rate: 5 Hz.",
     stopped_message="[green]xdna-top stopped cleanly.[/green]",
     header_border="green",
@@ -148,7 +148,7 @@ PHOSPHOR_THEME = replace(
 
 AMBER_THEME = replace(
     DEFAULT_THEME,
-    header="[bold orange3]xdna-top[/bold orange3] - Unified NPU+iGPU Monitor",
+    header="[bold orange3]xdna-top[/bold orange3] - Unified NPU+AMD GPU Monitor",
     footer="Press [bold orange3]q[/bold orange3] or [bold orange3]Ctrl-C[/bold orange3] to quit. Telemetry refresh rate: 5 Hz.",
     stopped_message="[orange3]xdna-top stopped cleanly.[/orange3]",
     header_border="orange3",
@@ -168,7 +168,7 @@ AMBER_THEME = replace(
 
 HALO_THEME = replace(
     DEFAULT_THEME,
-    header="[bold grey78]xdna-top[/bold grey78] - Unified NPU+iGPU Monitor",
+    header="[bold grey78]xdna-top[/bold grey78] - Unified NPU+AMD GPU Monitor",
     footer="Press [bold steel_blue1]q[/bold steel_blue1] or [bold steel_blue1]Ctrl-C[/bold steel_blue1] to quit. Telemetry refresh rate: 5 Hz.",
     stopped_message="[grey78]xdna-top stopped cleanly.[/grey78]",
     header_border="deep_sky_blue4",
@@ -188,7 +188,7 @@ HALO_THEME = replace(
 
 LIME_THEME = replace(
     DEFAULT_THEME,
-    header="[bold chartreuse1]xdna-top[/bold chartreuse1] - Unified NPU+iGPU Monitor",
+    header="[bold chartreuse1]xdna-top[/bold chartreuse1] - Unified NPU+AMD GPU Monitor",
     footer="Press [bold chartreuse1]q[/bold chartreuse1] or [bold chartreuse1]Ctrl-C[/bold chartreuse1] to quit. Telemetry refresh rate: 5 Hz.",
     stopped_message="[chartreuse1]xdna-top stopped cleanly.[/chartreuse1]",
     header_border="chartreuse1",
@@ -208,7 +208,7 @@ LIME_THEME = replace(
 
 GRAPEFRUIT_THEME = replace(
     DEFAULT_THEME,
-    header="[bold deep_pink3]xdna-top[/bold deep_pink3] - Unified NPU+iGPU Monitor",
+    header="[bold deep_pink3]xdna-top[/bold deep_pink3] - Unified NPU+AMD GPU Monitor",
     footer="Press [bold deep_pink3]q[/bold deep_pink3] or [bold deep_pink3]Ctrl-C[/bold deep_pink3] to quit. Telemetry refresh rate: 5 Hz.",
     stopped_message="[deep_pink3]xdna-top stopped cleanly.[/deep_pink3]",
     header_border="deep_pink3",
@@ -228,7 +228,7 @@ GRAPEFRUIT_THEME = replace(
 
 TEAM_RED_THEME = replace(
     DEFAULT_THEME,
-    header="[bold red3]xdna-top[/bold red3] - Unified NPU+iGPU Monitor",
+    header="[bold red3]xdna-top[/bold red3] - Unified NPU+AMD GPU Monitor",
     footer="Press [bold red3]q[/bold red3] or [bold red3]Ctrl-C[/bold red3] to quit. Telemetry refresh rate: 5 Hz.",
     stopped_message="[red3]xdna-top stopped cleanly.[/red3]",
     header_border="red3",
@@ -322,13 +322,21 @@ def make_bar(pct: int, width: int = 30) -> str:
     return "[" + "█" * filled_chars + "░" * empty_chars + f"] {pct}%"
 
 
-def make_sparkline(values: list[float], max_val: float = 100.0) -> str:
+def make_sparkline(values: list[float | None], max_val: float = 100.0, width: int | None = None) -> str:
     """Generates an ASCII sparkline of historical values."""
+    if width and len(values) > width:
+        # Preserve short bursts while fitting the whole window in the pane.
+        buckets = [values[i * len(values) // width:(i + 1) * len(values) // width]
+                   for i in range(width)]
+        values = [None if any(v is None for v in bucket) else max(bucket) for bucket in buckets]
     bars = " ▂▃▄▅▆▇█"
     if not values:
         return ""
     res = []
     for v in values:
+        if v is None:
+            res.append("·")
+            continue
         if max_val <= 0:
             idx = 0
         else:
@@ -346,8 +354,12 @@ def create_igpu_panel(
     power_history: list[float],
     igpu_degraded: bool = False,
     theme: TuiTheme = DEFAULT_THEME,
+    gpus: list[dict] | None = None,
+    gpu_history: dict | None = None,
 ) -> Panel:
-    """Constructs the iGPU status Panel."""
+    """Construct the AMD GPU pane, preserving the scalar compatibility API."""
+    if gpus:
+        return create_gpu_panel(gpus, gpu_history or {}, theme)
     text = Text()
     if igpu_degraded:
         text.append("[WARNING] sysfs endpoints missing or unreadable; iGPU telemetry degraded.\n\n", style="bold red")
@@ -365,20 +377,55 @@ def create_igpu_panel(
     text.append(f"{state.value}\n", style=state_color)
     
     text.append("Utilization: ", style="bold")
-    text.append(f"{make_bar(busy_pct if busy_pct is not None else 0)}\n")
+    text.append(f"{make_bar(busy_pct) if busy_pct is not None else 'N/A'}\n")
     
     text.append("Power Draw:  ", style="bold")
-    text.append(f"{power_w:.2f} W (max 100W)\n\n" if power_w is not None else "N/A W\n\n")
+    text.append(f"{power_w:.2f} W\n\n" if power_w is not None else "N/A W\n\n")
 
     # Sparklines
-    text.append("Busy (last 60s):  ", style="bold")
-    text.append(f"{make_sparkline(busy_history, max_val=100.0)}\n")
+    text.append("Busy (60s peaks):  ", style="bold")
+    text.append(f"{make_sparkline(busy_history, max_val=100.0, width=30)}\n")
     
-    text.append("Power (last 60s): ", style="bold")
-    # Strix Halo iGPU maximum power is typically ~80-100W, so scale sparkline to 80.0
-    text.append(f"{make_sparkline(power_history, max_val=80.0)}\n")
+    text.append("Power (60s peaks): ", style="bold")
+    # Scale only from observed values, never a guessed hardware maximum.
+    text.append(f"{make_sparkline(power_history, max_val=max([1.0] + [v for v in power_history if v is not None]), width=30)} (auto scale)\n")
 
+    text.append("APU power includes CPU/SoC; APU PCIe is not meaningful.\n", style="dim")
     return Panel(text, title=theme.igpu_title, border_style=theme.igpu_border)
+
+
+def create_gpu_panel(gpus: list[dict], history: dict, theme: TuiTheme = DEFAULT_THEME) -> Panel:
+    """Show each card independently; partial sensors never hide other values."""
+    text = Text()
+    def value(gpu, field, unit="", decimals=1):
+        v = gpu.get(field)
+        return "N/A" if v is None else f"{v:.{decimals}f}{unit}"
+
+    def memory(gpu, prefix):
+        def gib(field):
+            v = gpu.get(field)
+            return "N/A" if v is None else f"{v / 2**30:.2f}"
+        return f"{gib(prefix + '_used_bytes')} / {gib(prefix + '_total_bytes')} GiB"
+
+    for gpu in gpus:
+        text.append(f"{gpu['card']} · {gpu['name']}\n", style="bold")
+        text.append(f"PCI {gpu['bdf']}" + (" · APU" if gpu.get("is_apu") else "") + "\n", style="dim")
+        text.append(f"Busy: {value(gpu, 'busy_pct', '%', 0)}   Edge: {value(gpu, 'edge_temp_c', ' °C')}\n")
+        text.append(f"VRAM: {memory(gpu, 'vram')}\nGTT:  {memory(gpu, 'gtt')}\n")
+        text.append(f"Power: {value(gpu, 'power_w', ' W', 2)} / cap {value(gpu, 'power_cap_w', ' W', 2)}\n")
+        text.append(f"sclk (current sample): {value(gpu, 'sclk_mhz', ' MHz')}\n")
+        if gpu.get("is_apu") is True:
+            text.append("PCIe: not meaningful on an APU\n")
+        else:
+            text.append(f"PCIe: Gen{value(gpu, 'pcie_gen', decimals=0)} x{value(gpu, 'pcie_width', decimals=0)}"
+                        f" / max Gen{value(gpu, 'pcie_gen_max', decimals=0)} x{value(gpu, 'pcie_width_max', decimals=0)}\n")
+        if gpu.get("degraded"):
+            text.append("[WARNING] busy or power unavailable; partial telemetry\n", style="bold red")
+        busy, power = history.get(gpu['bdf'], ([], []))
+        text.append(f"Busy 60s peaks: {make_sparkline(busy, width=24)}\n")
+        text.append(f"Power 60s peaks: {make_sparkline(power, max_val=max([1.0] + [v for v in power if v is not None]), width=24)} (auto scale)\n\n")
+    text.append("APU power includes CPU/SoC. APU PCIe is not meaningful.\n", style="dim")
+    return Panel(text, title=theme.igpu_title.replace("iGPU", "AMD GPU"), border_style=theme.igpu_border)
 
 
 def create_npu_panel(
@@ -509,7 +556,7 @@ def _add_hardware_args(parser: argparse.ArgumentParser, *, suppress_defaults: bo
 
 
 def build_parser(
-    description: str = "xdna-top: NPU+iGPU Telemetry Monitor",
+    description: str = "xdna-top: NPU + AMD GPU telemetry. On APUs power includes CPU/SoC; PCIe link is not meaningful.",
     *,
     include_commands: bool = True,
 ) -> argparse.ArgumentParser:
@@ -737,7 +784,8 @@ def run_monitor(args: argparse.Namespace, theme: TuiTheme = DEFAULT_THEME) -> in
     # History buffers for sparklines
     busy_history = []
     power_history = []
-    max_history_len = 60
+    max_history_len = 300  # 5 Hz × 60 seconds
+    gpu_history = {}
 
     # Previous per-context submission counts, keyed by (pid, ctx_id), so the
     # context table can be ordered most-active-first by submission delta.
@@ -772,17 +820,23 @@ def run_monitor(args: argparse.Namespace, theme: TuiTheme = DEFAULT_THEME) -> in
                 if reading.gpu_busy_pct is not None:
                     busy_history.append(float(reading.gpu_busy_pct))
                 else:
-                    busy_history.append(0.0)
+                    busy_history.append(None)
 
                 if reading.gpu_power_w is not None:
                     power_history.append(reading.gpu_power_w)
                 else:
-                    power_history.append(0.0)
+                    power_history.append(None)
 
                 if len(busy_history) > max_history_len:
                     busy_history.pop(0)
                 if len(power_history) > max_history_len:
                     power_history.pop(0)
+
+                for gpu in reading.gpus:
+                    histories = gpu_history.setdefault(gpu["bdf"], ([], []))
+                    for values, field in zip(histories, ("busy_pct", "power_w")):
+                        values.append(gpu.get(field))
+                        del values[:-max_history_len]
 
                 # 2. Update Panels
                 if not npu_only:
@@ -795,6 +849,8 @@ def run_monitor(args: argparse.Namespace, theme: TuiTheme = DEFAULT_THEME) -> in
                             power_history,
                             igpu_degraded=reading.igpu_degraded,
                             theme=theme,
+                            gpus=reading.gpus,
+                            gpu_history=gpu_history,
                         )
                     )
                 layout["body"]["npu"].update(
