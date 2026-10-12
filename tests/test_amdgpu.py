@@ -253,12 +253,18 @@ def _context():
 
 def test_fabric_clock_warning_gating():
     ctx = _context()
-    assert fabric_clock_warning(ctx, [{"fclk": {"held_at_top": False}}]) is True
-    assert fabric_clock_warning([], [{"fclk": {"held_at_top": False}}]) is False
-    assert fabric_clock_warning(ctx, [{"fclk": {"held_at_top": True}}]) is False
-    assert fabric_clock_warning(ctx, [{"fclk": {"held_at_top": None}}]) is False
+    apu_not_held = {"is_apu": True, "fclk": {"held_at_top": False}}
+    assert fabric_clock_warning(ctx, [apu_not_held]) is True
+    assert fabric_clock_warning([], [apu_not_held]) is False
+    assert fabric_clock_warning(ctx, [{"is_apu": True, "fclk": {"held_at_top": True}}]) is False
+    assert fabric_clock_warning(ctx, [{"is_apu": True, "fclk": {"held_at_top": None}}]) is False
+    # a discrete card's fabric clock is not the APU fabric the NPU shares
+    assert fabric_clock_warning(ctx, [{"is_apu": False, "fclk": {"held_at_top": False}}]) is False
+    assert fabric_clock_warning(ctx, [{"is_apu": None, "fclk": {"held_at_top": False}}]) is False
+    assert fabric_clock_warning(ctx, [{"is_apu": False, "fclk": {"held_at_top": False}}, apu_not_held]) is True
     assert fabric_clock_warning(ctx, []) is False
-    assert fabric_clock_warning(ctx, [{"fclk": {}}]) is False
+    assert fabric_clock_warning(ctx, [{"is_apu": True, "fclk": {}}]) is False
+    assert fabric_clock_warning(ctx, None) is False
 
 
 def test_npu_panel_fabric_caution_and_iommu_hint():
