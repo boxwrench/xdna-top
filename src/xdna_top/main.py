@@ -42,15 +42,17 @@ FABRIC_WARNING = (
 
 
 def fabric_clock_warning(contexts: list[dict], gpus: list[dict] | None) -> bool:
-    """True only when an NPU context is present and a GPU reports fclk not held.
+    """True only when an NPU context is present and an APU iGPU reports fclk not held.
 
     ``held_at_top is False`` is a positive observation; ``None`` (unknown) does
-    not trigger the caution.
+    not trigger the caution. Only integrated GPUs (``is_apu is True``) count: the
+    reported hang involves the APU's own fabric, not a discrete card's.
     """
     if not contexts:
         return False
     return any(
-        (gpu.get("fclk") or {}).get("held_at_top") is False for gpu in (gpus or [])
+        gpu.get("is_apu") is True and (gpu.get("fclk") or {}).get("held_at_top") is False
+        for gpu in (gpus or [])
     )
 
 
