@@ -10,7 +10,13 @@ from xdna_top.amdgpu import discover_gpus, pcie_generation
 from xdna_top.exporter import XdnaCollector
 from xdna_top.env_report import render_markdown, render_record_markdown
 from xdna_top.gauge import GaugeReading, HardwareGauge
-from xdna_top.main import create_gpu_panel, make_sparkline
+from xdna_top.iommu import IOMMU_HINT
+from xdna_top.main import (
+    create_gpu_panel,
+    create_npu_panel,
+    fabric_clock_warning,
+    make_sparkline,
+)
 from xdna_top.record import build_telemetry_event
 from xdna_top.snapshot import build_snapshot
 
@@ -199,3 +205,87 @@ def test_legacy_override_keeps_per_card_facts(tmp_path, monkeypatch):
     sample = g.read_direct_from_contexts([])
     assert sample.gpu_busy_pct == 5 and sample.gpu_power_w == 1
     assert sample.gpus[0]["busy_pct"] == 73 and sample.gpus[0]["power_w"] == 55
+
+
+def test_fclk_held_not_held_and_absent(tmp_path):
+    d = card(
+        tmp_path,
+        power_dpm_force_performance_level="manual",
+        pp_dpm_fclk="0: 266Mhz\n1: 800Mhz\n2: 1600Mhz *\n",
+    )
+    sample = read(tmp_path)[0]
+    assert sample["power_dpm_force_performance_level"] == "manual"
+    assert sample["fclk"]["held_at_top"] is True
+    assert (sample["fclk"]["active_index"], sample["fclk"]["top_index"]) == (2, 2)
+    assert sample["fclk"]["active_mhz"] == 1600 and sample["fclk"]["reason"] is None
+
+    # Same starred top level, but the force level is auto: not held.
+    write(d / "power_dpm_force_performance_level", "auto")
+    assert read(tmp_path)[0]["fclk"]["held_at_top"] is False
+
+    # No pp_dpm_fclk node at all: unknown, with a reason (never guessed).
+    (d / "pp_dpm_fclk").unlink()
+    sample = read(tmp_path)[0]
+    assert sample["fclk"]["held_at_top"] is None
+    assert sample["fclk"]["reason"] == "pp_dpm_fclk_absent"
+
+
+def test_fclk_no_star_and_missing_force_level_are_unknown(tmp_path):
+    d = card(tmp_path, power_dpm_force_performance_level="manual",
+             pp_dpm_fclk="0: 266Mhz\n1: 1600Mhz\n")
+    sample = read(tmp_path)[0]
+    assert sample["fclk"]["held_at_top"] is None
+    assert sample["fclk"]["reason"] == "no_active_level"
+
+    # A starred level but no force-level node: cannot claim held.
+    write(d / "pp_dpm_fclk", "0: 266Mhz\n1: 1600Mhz *\n")
+    (d / "power_dpm_force_performance_level").unlink()
+    sample = read(tmp_path)[0]
+    assert sample["power_dpm_force_performance_level"] is None
+    assert sample["fclk"]["held_at_top"] is None
+    assert sample["fclk"]["reason"] == "force_level_absent"
+
+
+def _context():
+    return [{"pid": 1234, "ctx_id": 1, "submissions": 5, "completions": 4,
+             "status": "Active"}]
+
+
+def test_fabric_clock_warning_gating():
+    ctx = _context()
+    assert fabric_clock_warning(ctx, [{"fclk": {"held_at_top": False}}]) is True
+    assert fabric_clock_warning([], [{"fclk": {"held_at_top": False}}]) is False
+    assert fabric_clock_warning(ctx, [{"fclk": {"held_at_top": True}}]) is False
+    assert fabric_clock_warning(ctx, [{"fclk": {"held_at_top": None}}]) is False
+    assert fabric_clock_warning(ctx, []) is False
+    assert fabric_clock_warning(ctx, [{"fclk": {}}]) is False
+
+
+def test_npu_panel_fabric_caution_and_iommu_hint():
+    console = Console(width=120)
+    with console.capture() as capture:
+        console.print(create_npu_panel(True, _context(), False, fabric_warning=True))
+    text = capture.get()
+    assert "docs/NPU.md" in text and "without fabric clock held" in text
+
+    with console.capture() as capture:
+        console.print(create_npu_panel(True, _context(), False, fabric_warning=False))
+    assert "docs/NPU.md" not in capture.get()
+
+    with console.capture() as capture:
+        console.print(create_npu_panel(False, [], True, iommu_hint=IOMMU_HINT))
+    assert "SVA/PASID" in capture.get()
+
+    with console.capture() as capture:
+        console.print(create_npu_panel(False, [], True))
+    assert "SVA/PASID" not in capture.get()
+
+
+def test_gpu_panel_reports_fabric_clock_state(tmp_path):
+    card(tmp_path, power_dpm_force_performance_level="manual",
+         pp_dpm_fclk="0: 266Mhz\n1: 1600Mhz *\n")
+    console = Console(width=120)
+    with console.capture() as capture:
+        console.print(create_gpu_panel(read(tmp_path), {}))
+    text = capture.get()
+    assert "held at top" in text and "force level: manual" in text

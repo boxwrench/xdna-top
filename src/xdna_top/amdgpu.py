@@ -37,6 +37,85 @@ def pcie_generation(path: Path) -> int | None:
         return None
 
 
+def parse_fclk(path: Path, force_level: str | None) -> dict:
+    """Parse ``pp_dpm_fclk`` into the starred (active) level and whether the
+    fabric clock is held at its top level.
+
+    ``pp_dpm_fclk`` lines look like ``1: 1600Mhz *``; the ``*`` marks the active
+    level. The gufo NPU notes report that running GPU and NPU together on Strix
+    Halo can hang unless ``power_dpm_force_performance_level`` is ``manual`` and
+    the top level is starred. This is an observation only: ``held_at_top`` is
+    ``true``/``false`` only when both the force level and a starred level were
+    read, and ``null`` (unknown) otherwise, with a ``reason``.
+    """
+    text = read_text(path)
+    if text is None:
+        return {
+            "levels": [],
+            "active_index": None,
+            "active_mhz": None,
+            "top_index": None,
+            "top_mhz": None,
+            "held_at_top": None,
+            "reason": "pp_dpm_fclk_absent",
+        }
+
+    levels: list[dict] = []
+    active_index: int | None = None
+    for line in text.splitlines():
+        head, sep, tail = line.partition(":")
+        if not sep:
+            continue
+        try:
+            index = int(head.strip())
+        except ValueError:
+            continue
+        starred = "*" in tail
+        freq_mhz = None
+        for token in tail.replace("*", " ").split():
+            if token.lower().endswith("mhz"):
+                try:
+                    freq_mhz = int(token[:-3].strip())
+                except ValueError:
+                    pass
+        levels.append({"index": index, "freq_mhz": freq_mhz})
+        if starred:
+            active_index = index
+
+    if not levels:
+        return {
+            "levels": [],
+            "active_index": None,
+            "active_mhz": None,
+            "top_index": None,
+            "top_mhz": None,
+            "held_at_top": None,
+            "reason": "pp_dpm_fclk_unparsable",
+        }
+
+    top_index = max(level["index"] for level in levels)
+    top = next(level for level in levels if level["index"] == top_index)
+    active = next(
+        (level for level in levels if level["index"] == active_index), None
+    )
+    if active_index is None:
+        held_at_top, reason = None, "no_active_level"
+    elif force_level is None:
+        held_at_top, reason = None, "force_level_absent"
+    else:
+        held_at_top = force_level == "manual" and active_index == top_index
+        reason = None
+    return {
+        "levels": levels,
+        "active_index": active_index,
+        "active_mhz": active["freq_mhz"] if active else None,
+        "top_index": top_index,
+        "top_mhz": top["freq_mhz"],
+        "held_at_top": held_at_top,
+        "reason": reason,
+    }
+
+
 # Conservative identity hints for the verified platforms, not a VRAM-size
 # heuristic. Unlisted devices retain unknown type and the general APU caveat.
 APU_IDS = {"0x1586", "0x13c0"}  # Strix Halo and the verified desktop integrated device
@@ -81,6 +160,7 @@ class AmdGpu:
         busy = number(d / "gpu_busy_percent")
         if busy is not None and not 0 <= busy <= 100:
             busy = None
+        force_level = read_text(d / "power_dpm_force_performance_level")
         result = {
             "card": self.card, "bdf": d.name, "name": self.name,
             "device_id": self.device_id, "is_apu": self.is_apu,
@@ -98,6 +178,8 @@ class AmdGpu:
             "pcie_width": number(d / "current_link_width"),
             "pcie_width_max": number(d / "max_link_width"),
             "pcie_meaningful": False if self.is_apu else (True if self.is_apu is False else None),
+            "power_dpm_force_performance_level": force_level,
+            "fclk": parse_fclk(d / "pp_dpm_fclk", force_level),
         }
         result["unavailable"] = [k for k, v in result.items() if v is None]
         result["degraded"] = busy is None or power is None

@@ -87,6 +87,17 @@ full, machine-generated inventory for this box is in
 [sensor-probe-6.17.0-35-generic.md](sensor-probe-6.17.0-35-generic.md);
 regenerate it for your machine with `tools/probe_sensors.py`.
 
+**One boot requirement.** The `amdxdna` driver binds the NPU to an IOMMU domain
+(SVA/PASID) when the device is opened, so booting with `amd_iommu=off` makes
+`/dev/accel/*` return `ENODEV`. `iommu=pt` restores the device; one measurement
+on this box found it costing roughly 7.5% iGPU LLM prompt processing — a
+trade-off to weigh, and a cited one-user measurement rather than an `xdna-top`
+metric. Separately, the [gufo](https://github.com/mikealanni/gufo) `docs/NPU.md`
+notes report that running GPU and NPU workloads together can hard-hang unless
+the GPU fabric clock (`pp_dpm_fclk`) is held at its top level with
+`power_dpm_force_performance_level=manual`. `xdna-top` records both observations
+and shows the caution only when the evidence is present.
+
 ---
 
 ## The iGPU (Radeon 8060S, RDNA 3.5)

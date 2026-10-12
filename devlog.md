@@ -1,5 +1,59 @@
 # xdna-top Devlog
 
+## 2026-10-12 — IOMMU/SVA diagnostics and fabric-clock observation
+
+Implemented the read-only diagnostics behind the 2026-10-11 ENODEV finding,
+following the house rules: report only what was read, zero-root, and no rename
+of the machine reasons that tests and schema 1.1 consumers key on.
+
+- New `xdna_top.iommu` module reads `/proc/cmdline` and
+  `/sys/bus/pci/devices/<bdf>/iommu_group`. The IOMMU tokens actually present
+  are recorded verbatim and a `mode` (off/pt/passthrough/on/other/none/unknown)
+  is classified over them. `iommu_blocks_sva()` treats only `amd_iommu=off` /
+  `iommu=off`, or a probed NPU with no IOMMU group, as positive evidence; an
+  unreadable command line with a present group is not evidence.
+- Snapshot gains additive `host.iommu` and `devices.npu.iommu_group`. The schema
+  stays 1.1 because these are optional additive fields, like the existing
+  `power_state` and `ioctl` blocks.
+- `read_amdxdna_info()` now returns `errno` and a human `reason_detail`. An
+  `ENODEV` open (errno 19) with the IOMMU evidence becomes
+  `iommu_disabled_sva_unavailable`; without that evidence the old
+  `node_unreadable_errno_19` is kept. Sensor `EOPNOTSUPP` and the debugfs
+  power-state reasons keep their machine strings and gain explanatory
+  `reason_detail`/`detail` text.
+- `AmdGpu.read()` records `power_dpm_force_performance_level` and parses
+  `pp_dpm_fclk` (active/top level and `held_at_top` true/false/unknown). The TUI
+  shows the fclk state and prints the gufo-cited hang caution only when an NPU
+  context is present and `held_at_top is false`; `env-report` renders the same
+  fields and the IOMMU hint.
+- Tests: cmdline off/pt/none fixtures, ENODEV with and without IOMMU evidence,
+  fclk held/not-held/absent/no-star, and warning gating. All 257 tests pass.
+
+Read-only check on nimo (no NPU/GPU workload was run; a benchmark was already
+running, iGPU busy 100%, 140 W, edge 90 °C). The box currently boots `iommu=pt`,
+so the NPU path is healthy and the ENODEV diagnosis was not exercised live.
+Observed fields:
+
+- `host.iommu = {readable: true, tokens: ["iommu=pt"], mode: "pt"}`
+- `devices.npu.iommu_group = {bdf: "0000:c6:00.1", exists: true}`
+- `devices.npu.ioctl` opened (`reason: null`, `errno: null`);
+  `sensors.reason: "ioctl_errno_95"`,
+  `sensors.reason_detail: "driver does not report NPU sensors (EOPNOTSUPP)"`
+- `devices.npu.power_state.reason: "debugfs_accel_absent"` with the new
+  human `detail`
+- `card1` `power_dpm_force_performance_level: "manual"`,
+  `fclk.held_at_top: true` (active level 7 of 7, 2000 MHz) — so no fabric
+  caution was raised, correctly.
+
+No performance value is emitted by the tool. The ~7.5% iGPU prompt-processing
+cost of `iommu=pt` and the gufo `docs/NPU.md` GPU+NPU hang report are cited as
+one user's observations, never as measured metrics.
+
+Docs: SNAPSHOT-SCHEMA.md, HOW-IT-WORKS.md, HARDWARE.md and CHANGELOG
+Unreleased updated. No push, merge, tag or release was performed.
+
+AI-assisted implementation: DeepSeek (dsh), coordinated by Claude.
+
 ## 2026-10-11 — Local AI GPU scope and read-only NPU ENODEV diagnosis
 
 Accepted the concrete need for AMD GPU inference monitoring: APU iGPUs and

@@ -348,3 +348,51 @@ def test_build_snapshot_surfaces_memlock_reason(
     memlock_errors = [e for e in snapshot["errors"] if e.get("probe") == "rlimit_memlock"]
     assert len(memlock_errors) == 1
     assert "memlock" in memlock_errors[0]["message"].lower()
+
+
+@patch("xdna_top.snapshot.observe_iommu")
+@patch("xdna_top.snapshot._accel_entries")
+@patch("xdna_top.snapshot.HardwareGauge")
+@patch("xdna_top.snapshot.os.path.exists")
+@patch("xdna_top.snapshot.load_sysfs_paths")
+@patch("xdna_top.snapshot._probe_xrt_smi")
+def test_build_snapshot_carries_iommu_observation(
+    mock_probe_xrt,
+    mock_load_sysfs_paths,
+    mock_exists,
+    mock_gauge_class,
+    mock_accel_entries,
+    mock_observe,
+):
+    """The zero-root IOMMU cmdline/group evidence lands in the snapshot."""
+    mock_probe_xrt.return_value = {
+        "path": "/usr/bin/xrt-smi",
+        "available": True,
+        "version_output": "XRT 2.25",
+        "examine_returncode": 1,
+        "aie_partitions_returncode": 1,
+        "device": {"bdf": "0000:c6:00.1", "name": "RyzenAI-npu5"},
+        "contexts": [],
+    }
+    mock_load_sysfs_paths.return_value = (None, None)
+    mock_exists.return_value = False
+    mock_accel_entries.return_value = [{"path": "/dev/accel/accel0", "exists": True}]
+    mock_observe.return_value = {
+        "cmdline": {"readable": True, "tokens": ["amd_iommu=off"], "mode": "off"},
+        "npu_iommu_group": {
+            "bdf": "0000:c6:00.1",
+            "path": "/sys/bus/pci/devices/0000:c6:00.1/iommu_group",
+            "exists": False,
+        },
+    }
+    reading = MagicMock()
+    reading.to_dict.return_value = {"npu_active": False, "state": "IDLE", "ts": 1.0}
+    mock_gauge_class.return_value.read_direct_from_contexts.return_value = reading
+
+    snapshot = build_snapshot(bench_dir="/tmp/xdna-top-test")
+
+    assert snapshot["host"]["iommu"] == mock_observe.return_value["cmdline"]
+    assert snapshot["devices"]["npu"]["iommu_group"] == (
+        mock_observe.return_value["npu_iommu_group"]
+    )
+    mock_observe.assert_called_once_with("0000:c6:00.1")

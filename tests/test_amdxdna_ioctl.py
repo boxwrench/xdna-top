@@ -173,3 +173,80 @@ def test_read_sensors_unsupported_is_honest(_resolve, _ver, _info, _sensors, _op
     assert info["supports_sensors"] is False
     assert info["sensors"]["available"] is False
     assert info["sensors"]["reason"] == "ioctl_errno_95"
+    # Additive human-readable detail; the machine reason above is unchanged.
+    assert "EOPNOTSUPP" in info["sensors"]["reason_detail"]
+
+
+# --- ENODEV / IOMMU diagnosis ------------------------------------------------
+_IOMMU_OFF = {
+    "cmdline": {"readable": True, "tokens": ["amd_iommu=off"], "mode": "off"},
+    "npu_iommu_group": {
+        "bdf": "0000:c6:00.1",
+        "path": "/sys/bus/pci/devices/0000:c6:00.1/iommu_group",
+        "exists": False,
+    },
+}
+_IOMMU_PT = {
+    "cmdline": {"readable": True, "tokens": ["iommu=pt"], "mode": "pt"},
+    "npu_iommu_group": {
+        "bdf": "0000:c6:00.1",
+        "path": "/sys/bus/pci/devices/0000:c6:00.1/iommu_group",
+        "exists": True,
+    },
+}
+_IOMMU_NONE_NO_GROUP = {
+    "cmdline": {"readable": True, "tokens": [], "mode": "none"},
+    "npu_iommu_group": {"bdf": "0000:c6:00.1", "path": "...", "exists": False},
+}
+
+
+@patch("xdna_top.amdxdna_ioctl.os.open", side_effect=OSError(19, "No such device"))
+@patch(
+    "xdna_top.amdxdna_ioctl._resolve_node",
+    return_value=(Path("/dev/accel/accel0"), None),
+)
+def test_read_enodev_with_iommu_off_is_precise(_resolve, _open):
+    info = ax.read_amdxdna_info("0000:c6:00.1", iommu_observation=_IOMMU_OFF)
+    assert info["available"] is False
+    assert info["reason"] == "iommu_disabled_sva_unavailable"
+    # The raw errno stays visible alongside the precise reason.
+    assert info["errno"] == 19
+    assert "amd_iommu=off" in info["reason_detail"]
+
+
+@patch("xdna_top.amdxdna_ioctl.os.open", side_effect=OSError(19, "No such device"))
+@patch(
+    "xdna_top.amdxdna_ioctl._resolve_node",
+    return_value=(Path("/dev/accel/accel0"), None),
+)
+def test_read_enodev_group_absent_is_precise(_resolve, _open):
+    info = ax.read_amdxdna_info("0000:c6:00.1", iommu_observation=_IOMMU_NONE_NO_GROUP)
+    assert info["reason"] == "iommu_disabled_sva_unavailable"
+    assert info["errno"] == 19
+
+
+@patch("xdna_top.amdxdna_ioctl.os.open", side_effect=OSError(19, "No such device"))
+@patch(
+    "xdna_top.amdxdna_ioctl._resolve_node",
+    return_value=(Path("/dev/accel/accel0"), None),
+)
+def test_read_enodev_without_evidence_keeps_old_reason(_resolve, _open):
+    info = ax.read_amdxdna_info("0000:c6:00.1", iommu_observation=_IOMMU_PT)
+    assert info["reason"] == "node_unreadable_errno_19"
+    assert info["errno"] == 19
+    assert "iommu" not in info
+
+
+@patch(
+    "xdna_top.amdxdna_ioctl.observe_iommu",
+    return_value=_IOMMU_OFF,
+)
+@patch("xdna_top.amdxdna_ioctl.os.open", side_effect=OSError(19, "No such device"))
+@patch(
+    "xdna_top.amdxdna_ioctl._resolve_node",
+    return_value=(Path("/dev/accel/accel0"), None),
+)
+def test_read_enodev_reads_iommu_evidence_when_not_supplied(_resolve, _open, observe):
+    info = ax.read_amdxdna_info()
+    assert info["reason"] == "iommu_disabled_sva_unavailable"
+    observe.assert_called_once()

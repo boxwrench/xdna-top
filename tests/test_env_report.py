@@ -230,3 +230,82 @@ def test_env_report_main_renders_record_jsonl(tmp_path):
     report = out_path.read_text(encoding="utf-8")
     assert "# xdna-top Telemetry Report" in report
     assert "- Telemetry samples: 2" in report
+
+
+def test_render_markdown_iommu_hint_and_fabric_clock():
+    snapshot = sample_snapshot()
+    snapshot["host"]["iommu"] = {
+        "readable": True,
+        "tokens": ["amd_iommu=off"],
+        "mode": "off",
+    }
+    snapshot["devices"]["npu"]["detected"] = False
+    snapshot["devices"]["npu"]["iommu_group"] = {
+        "bdf": "0000:c6:00.1",
+        "path": "/sys/bus/pci/devices/0000:c6:00.1/iommu_group",
+        "exists": False,
+    }
+    snapshot["devices"]["npu"]["ioctl"] = {
+        "available": False,
+        "reason": "iommu_disabled_sva_unavailable",
+        "reason_detail": "NPU open returned ENODEV: the NPU driver needs the IOMMU (SVA/PASID)",
+        "errno": 19,
+    }
+    snapshot["telemetry"]["gpus"] = [
+        {
+            "card": "card1",
+            "bdf": "0000:c6:00.0",
+            "name": "AMD Radeon 8060S",
+            "power_dpm_force_performance_level": "auto",
+            "fclk": {
+                "active_index": 1,
+                "active_mhz": 1600,
+                "top_index": 2,
+                "top_mhz": 2000,
+                "held_at_top": False,
+                "reason": None,
+            },
+        }
+    ]
+
+    report = render_markdown(snapshot)
+
+    assert "- IOMMU cmdline: amd_iommu=off (mode: off)" in report
+    assert (
+        "- NPU IOMMU group: /sys/bus/pci/devices/0000:c6:00.1/iommu_group (exists: no)"
+        in report
+    )
+    assert "- NPU IOMMU hint:" in report and "SVA/PASID" in report
+    assert "Fabric clock: force level auto" in report
+    assert "not held at top" in report
+
+
+def test_render_markdown_no_iommu_hint_without_evidence():
+    snapshot = sample_snapshot()
+    snapshot["host"]["iommu"] = {
+        "readable": True,
+        "tokens": ["iommu=pt"],
+        "mode": "pt",
+    }
+    snapshot["devices"]["npu"]["ioctl"] = {
+        "available": True,
+        "driver": {"version": "0.6.0"},
+        "sensors": {
+            "available": False,
+            "reason": "ioctl_errno_95",
+            "reason_detail": "driver does not report NPU sensors (EOPNOTSUPP)",
+        },
+    }
+    report = render_markdown(snapshot)
+    assert "NPU IOMMU hint" not in report
+    # The additive sensor detail makes the degraded report human-readable...
+    assert "driver does not report NPU sensors (EOPNOTSUPP)" in report
+
+    # ...and an off command line alone is not a hint when no accel node exists.
+    degraded = sample_snapshot(degraded=True)
+    degraded["host"]["iommu"] = {
+        "readable": True,
+        "tokens": ["amd_iommu=off"],
+        "mode": "off",
+    }
+    assert "NPU IOMMU hint" not in render_markdown(degraded)
