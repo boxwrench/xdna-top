@@ -29,6 +29,29 @@ from xdna_top.gauge import (
 )
 from xdna_top.record import mark_main, record_main
 from xdna_top.snapshot import detect_npu_device, snapshot_main
+from xdna_top.iommu import IOMMU_HINT, observe_iommu
+
+
+# Cited caution shown when an NPU context is present while the GPU fabric clock
+# is not held at its top pp_dpm_fclk level. It is an observation plus a citation,
+# not a diagnosis of any particular run.
+FABRIC_WARNING = (
+    "GPU+NPU concurrent without fabric clock held - reported to hang some "
+    "Strix Halo systems; see gufo docs/NPU.md"
+)
+
+
+def fabric_clock_warning(contexts: list[dict], gpus: list[dict] | None) -> bool:
+    """True only when an NPU context is present and a GPU reports fclk not held.
+
+    ``held_at_top is False`` is a positive observation; ``None`` (unknown) does
+    not trigger the caution.
+    """
+    if not contexts:
+        return False
+    return any(
+        (gpu.get("fclk") or {}).get("held_at_top") is False for gpu in (gpus or [])
+    )
 
 
 @dataclass(frozen=True)
@@ -421,6 +444,13 @@ def create_gpu_panel(gpus: list[dict], history: dict, theme: TuiTheme = DEFAULT_
                         f" / max Gen{value(gpu, 'pcie_gen_max', decimals=0)} x{value(gpu, 'pcie_width_max', decimals=0)}\n")
         if gpu.get("degraded"):
             text.append("[WARNING] busy or power unavailable; partial telemetry\n", style="bold red")
+        fclk = gpu.get("fclk") or {}
+        held = fclk.get("held_at_top")
+        held_text = {True: "held at top", False: "not held at top", None: "unknown"}[held]
+        active = fclk.get("active_index")
+        level = "N/A" if active is None else f"{active} of {fclk.get('top_index')}"
+        force = gpu.get("power_dpm_force_performance_level") or "N/A"
+        text.append(f"fclk: {level} ({held_text}); force level: {force}\n", style="dim")
         busy, power = history.get(gpu['bdf'], ([], []))
         text.append(f"Busy 60s peaks: {make_sparkline(busy, width=24)}\n")
         text.append(f"Power 60s peaks: {make_sparkline(power, max_val=max([1.0] + [v for v in power if v is not None]), width=24)} (auto scale)\n\n")
@@ -433,12 +463,24 @@ def create_npu_panel(
     contexts: list[dict],
     xrt_error: bool,
     theme: TuiTheme = DEFAULT_THEME,
+    *,
+    iommu_hint: str | None = None,
+    fabric_warning: bool = False,
 ) -> Panel:
-    """Constructs the NPU status Panel."""
+    """Constructs the NPU status Panel.
+
+    ``iommu_hint`` and ``fabric_warning`` are pre-computed observations from the
+    caller: the IOMMU caution is shown only when the live NPU is degraded and the
+    booted command line says ``amd_iommu=off``; the fabric-clock caution only
+    when an NPU context is present and a GPU reports fclk not held at top.
+    """
     text = Text()
     
     if xrt_error:
-        text.append("[WARNING] xrt-smi not found or failed; NPU telemetry degraded.\n\n", style="bold red")
+        text.append("[WARNING] xrt-smi not found or failed; NPU telemetry degraded.\n", style="bold red")
+        if iommu_hint:
+            text.append(f"[HINT] {iommu_hint}.\n", style="yellow")
+        text.append("\n")
         return Panel(text, title=theme.npu_title, border_style="red")
 
     status_str = "ACTIVE" if npu_active else "IDLE"
@@ -469,7 +511,14 @@ def create_npu_panel(
     if not contexts:
         table.add_row("N/A", "N/A", "N/A", "0", "0", "No active contexts")
 
-    return Panel(Group(text, Align.left(table)), title=theme.npu_title, border_style=theme.npu_border)
+    group = Group(text, Align.left(table))
+    if fabric_warning:
+        group = Group(
+            text,
+            Align.left(Text(f"[CAUTION] {FABRIC_WARNING}.\n", style="bold yellow")),
+            Align.left(table),
+        )
+    return Panel(group, title=theme.npu_title, border_style=theme.npu_border)
 
 
 def create_header_panel(
@@ -772,8 +821,14 @@ def run_monitor(args: argparse.Namespace, theme: TuiTheme = DEFAULT_THEME) -> in
     # "RyzenAI-npu5"), or no platform label at all when none is found, rather
     # than asserting a fixed platform on every machine. Detected once; device
     # identity is stable for the session.
-    device_label = detect_npu_device(args.npu_device).get("name")
+    detected_device = detect_npu_device(args.npu_device)
+    device_label = detected_device.get("name")
     layout["header"].update(create_header_panel(theme, device_label))
+
+    # IOMMU evidence is a host fact (the booted command line), so read it once.
+    # The NPU hint is shown only when the live NPU is degraded *and* the command
+    # line actually says amd_iommu=off; otherwise no claim is made.
+    iommu_observation = observe_iommu(detected_device.get("bdf"))
     
     # Footer
     layout["footer"].update(Panel(
@@ -853,12 +908,20 @@ def run_monitor(args: argparse.Namespace, theme: TuiTheme = DEFAULT_THEME) -> in
                             gpu_history=gpu_history,
                         )
                     )
+                iommu_hint = (
+                    IOMMU_HINT
+                    if xrt_error
+                    and iommu_observation.get("cmdline", {}).get("mode") == "off"
+                    else None
+                )
                 layout["body"]["npu"].update(
                     create_npu_panel(
                         reading.npu_active,
                         contexts,
                         xrt_error,
                         theme=theme,
+                        iommu_hint=iommu_hint,
+                        fabric_warning=fabric_clock_warning(contexts, reading.gpus),
                     )
                 )
 

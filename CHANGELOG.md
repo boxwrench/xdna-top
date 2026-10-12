@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Read-only IOMMU and fabric-clock diagnostics. Snapshots now carry
+  `host.iommu` (the IOMMU tokens actually present on `/proc/cmdline`, plus a
+  classified mode) and `devices.npu.iommu_group` (whether the NPU PCI device has
+  an IOMMU-group link). An NPU node open that fails `ENODEV` while
+  `amd_iommu=off` is on the command line — or when the probed NPU has no IOMMU
+  group — is reported as `iommu_disabled_sva_unavailable` with the raw `errno`
+  retained, and `env-report` plus the TUI explain that the driver needs IOMMU
+  SVA/PASID and that `iommu=pt` restores it (one user measured `iommu=pt`
+  costing iGPU throughput). Each GPU object also records
+  `power_dpm_force_performance_level` and the starred `pp_dpm_fclk` level
+  (`fclk.held_at_top` true/false/unknown); the TUI cautions only when an NPU
+  context is present and a GPU reports fclk not held at top, citing gufo
+  `docs/NPU.md`. These are additive fields — the schema remains 1.1 — and the
+  degraded sensor/power-state reasons gain human-readable `reason_detail`/
+  `detail` text without renaming the machine reasons.
+
 - Per-device AMD GPU telemetry, including multiple discrete cards with or
   without an NPU: names, busy %, separate VRAM/GTT used and total, edge
   temperature, power/cap, current sclk sample, and PCIe current/max links.

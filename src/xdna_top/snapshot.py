@@ -18,6 +18,7 @@ from typing import Any
 from xdna_top.diagnostics import diagnose_memlock
 from xdna_top.gauge import HardwareGauge, load_sysfs_paths, parse_xrt_smi
 from xdna_top.amdxdna_ioctl import read_amdxdna_info
+from xdna_top.iommu import observe_iommu
 from xdna_top.npu_power import read_npu_power
 
 SCHEMA_VERSION = "1.1"
@@ -79,6 +80,11 @@ def build_snapshot(
     # `examine` fails (e.g. the RLIMIT_MEMLOCK false-negative). The read is fully
     # guarded — root-only/absent debugfs yields available:false, never raises.
     npu_power = read_npu_power(xrt["device"]["bdf"])
+    # Zero-root platform observation: which IOMMU tokens actually booted, and
+    # whether the NPU PCI device has an IOMMU group. This is the evidence behind
+    # an ENODEV open failure (the driver needs IOMMU SVA/PASID); it is recorded
+    # on the snapshot and re-read by the ioctl probe if that open fails.
+    iommu = observe_iommu(xrt["device"]["bdf"])
     # Direct-AMDXDNA read-only probe: device/driver identity + AIE metadata +
     # clocks + firmware + sensors, straight from the kernel via DRM ioctls,
     # independent of xrt-smi. Optional/additive and fully guarded.
@@ -145,11 +151,14 @@ def build_snapshot(
         }
     )
 
+    host = host_facts()
+    host["iommu"] = iommu["cmdline"]
+
     return {
         "schema_version": SCHEMA_VERSION,
         "kind": SNAPSHOT_KIND,
         "captured_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        "host": host_facts(),
+        "host": host,
         "commands": {
             "xrt_smi": {
                 "path": xrt["path"],
@@ -186,6 +195,7 @@ def build_snapshot(
                 },
                 "power_state": npu_power,
                 "ioctl": npu_ioctl,
+                "iommu_group": iommu["npu_iommu_group"],
                 "contexts": contexts,
                 "report_shape": {
                     "has_aie_partitions": xrt["aie_partitions_returncode"] == 0,

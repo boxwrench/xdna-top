@@ -106,6 +106,7 @@ def read_npu_power(bdf: str | None = None) -> dict[str, Any]:
         "available": False,
         "source": None,
         "reason": None,
+        "detail": None,
         "powerstate": None,
         "dpm": None,
     }
@@ -113,6 +114,10 @@ def read_npu_power(bdf: str | None = None) -> dict[str, Any]:
     d = _debugfs_dir(bdf)
     if d is None:
         result["reason"] = "debugfs_accel_absent"
+        result["detail"] = (
+            "NPU power-state debugfs nodes absent (the driver does not export "
+            "them, or debugfs is not mounted; debugfs is usually root-only)"
+        )
         return result
 
     dpm_raw = _read(d / "dpm_level")
@@ -121,6 +126,9 @@ def read_npu_power(bdf: str | None = None) -> dict[str, Any]:
         # The directory exists but neither node could be read: either this driver
         # does not export them, or (typically) debugfs is root-only here.
         result["reason"] = "debugfs_nodes_unreadable"
+        result["detail"] = (
+            "NPU power-state debugfs nodes unreadable (usually root-only debugfs)"
+        )
         return result
 
     dpm = parse_dpm_level(dpm_raw) if dpm_raw is not None else None
@@ -128,6 +136,7 @@ def read_npu_power(bdf: str | None = None) -> dict[str, Any]:
     # parsed DPM state or a non-empty powerstate before reporting available.
     if dpm is None and not powerstate:
         result["reason"] = "debugfs_nodes_unparsable"
+        result["detail"] = "NPU power-state debugfs nodes present but unparsable"
         return result
 
     result["available"] = True

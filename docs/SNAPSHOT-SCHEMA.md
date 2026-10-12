@@ -19,7 +19,16 @@ power missing). Numeric fields are null when unavailable. Power uses
 `power1_average` then `power1_input`; on APUs it includes CPU/SoC. The shader
 clock is a current sample. Raw PCIe numbers on recognized APUs are retained
 with `pcie_meaningful: false`. GTT budgets must not be summed across devices.
-See [HOW-IT-WORKS.md](HOW-IT-WORKS.md) for identity hint coverage and sources.
+Each GPU object also carries the additive, zero-root fabric-clock observation:
+`power_dpm_force_performance_level` (the raw
+`power_dpm_force_performance_level` node, or null) and `fclk` (the parsed
+`pp_dpm_fclk` table: `levels`, `active_index`, `active_mhz`, `top_index`,
+`top_mhz`, `held_at_top`, and a `reason` when it cannot be determined). The
+`held_at_top` value is `true` only when the force level is `manual` and the
+starred (active) level is the top level; it is `false` when both were read and
+that is not the case, and `null` (unknown) when either signal is missing — it is
+never guessed. See [HOW-IT-WORKS.md](HOW-IT-WORKS.md) for identity hint coverage
+and sources.
 
 ## Top-Level Shape
 
@@ -78,6 +87,26 @@ Platform facts that usually affect driver/runtime behavior.
   },
   "python": {
     "version": "3.12.3"
+  }
+}
+```
+
+`host.iommu` is an **additive, optional** block (no `schema_version` bump).
+`cmdline.readable` records whether `/proc/cmdline` was read; `cmdline.tokens`
+lists the IOMMU tokens actually present (`amd_iommu=off`, `iommu=pt`,
+`iommu.passthrough=...`, `amd_iommu=...`, `intel_iommu=...`) verbatim, in boot
+order; and `cmdline.mode` is a convenience classification over those tokens —
+`off`, `pt`, `passthrough`, `on`, `other`, `none`, or `unknown` when the command
+line was unreadable. The raw tokens are the observation; `mode` never replaces
+them. This is a zero-root platform fact used to explain an NPU `ENODEV` open
+failure.
+
+```json
+"iommu": {
+  "cmdline": {
+    "readable": true,
+    "tokens": ["amd_iommu=off"],
+    "mode": "off"
   }
 }
 ```
@@ -148,7 +177,8 @@ exports those debugfs nodes (the staging `amdxdna.ko`; the mainline/DKMS driver
 does not — see amd/xdna-driver#1447) and only when readable (debugfs is usually
 root-only). When unavailable, `devices.npu.power_state.available` is `false` with a
 `reason` (`debugfs_accel_absent`, `debugfs_nodes_unreadable`, or
-`debugfs_nodes_unparsable`), and `backends.npu.signals.power_state` is `null`. The value is
+`debugfs_nodes_unparsable`) plus an additive human `detail` string, and
+`backends.npu.signals.power_state` is `null`. The value is
 the active **clock-frequency power state**, never a utilization percentage.
 Consumers should treat unknown keys as forward-compatible and ignore them.
 
@@ -169,14 +199,31 @@ unreadable node, a non-amdxdna device, or an unsupported `GET_INFO` query yields
 `available: false` (or a `null` sub-probe) with a `reason`, never an exception.
 `supports_sensors` / `sensors.available` reflect whether the kernel's
 `QUERY_SENSORS` ioctl is implemented — on kernels that return `EOPNOTSUPP` it is
-`false` with `reason: "ioctl_errno_95"`. When available,
-`backends.npu.signals.driver` is `"amdxdna_ioctl"` (and `signals.sensors` when
-sensor data is present). Validated read-only on real silicon (amdxdna `0.6.0`,
-AIE `1.1`, MP-NPU `1267` / H `1800` MHz, firmware `1.1.2.65`); `xrt-smi` remains
-the per-context PID/submission attribution path. A real capture is committed at
+`false` with `reason: "ioctl_errno_95"` and the additive human
+`sensors.reason_detail: "driver does not report NPU sensors (EOPNOTSUPP)"`. When
+available, `backends.npu.signals.driver` is `"amdxdna_ioctl"` (and
+`signals.sensors` when sensor data is present). Validated read-only on real
+silicon (amdxdna `0.6.0`, AIE `1.1`, MP-NPU `1267` / H `1800` MHz, firmware
+`1.1.2.65`); `xrt-smi` remains the per-context PID/submission attribution path.
+A real capture is committed at
 [`captures/snapshot_npu5_ioctl.json`](captures/snapshot_npu5_ioctl.json) —
 `RyzenAI-npu5` with the full `ioctl` block populated and ten live FastFlowLM
 hardware contexts attributed by PID.
+
+`devices.npu.iommu_group` is the zero-root probe of the NPU PCI device's
+`iommu_group` symlink. `exists` is `true`/`false` when a BDF was probed and
+`null` when no BDF was known; it is never guessed. On an `ENODEV` open
+(`errno` 19), when the booted command line has `amd_iommu=off`
+(`host.iommu.cmdline.mode == "off"`) or the probed NPU has no `iommu_group`,
+`devices.npu.ioctl.reason` becomes `iommu_disabled_sva_unavailable`, the raw
+`errno` is retained, and an additive human `reason_detail` explains that the
+driver needs IOMMU SVA/PASID. Without that positive evidence the older
+`node_unreadable_errno_19` reason is kept. Observed on a Strix Halo box:
+`amd_iommu=off` makes `open("/dev/accel/accel0")` fail `ENODEV` with
+`amdxdna_drm_open: SVA bind device failed, ret -19`; booting `iommu=pt` restores
+it. That same user measured `iommu=pt` slowing iGPU compute (~7.5% LLM prompt
+processing) versus `amd_iommu=off` — a cited one-user measurement, not a metric
+this tool reports.
 
 ### `devices`
 
@@ -202,6 +249,11 @@ available; consumers that require contexts must also inspect
     "detected": true,
     "bdf": "0000:c6:00.1",
     "name": "RyzenAI-npu5",
+    "iommu_group": {
+      "bdf": "0000:c6:00.1",
+      "path": "/sys/bus/pci/devices/0000:c6:00.1/iommu_group",
+      "exists": false
+    },
     "driver": {
       "drm_version": {
         "major": 0,

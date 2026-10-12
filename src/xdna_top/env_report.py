@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from xdna_top.assertions import load_artifact
+from xdna_top.iommu import IOMMU_HINT
 from xdna_top.snapshot import SNAPSHOT_KIND
 
 
@@ -57,6 +58,7 @@ def render_markdown(snapshot: dict[str, Any]) -> str:
         f"- Kernel: {_value(kernel.get('release'))}",
         f"- Python: {_value(python.get('version'))}",
         f"- xdna-top: {_value(xdna_top.get('version'))}",
+        f"- IOMMU cmdline: {_iommu_cmdline(host.get('iommu'))}",
         "",
         "## Commands",
         "",
@@ -85,6 +87,7 @@ def render_markdown(snapshot: dict[str, Any]) -> str:
         f"- NPU context count: {_value(_get(npu, 'report_shape', 'context_count'))}",
         f"- NPU sensor support: {_bool(_get(npu, 'driver', 'supports_sensors'))}",
         f"- NPU direct backend (amdxdna ioctl): {_npu_ioctl(npu.get('ioctl'))}",
+        f"- NPU IOMMU group: {_iommu_group(npu.get('iommu_group'))}",
         f"- NPU power state: {_npu_power_state(npu.get('power_state'))}",
         f"- iGPU busy path: {_path_status(igpu.get('busy_path'), igpu.get('busy_path_exists'))}",
         f"- iGPU power path: {_path_status(igpu.get('power_path'), igpu.get('power_path_exists'))}",
@@ -105,6 +108,10 @@ def render_markdown(snapshot: dict[str, Any]) -> str:
         f"- NPU degraded: {_bool(_get(degraded, 'npu', 'degraded'))}",
         f"- NPU reasons: {_list(_get(degraded, 'npu', 'reasons'))}",
     ]
+
+    hint = _npu_iommu_hint(npu, host.get("iommu"), accel)
+    if hint:
+        lines.append(f"- NPU IOMMU hint: {hint}")
 
     lines.extend(_gpu_lines(telemetry))
 
@@ -282,6 +289,11 @@ def _gpu_lines(reading: dict[str, Any]) -> list[str]:
         else:
             lines.append(f"  - PCIe current/max: Gen{_value(gpu.get('pcie_gen'))} x{_value(gpu.get('pcie_width'))} / "
                          f"Gen{_value(gpu.get('pcie_gen_max'))} x{_value(gpu.get('pcie_width_max'))}")
+        lines.append(
+            f"  - Fabric clock: force level "
+            f"{_value(gpu.get('power_dpm_force_performance_level'))}, "
+            f"{_fclk_summary(gpu.get('fclk'))}"
+        )
         lines.append(f"  - Unavailable fields: {_list(gpu.get('unavailable'))}")
     lines.append("APU power includes CPU/SoC; PCIe link values are not meaningful on APUs.")
     return lines
@@ -365,7 +377,12 @@ def _metric(value: Any, unit: str) -> str:
 def _npu_power_state(power_state: Any) -> str:
     """Render the debugfs NPU power state: active DPM clock state (npuclk/hclk MHz), never a busy %."""
     if not isinstance(power_state, dict) or not power_state.get("available"):
-        reason = power_state.get("reason") if isinstance(power_state, dict) else None
+        if not isinstance(power_state, dict):
+            return "unavailable"
+        reason = power_state.get("reason")
+        detail = power_state.get("detail")
+        if reason and detail:
+            return f"unavailable ({reason}: {detail})"
         return f"unavailable ({reason})" if reason else "unavailable"
     parts = []
     ps = power_state.get("powerstate")
@@ -385,7 +402,12 @@ def _npu_ioctl(ioctl: Any) -> str:
     """Render the direct-AMDXDNA ioctl summary. Clocks are frequencies (MHz),
     never a utilization %; unavailable states carry a reason."""
     if not isinstance(ioctl, dict) or not ioctl.get("available"):
-        reason = ioctl.get("reason") if isinstance(ioctl, dict) else None
+        if not isinstance(ioctl, dict):
+            return "unavailable"
+        reason = ioctl.get("reason")
+        detail = ioctl.get("reason_detail")
+        if reason and detail:
+            return f"unavailable ({reason}: {detail})"
         return f"unavailable ({reason})" if reason else "unavailable"
     parts = []
     driver = ioctl.get("driver") or {}
@@ -400,7 +422,67 @@ def _npu_ioctl(ioctl: Any) -> str:
         )
     if ioctl.get("firmware_version"):
         parts.append(f"fw {ioctl['firmware_version']}")
+    sensors = ioctl.get("sensors") or {}
+    if sensors.get("reason_detail"):
+        parts.append(f"sensors {sensors['reason_detail']}")
+    elif sensors.get("available"):
+        parts.append("sensors available")
     return ", ".join(parts) if parts else "available"
+
+
+def _fclk_summary(fclk: Any) -> str:
+    """Render the ``pp_dpm_fclk`` observation without claiming more than read."""
+    if not isinstance(fclk, dict):
+        return "unavailable"
+    held = fclk.get("held_at_top")
+    held_text = "held at top" if held is True else "not held at top" if held is False else "unknown"
+    active = fclk.get("active_index")
+    top = fclk.get("top_index")
+    if active is None:
+        return f"level unavailable ({_value(fclk.get('reason'))})"
+    return (
+        f"level {active} ({_metric(fclk.get('active_mhz'), 'MHz')}) "
+        f"of {_value(top)}, {held_text}"
+    )
+
+
+def _iommu_cmdline(iommu: Any) -> str:
+    """Render the observed IOMMU command-line tokens and derived mode."""
+    if not isinstance(iommu, dict):
+        return "unavailable"
+    if not iommu.get("readable"):
+        return "unavailable (/proc/cmdline unreadable)"
+    tokens = iommu.get("tokens") or []
+    shown = ", ".join(str(token) for token in tokens) if tokens else "none"
+    return f"{shown} (mode: {_value(iommu.get('mode'))})"
+
+
+def _iommu_group(group: Any) -> str:
+    if not isinstance(group, dict):
+        return "unavailable"
+    return _path_status(group.get("path"), group.get("exists"))
+
+
+def _npu_iommu_hint(npu: Any, iommu: Any, accel: Any) -> str | None:
+    """Return the IOMMU helper hint only when the observation supports it.
+
+    Positive evidence is either the precise ENODEV diagnosis or an accel node
+    that exists while the NPU is not detected under ``amd_iommu=off``. A hint is
+    never emitted from a missing signal alone.
+    """
+    if not isinstance(npu, dict):
+        return None
+    ioctl = npu.get("ioctl") if isinstance(npu.get("ioctl"), dict) else {}
+    if ioctl.get("reason") == "iommu_disabled_sva_unavailable":
+        return IOMMU_HINT
+    mode = iommu.get("mode") if isinstance(iommu, dict) else None
+    if mode != "off" or npu.get("detected") is True:
+        return None
+    entries = accel.get("entries") if isinstance(accel, dict) else None
+    accel_present = any(
+        isinstance(entry, dict) and entry.get("exists") for entry in (entries or [])
+    )
+    return IOMMU_HINT if accel_present else None
 
 
 def _path_status(path: Any, exists: Any) -> str:

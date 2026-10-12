@@ -87,6 +87,18 @@ be discrete. `state` is a threshold heuristic, not proof of an inference phase.
 An explicit `--bench-dir/e0_sysfs.json` still overrides only those legacy
 scalars; the per-card list always reports actual per-device sysfs readings.
 
+### Fabric clock: a cited concurrency caution, not a metric
+
+Each AMD GPU object also records `power_dpm_force_performance_level` and the
+starred `pp_dpm_fclk` level. `held_at_top` is `true` only when the force level is
+`manual` and the top fabric level is starred; it is `false` when both were read
+and that is not the case, and `null` (unknown) when either signal is missing.
+The [gufo](https://github.com/mikealanni/gufo) `docs/NPU.md` notes report that
+running GPU and NPU work together on Strix Halo can hard-hang unless the fabric
+clock is held that way. When an NPU context is present and a GPU reports
+`held_at_top: false`, the TUI prints that observation with the citation. `false`
+is required, so an unknown value never raises the caution.
+
 ## Reading the NPU: IOCTLs first, XRT where it helps
 
 The preferred NPU path is to talk to the kernel driver directly through the
@@ -132,6 +144,24 @@ sample, and derives each context's state from the delta. That's the "ACTIVE"
 badge - not a guess, a measurement. As the direct IOCTL backend grows, `xrt-smi`
 becomes a compatibility and context-attribution source rather than the preferred
 low-level telemetry path.
+
+### The NPU needs an IOMMU (SVA/PASID)
+
+`xdna-top` also reads the booted kernel command line (`/proc/cmdline`) and the
+NPU PCI device's `iommu_group` link, both zero-root. The `amdxdna` driver binds
+the NPU to an IOMMU domain when the device is opened
+(`iommu_sva_bind_device()`), so `amd_iommu=off` — or any boot where the NPU has
+no IOMMU group — makes `open("/dev/accel/accel0")` fail with `ENODEV`. On one
+Strix Halo box that appeared in `dmesg` as
+`amdxdna_drm_open: SVA bind device failed, ret -19`.
+
+When that failure and the IOMMU evidence line up, the snapshot records
+`devices.npu.ioctl.reason: "iommu_disabled_sva_unavailable"` (keeping the raw
+`errno` visible) and `env-report` prints a hint; the live TUI shows the hint when
+the NPU is degraded and the command line actually says `amd_iommu=off`. Booting
+`iommu=pt` restores the device. Note that one user measured `iommu=pt` costing
+roughly 7.5% iGPU LLM prompt processing versus `amd_iommu=off`; that is a cited
+one-user measurement, not a number this tool claims or reports.
 
 ## A real capture, annotated
 

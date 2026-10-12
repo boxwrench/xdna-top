@@ -31,12 +31,28 @@ values.
 from __future__ import annotations
 
 import ctypes
+import errno
 import fcntl
 import os
 from pathlib import Path
 from typing import Any
 
+from xdna_top.iommu import IOMMU_HINT, iommu_blocks_sva, observe_iommu
+
 ACCEL_DIR = Path("/dev/accel")
+
+
+def _open_error_detail(exc: OSError) -> str:
+    """Human-readable open failure that keeps the raw errno visible."""
+    return f"open failed: errno {exc.errno} ({exc.strerror})"
+
+
+def _sensor_reason_detail(reason: str | None) -> str | None:
+    if reason == "ioctl_errno_95":
+        return "driver does not report NPU sensors (EOPNOTSUPP)"
+    if reason is None:
+        return None
+    return f"NPU sensor query unavailable ({reason})"
 
 # --- ioctl encoding (linux asm-generic/ioctl.h, DRM uses type 'd') ----------
 _IOC_WRITE = 1
@@ -188,6 +204,14 @@ def _resolve_node(bdf: str | None) -> tuple[Path | None, str | None]:
     return nodes[0], None
 
 
+def _node_bdf(node: Path) -> str | None:
+    """Best-effort BDF for a resolved accel node (via its sysfs device link)."""
+    try:
+        return os.path.basename(os.path.realpath(f"/sys/class/accel/{node.name}/device"))
+    except OSError:
+        return None
+
+
 def _drm_version(fd: int) -> dict[str, Any] | None:
     v = _DrmVersion()
     name = ctypes.create_string_buffer(64)
@@ -266,7 +290,11 @@ def _query_sensors(fd: int) -> tuple[list[dict[str, Any]] | None, str | None]:
     return items, None
 
 
-def read_amdxdna_info(bdf: str | None = None) -> dict[str, Any]:
+def read_amdxdna_info(
+    bdf: str | None = None,
+    *,
+    iommu_observation: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Probe the AMDXDNA NPU read-only over DRM ioctls.
 
     Returns a dict that always has ``available``, ``source`` and ``reason``.
@@ -274,11 +302,21 @@ def read_amdxdna_info(bdf: str | None = None) -> dict[str, Any]:
     its DRM version read; individual sub-probes (aie version/metadata, clocks,
     firmware, sensors) are best-effort and independently ``None`` when the kernel
     does not support that query. Never raises.
+
+    When the node open fails with ``ENODEV`` and the IOMMU evidence explains it
+    (``amd_iommu=off`` on the command line, or the NPU has no IOMMU group), the
+    reason becomes ``iommu_disabled_sva_unavailable``; the raw ``errno`` and a
+    human ``reason_detail`` stay on the result. ``iommu_observation`` may be
+    supplied by a caller (or test) that already read it; otherwise it is read
+    here. Without positive evidence the old ``node_unreadable_errno_N`` reason
+    is retained.
     """
     result: dict[str, Any] = {
         "available": False,
         "source": None,
         "reason": None,
+        "reason_detail": None,
+        "errno": None,
         "node": None,
         "driver": None,
         "aie_version": None,
@@ -286,7 +324,7 @@ def read_amdxdna_info(bdf: str | None = None) -> dict[str, Any]:
         "clocks": None,
         "firmware_version": None,
         "supports_sensors": False,
-        "sensors": {"available": False, "reason": None, "items": []},
+        "sensors": {"available": False, "reason": None, "reason_detail": None, "items": []},
     }
 
     node, reason = _resolve_node(bdf)
@@ -298,6 +336,18 @@ def read_amdxdna_info(bdf: str | None = None) -> dict[str, Any]:
         fd = os.open(str(node), os.O_RDONLY)
     except OSError as exc:
         result["reason"] = f"node_unreadable_errno_{exc.errno}"
+        result["errno"] = exc.errno
+        result["reason_detail"] = _open_error_detail(exc)
+        if exc.errno == errno.ENODEV:
+            observation = iommu_observation
+            if observation is None:
+                observation = observe_iommu(bdf or _node_bdf(node))
+            if iommu_blocks_sva(observation):
+                result["reason"] = "iommu_disabled_sva_unavailable"
+                result["reason_detail"] = (
+                    "NPU open returned ENODEV: " + IOMMU_HINT
+                )
+                result["iommu"] = observation
         return result
 
     try:
@@ -343,6 +393,7 @@ def read_amdxdna_info(bdf: str | None = None) -> dict[str, Any]:
         result["sensors"] = {
             "available": items is not None,
             "reason": sensor_reason,
+            "reason_detail": _sensor_reason_detail(sensor_reason),
             "items": items or [],
         }
         result["supports_sensors"] = items is not None
