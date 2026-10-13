@@ -70,12 +70,12 @@ other untriggered feature families remain deferred.
    - **Done:** assert one XRT call and a shared context fixture for every
      sampling path.
    - **Done:** cover absent, unreadable, and unparsable direct power-state data.
-   - Run idle, rapidly starting/stopping workload, XRT-failure, and
-     debugfs-unavailable smoke tests on supported hardware.
+   - **Done:** run idle, rapidly starting/stopping workload, XRT-failure, and
+     debugfs-unavailable smoke tests on supported hardware (Strix Halo NPU5,
+     2026-10-12; the two findings are fixed in v0.5.0).
 
-This combined milestone retains v0.5.0 as the release candidate. The
-off-hardware implementation and automated validation form the release
-candidate; the supported-hardware smoke pass is the remaining release gate.
+This combined milestone shipped as v0.5.0 after the supported-hardware smoke
+pass.
 
 ## Next: Simplify the Product
 
