@@ -125,3 +125,21 @@ def test_read_available_with_powerstate_when_dpm_unparsable(monkeypatch, tmp_pat
     assert out["available"] is True
     assert out["dpm"] is None
     assert out["powerstate"] == "SMU power ON"
+
+
+def test_read_root_only_debugfs_is_unreadable_not_absent(monkeypatch, tmp_path):
+    # Unprivileged: /sys/kernel/debug is mode 700, so the lookup itself raises
+    # PermissionError. That is "unreadable", not "absent" (smoke pass on nimo).
+    class Denied(type(tmp_path)):
+        def iterdir(self):
+            raise PermissionError(13, "Permission denied")
+
+        def is_dir(self):
+            raise PermissionError(13, "Permission denied")
+
+    monkeypatch.setattr(npu_power, "DEBUGFS_ACCEL", Denied(tmp_path / "accel"))
+    for bdf in (None, "0000:c6:00.1"):
+        out = npu_power.read_npu_power(bdf)
+        assert out["available"] is False
+        assert out["reason"] == "debugfs_nodes_unreadable"
+        assert "root-only" in out["detail"]

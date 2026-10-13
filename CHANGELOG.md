@@ -70,6 +70,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- An unprivileged run on a root-only debugfs (`/sys/kernel/debug` mode 700)
+  reported the NPU power state as `debugfs_accel_absent`. A refused lookup is
+  now `debugfs_nodes_unreadable` with a root-only `detail` (found in the
+  v0.5.0 hardware smoke pass).
+- `test_build_snapshot_degraded_path` read the real AMDXDNA ioctl and failed on
+  hosts with an NPU; it now stubs it like the rest of the test.
+
 - Bind busy and hwmon sensors to the same amdgpu device. Missing samples now
   appear as sparkline gaps, and 60-second history holds 300 samples at 5 Hz.
   Removed the unsupported fixed 100 W display maximum and the private
