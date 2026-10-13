@@ -105,6 +105,7 @@ def test_build_snapshot_happy_path(
     )
 
 
+@patch("xdna_top.snapshot.read_amdxdna_info", return_value={"available": False})
 @patch("xdna_top.snapshot._accel_entries")
 @patch("xdna_top.snapshot.HardwareGauge")
 @patch("xdna_top.snapshot.os.path.exists")
@@ -116,6 +117,7 @@ def test_build_snapshot_degraded_path(
     mock_exists,
     mock_gauge_class,
     mock_accel_entries,
+    _mock_ioctl,
 ):
     mock_probe_xrt.return_value = {
         "path": None,

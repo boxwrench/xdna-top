@@ -36,7 +36,7 @@ DEBUGFS_ACCEL = Path("/sys/kernel/debug/accel")
 _DPM_TOKEN = re.compile(r"(?P<lb>\[?)\s*(?P<npuclk>\d+)\s*,\s*(?P<hclk>\d+)\s*(?P<rb>\]?)")
 
 
-def _debugfs_dir(bdf: str | None) -> Path | None:
+def _debugfs_dir(bdf: str | None) -> tuple[Path | None, bool]:
     """Resolve the per-device debugfs dir for ``bdf`` (or the first accel device
     when ``bdf`` is ``None``).
 
@@ -44,7 +44,9 @@ def _debugfs_dir(bdf: str | None) -> Path | None:
     (the usual unprivileged case — ``/sys/kernel/debug`` is mode 700, and
     ``Path.exists()`` raises ``PermissionError`` rather than returning ``False``)
     yields ``None``, never an exception. ``None`` also covers "no accel node"
-    (a driver that does not export these files, or debugfs not mounted).
+    (a driver that does not export these files, or debugfs not mounted). The
+    second value is ``True`` when the lookup was refused (``PermissionError``),
+    so a root-only debugfs is not reported as an absent one.
     """
     try:
         if bdf:
@@ -52,11 +54,13 @@ def _debugfs_dir(bdf: str | None) -> Path | None:
             # fall back to a different accel device, which would report another
             # NPU's power state under the requested BDF.
             d = DEBUGFS_ACCEL / bdf
-            return d if d.is_dir() else None
+            return (d if d.is_dir() else None), False
         subdirs = sorted(p for p in DEBUGFS_ACCEL.iterdir() if p.is_dir())
-        return subdirs[0] if subdirs else None
+        return (subdirs[0] if subdirs else None), False
+    except PermissionError:
+        return None, True
     except OSError:
-        return None
+        return None, False
 
 
 def _read(path: Path) -> str | None:
@@ -111,7 +115,14 @@ def read_npu_power(bdf: str | None = None) -> dict[str, Any]:
         "dpm": None,
     }
 
-    d = _debugfs_dir(bdf)
+    d, denied = _debugfs_dir(bdf)
+    if denied:
+        result["reason"] = "debugfs_nodes_unreadable"
+        result["detail"] = (
+            "NPU power-state debugfs is root-only here (permission denied); "
+            "run as root to read it"
+        )
+        return result
     if d is None:
         result["reason"] = "debugfs_accel_absent"
         result["detail"] = (
