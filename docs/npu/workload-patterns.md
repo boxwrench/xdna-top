@@ -3,8 +3,9 @@
 A field note on *which jobs pay off* on a Ryzen AI NPU, distilled from running
 small models on XDNA2 and watching the telemetry. It is workload-shape guidance,
 not a benchmark — pair it with [Why the NPU?](why-the-npu.md) for the hardware
-reasoning and the [Evidence Library](../experiments/index.md) for measured
-numbers.
+reasoning, the [measured Strix Halo NPU envelope](../experiments/strix-halo-npu-envelope.md)
+for device rates and limits, and the [Evidence Library](../experiments/index.md)
+for measured numbers.
 
 ## The short version
 

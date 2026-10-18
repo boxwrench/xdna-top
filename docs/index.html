@@ -2043,6 +2043,11 @@
       <h2>Evidence Library</h2>
       <p>Self-contained benchmark reports, each grounded in xdna-top snapshot/record evidence artifacts. Generated from <code>docs/experiments/</code>.</p>
       <ul class="evidence-list">
+        <li class="evidence-entry">
+          <a href="experiments/strix-halo-npu-envelope.md"><strong>The Strix Halo XDNA2 NPU Envelope for LLM Work</strong></a> <span class="evidence-date">2026-10-17</span><br>
+          <span class="evidence-headline">On one Strix Halo box the XDNA2 NPU runs 3.2-26.5 TFLOPS of bfp8 GEMM depending on rows, is 1.55-5.63x slower than the iGPU on matched dense GEMMs, and helps LLM work only when the result can be consumed late.</span><br>
+          <span class="evidence-platform">AMD RYZEN AI MAX+ 395 (Strix Halo, gfx1151) · kernel 7.3.0-rc6-perfopt+ · XRT 2.25.00</span>
+        </li>
 
         <li style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.5rem; margin-bottom: 1.5rem; list-style: none; box-shadow: var(--shadow-sm);">
           <h3 style="margin-top: 0; margin-bottom: 0.5rem; font-size: 1.25rem;"><a href="experiments/structured-output-sampling-sweep.md" style="color: var(--primary); text-decoration: none;">Structured-Output Reliability Across Sampling Configs (NPU LLM stack)</a></h3>
