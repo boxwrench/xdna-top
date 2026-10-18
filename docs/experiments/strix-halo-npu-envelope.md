@@ -64,7 +64,9 @@ close it. This is the installed-toolchain envelope, not a hardware ceiling.
 Two other costs are part of the envelope:
 
 - **Per-call copies:** ~0.86 ms to encode A and decode C per call at the GLM
-  q/k/v shapes. Per-GEMM calls lose; calls must be batched per layer chunk.
+  q/k/v shapes through XRT. Per-GEMM calls lose on that path; calls must be batched per layer chunk.
+  Through HRX (AMD FastFlow-SDK) a dispatch costs 66 µs alone and ~18 µs chained, and switching
+  xclbins costs ~2–3 ms, so a resident one-program design avoids it (2026-10-18).
 - **Numerical error:** bfp8 with BF16 accumulation is 1.0% / 1.2% / 2.6% max
   relative error at K=2560 / 4096 / 8192. Any integration needs a quality gate.
 
@@ -122,8 +124,12 @@ from the run.
   ~3× the throughput of spare CPU cores at ~3× total-board perf/watt, with
   slightly less iGPU decode loss than the CPU arm. See the
   [contention experiment](npu-igpu-contention.md).
-- **Do not expect decode or draft-head speedups.** The work is memory-bound; the
-  NPU is slower than the iGPU there at every measured shape.
+- **Do not expect the foreground model's decode or draft heads to get faster.** The
+  work is memory-bound; the NPU is slower than the iGPU there at every measured shape.
+- **A whole second model can decode on the NPU in the background.** Hy-Memory-30B-A3B
+  runs every linear layer on the NPU at 9.4 tok/s as a fused 4-bit GEMV in one resident
+  program ([NPU Wrench](https://github.com/boxwrench/npu-wrench)); watch the iGPU with
+  `xdna-top` while it runs, since its contention cost is not yet measured.
 - **Do not build a block drafter on it as-is.** Existing kernels pad a small block
   to 128–512 rows, and retention gains stay below the gate.
 - **Treat dense prefill as open only with deferred consumers.** A synchronous 27B
